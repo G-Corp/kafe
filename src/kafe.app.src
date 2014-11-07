@@ -1,0 +1,16 @@
+{application, kafe,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  syntax_tools,
+                  compiler,
+                  goldrush,
+                  lager
+                 ]},
+  {mod, { kafe_app, []}},
+  {env, []}
+ ]}.
