@@ -19,13 +19,38 @@ application:ensure_all_started(kafe).
 Types:
 
 ```
+  Result = {ok, #{brokers => [Broker], topics => [Topic]}}
+    Broker = #{host => Host, id => ID, port => Port}
+      Host = binary()
+      Port = integer()
+    Topic = #{error_code = Error, name => Name, partitions => [Partition]}
+      Name = binary()
+      Partition = #{error_code => Error, id => ID, isr => [ISR], leader => Leader, replicas => [Replicat]}
+        ISR = integer()
+        Leader = integer()
+        Replicat = integer()
+  ID = integer()
+  Error = atom()
 ```
 
-#### `kafe:metadata(TopicName) -> Result`
+#### `kafe:metadata(TopicNames) -> Result`
 
 Types:
 
 ```
+  TopicNames = [binary()]
+  Result = {ok, #{brokers => [Broker], topics => [Topic]}}
+    Broker = #{host => Host, id => ID, port => Port}
+      Host = binary()
+      Port = integer()
+    Topic = #{error_code = Error, name => Name, partitions => [Partition]}
+      Name = binary()
+      Partition = #{error_code => Error, id => ID, isr => [ISR], leader => Leader, replicas => [Replicat]}
+        ISR = integer()
+        Leader = integer()
+        Replicat = integer()
+  ID = integer()
+  Error = atom()
 ```
 
 #### `kafe:offset(Replica, Topics) -> Result`
@@ -33,6 +58,19 @@ Types:
 Types:
 
 ```
+  Replica = integer()
+  Topics = [TopicName] | [TopicName, [Partition]] 
+    Partition = {PartitionNumber, FetchOffset, MaxBytes}
+      PartitionNumber = integer()
+      FetchOffset = integer()
+      MaxBytes = integer()
+  Result = {ok,[TopicPartitionInfo]}
+    TopicPartitionInfo = #{name => TopicName, partitions => [PartitionInfo]}
+      PartitionInfo = #{error_code => Error, id => ID, offsets => [Offset]}
+        Error = atom()
+        ID = integer()
+        Offset = integer()
+  TopicName = binary()
 ```
 
 #### `kafe:produce(TopicName, Message) -> Result`
@@ -40,6 +78,9 @@ Types:
 Types:
 
 ```
+  TopicName = binary()
+  Message = binary() | {binary(), binary()}
+
 ```
 
 #### `kafe:produce(TopicName, Message, Options) -> Result`
@@ -47,7 +88,23 @@ Types:
 Types:
 
 ```
+  TopicName = binary()
+  Message = binary() | {binary(), binary()}
+  Options = #{Option => Value}
+  Result = {ok, [Topic]}
+    Topic = #{name => Name, partitions => [Partition]}
+      Name = binary()
+      Partition = #{error_code => Error, offset => Offset, partition => Number}
+        Error = atom()
+        Offset = integer()
+        Number = integer()
 ```
+
+`Option` is any of :
+
+* `timeout :: integer()`
+* `required_acks :: integer()`
+* `partition :: integer()`
 
 ## Contributing
 
