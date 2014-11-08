@@ -1,12 +1,8 @@
 -module(kafe).
 -behaviour(gen_server).
 
+-include("../include/kafe.hrl").
 -define(SERVER, ?MODULE).
--define(DEFAULT_IP, enet:get_loopback()).
--define(DEFAULT_PORT, 9092).
--define(DEFAULT_CLIENT_ID, <<"kafe">>).
--define(DEFAULT_CORRELATION_ID, 0).
--define(DEFAULT_API_VERSION, 0).
 
 %% ------------------------------------------------------------------
 %% API Function Exports

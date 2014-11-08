@@ -1,6 +1,6 @@
 -module(kafe_protocol_metadata).
 
--define(METADATA_REQUEST, 3).
+-include("../include/kafe.hrl").
 
 -export([
          request/1,

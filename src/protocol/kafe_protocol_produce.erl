@@ -1,10 +1,6 @@
 -module(kafe_protocol_produce).
 
--define(PRODUCE_REQUEST, 0).
--define(BITMASK_REQUIRE_ACK, 1).
--define(PRODUCE_REQUIRED_ACKS, 0).
--define(PRODUCE_SYNC_TIMEOUT, 5000).
--define(PRODUCE_PARTITION, 0).
+-include("../include/kafe.hrl").
 
 -export([
          request/4,
@@ -16,15 +12,15 @@
 %%   * required_acks :: integer() (default: 0)
 %%   * partition :: integer()     (default: 0)
 request(Topic, Message, Options, #{api_version := Magic} = State) ->
-  Timeout = maps:get(timeout, Options, ?PRODUCE_SYNC_TIMEOUT),
+  Timeout = maps:get(timeout, Options, ?DEFAULT_PRODUCE_SYNC_TIMEOUT),
   RequiredAcks = maps:get(required_acks, 
                           Options, 
-                          ?PRODUCE_REQUIRED_ACKS) bor ?BITMASK_REQUIRE_ACK,
+                          ?DEFAULT_PRODUCE_REQUIRED_ACKS) bor ?BITMASK_REQUIRE_ACK,
   {Key, Value} = if
     is_tuple(Message) -> Message;
     true -> {undefined, Message}
   end,
-  Partition = maps:get(partition, Options, ?PRODUCE_PARTITION),
+  Partition = maps:get(partition, Options, ?DEFAULT_PRODUCE_PARTITION),
   Msg = <<
           Magic:8/signed, 
           0:8/signed, 

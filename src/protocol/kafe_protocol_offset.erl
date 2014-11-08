@@ -1,9 +1,6 @@
 -module(kafe_protocol_offset).
 
--define(OFFSET_REQUEST, 2).
--define(DEFAULT_PARTITION, 0).
--define(DEFAULT_TIME, -1).
--define(DEFAULT_MAX_SIZE, 65535).
+-include("../include/kafe.hrl").
 
 -export([
          request/3,
@@ -35,7 +32,9 @@ topics([{TopicName, Partitions} | T], Acc) ->
                {Partition, FetchOffset, MaxBytes} <- Partitions]))/binary
          >>);
 topics([TopicName | T], Acc) ->
-  topics([{TopicName, [{?DEFAULT_PARTITION, ?DEFAULT_TIME, ?DEFAULT_MAX_SIZE}]} | T], Acc).
+  topics([{TopicName, [{?DEFAULT_OFFSET_PARTITION, 
+                        ?DEFAULT_OFFSET_TIME, 
+                        ?DEFAULT_OFFSET_MAX_SIZE}]} | T], Acc).
 
 response(0, <<>>) ->
     [];
