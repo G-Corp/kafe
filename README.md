@@ -25,10 +25,10 @@ Types:
       Port = integer()
     Topic = #{error_code = Error, name => Name, partitions => [Partition]}
       Name = binary()
-      Partition = #{error_code => Error, id => ID, isr => [ISR], leader => Leader, replicas => [Replicat]}
+      Partition = #{error_code => Error, id => ID, isr => [ISR], leader => Leader, replicas => [ReplicatID]}
         ISR = integer()
         Leader = integer()
-        Replicat = integer()
+        ReplicatID = integer()
   ID = integer()
   Error = atom()
 ```
@@ -45,20 +45,20 @@ Types:
       Port = integer()
     Topic = #{error_code = Error, name => Name, partitions => [Partition]}
       Name = binary()
-      Partition = #{error_code => Error, id => ID, isr => [ISR], leader => Leader, replicas => [Replicat]}
+      Partition = #{error_code => Error, id => ID, isr => [ISR], leader => Leader, replicas => [ReplicatID]}
         ISR = integer()
         Leader = integer()
-        Replicat = integer()
+        ReplicatID = integer()
   ID = integer()
   Error = atom()
 ```
 
-#### `kafe:offset(Replica, Topics) -> Result`
+#### `kafe:offset(ReplicatID, Topics) -> Result`
 
 Types:
 
 ```
-  Replica = integer()
+  ReplicatID = integer()
   Topics = [TopicName] | [TopicName, [Partition]] 
     Partition = {PartitionNumber, FetchOffset, MaxBytes}
       PartitionNumber = integer()
@@ -75,13 +75,7 @@ Types:
 
 #### `kafe:produce(TopicName, Message) -> Result`
 
-Types:
-
-```
-  TopicName = binary()
-  Message = binary() | {binary(), binary()}
-
-```
+Same as `kafe:produce(TopicName, Message, #{})`.
 
 #### `kafe:produce(TopicName, Message, Options) -> Result`
 
@@ -105,6 +99,30 @@ Types:
 * `timeout :: integer()`
 * `required_acks :: integer()`
 * `partition :: integer()`
+
+#### `kafe:fetch(ReplicatID, TopicName)`
+
+Same as `kafe:fetch(ReplicatID, TopicName, #{})`
+
+#### `kafe:fetch(ReplicatID, TopicName, Options)`
+
+Types:
+
+```
+  ReplicatID = integer() % must alwaus be -1
+  TopicName = binary()
+  Options = #{Option => Value}
+    Option = atom()
+    Value = term()
+```
+
+`Option` is any of :
+
+* `partition :: integer()`
+* `offset :: integer()`
+* `max_bytes :: integer()`
+* `min_bytes :: integer()`
+* `max_wait_time :: integer()`
 
 ## Contributing
 
