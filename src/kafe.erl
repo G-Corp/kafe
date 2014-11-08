@@ -15,7 +15,9 @@
          metadata/1,
          offset/2,
          produce/2,
-         produce/3
+         produce/3,
+         fetch/2,
+         fetch/3
         ]).
 
 %% ------------------------------------------------------------------
@@ -35,7 +37,7 @@ start_link() ->
 metadata() ->
   gen_server:call(?SERVER, {metadata, []}).
 
-metadata(Topics) when is_list(Topics)->
+metadata(Topics) when is_list(Topics) ->
   gen_server:call(?SERVER, {metadata, Topics}).
 
 % kafe:offset(0, [<<"public">>]).
@@ -50,6 +52,16 @@ produce(Topic, Message) ->
   produce(Topic, Message, #{}).
 produce(Topic, Message, Options) ->
   gen_server:call(?SERVER, {produce, Topic, Message, Options}).
+
+% Replica = integer()
+% TopicName = binary()
+% Options = #{Key => Value}
+%   Key = partition | offset | max_bytes | min_bytes | max_wait_time
+%   Value = term()
+fetch(Replica, TopicName) ->
+  fetch(Replica, TopicName, #{}).
+fetch(Replica, TopicName, Options) ->
+  gen_server:call(?SERVER, {fetch, Replica, TopicName, Options}).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
@@ -76,6 +88,10 @@ init(_) ->
                  {ok, Version} -> Version;
                  _ -> ?DEFAULT_API_VERSION
                end,
+  Offset = case application:get_env(kafe, offset) of
+             {ok, Off} -> Off;
+             _ -> ?DEFAULT_OFFSET
+           end,
   case gen_tcp:connect(KafkaIP, KafkaPort, [{mode, binary}, {active, once}]) of
     {ok, Socket} ->
       {ok, #{host => KafkaIP, 
@@ -85,7 +101,8 @@ init(_) ->
              correlation_id => CorrelationID,
              client_id => ClientID,
              requests => orddict:new(),
-             parts => <<>>
+             parts => <<>>,
+             offset => Offset
             }};
     {error, Reason} ->
       {stop, Reason}
@@ -105,6 +122,11 @@ handle_call({produce, Topic, Message, Options}, From, State) ->
   send_request(kafe_protocol_produce:request(Topic, Message, Options, State),
                From,
                fun kafe_protocol_produce:response/1,
+               State);
+handle_call({fetch, Replica, TopicName, Options}, From, State) ->
+  send_request(kafe_protocol_fetch:request(Replica, TopicName, Options, State),
+               From,
+               fun kafe_protocol_fetch:response/1,
                State);
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
