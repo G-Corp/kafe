@@ -2,6 +2,11 @@
 
 A Kafka client un pure Erlang
 
+## Links
+
+* [Apache Kafka](http://kafka.apache.org/)
+* [Apache Kafka Protocol](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol)
+
 ## Applications
 
 ### `kafe`
