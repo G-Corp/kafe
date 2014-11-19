@@ -1,3 +1,4 @@
+% @hidden
 -module(kafe_protocol_offset).
 
 -include("../include/kafe.hrl").

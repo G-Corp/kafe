@@ -1,8 +1,8 @@
 REBAR = ./rebar
 
-.PHONY: compile get-deps test
+.PHONY: compile get-deps test doc
 
-all: compile
+all: compile doc
 
 compile: get-deps
 	@$(REBAR) compile
@@ -22,7 +22,9 @@ test: compile
 	@$(REBAR) skip_deps=true eunit
 
 doc:
-	$(REBAR) skip_deps=true doc
+	@rm -f documentation.md
+	@rm -rf doc
+	@./make_doc
 
 dev:
 	@erl -pa ebin include deps/*/ebin deps/*/include -config config/kafe.config

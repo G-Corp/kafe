@@ -1,3 +1,4 @@
+% @hidden
 -module(kafe_error).
 
 -export([code/1]).

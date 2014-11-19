@@ -1,3 +1,9 @@
+%% @doc
+%% @author Gregoire Lejeune <gl@finexkap.com>
+%% @copyright 2014 Finexkap
+%%
+%% A Kafka client un pure Erlang
+%% @end
 -module(kafe).
 -behaviour(gen_server).
 
@@ -31,33 +37,39 @@
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
+% @hidden
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+% @doc
+% Return kafka metadata
+% @end
 metadata() ->
   gen_server:call(?SERVER, {metadata, []}).
 
+% @doc
+% Return metadata for the given topics
+% @end
 metadata(Topics) when is_list(Topics) ->
   gen_server:call(?SERVER, {metadata, Topics}).
 
-% kafe:offset(0, [<<"public">>]).
-% kafe:offset(1, [{<<"public">>, [{0, -1, 65535}]}, <<"service">>]).
+% @doc
+% Get offet for the given topics and replicat
+% @end
 offset(ReplicatID, Topics) ->
   gen_server:call(?SERVER, {offset, ReplicatID, Topics}).
 
-% Topic :: binary()
-% Message :: binary() | {binary(), binary()}
-% Options :: #{timeout => integer(), required_acks => integer(), partition => integer()}
+% @doc
+% Send a message
+% @end
 produce(Topic, Message) ->
   produce(Topic, Message, #{}).
 produce(Topic, Message, Options) ->
   gen_server:call(?SERVER, {produce, Topic, Message, Options}).
 
-% ReplicatID = integer()
-% TopicName = binary()
-% Options = #{Key => Value}
-%   Key = partition | offset | max_bytes | min_bytes | max_wait_time
-%   Value = term()
+% @doc
+% Fetch messages
+% @end
 fetch(ReplicatID, TopicName) ->
   fetch(ReplicatID, TopicName, #{}).
 fetch(ReplicatID, TopicName, Options) ->
@@ -67,6 +79,7 @@ fetch(ReplicatID, TopicName, Options) ->
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
+% @hidden
 init(_) ->
   KafkaIP = case application:get_env(kafe, host) of
               {ok, IP} -> IP;
@@ -108,43 +121,52 @@ init(_) ->
       {stop, Reason}
   end.
 
+% @hidden
 handle_call({metadata, Topics}, From, State) ->
   send_request(kafe_protocol_metadata:request(Topics, State), 
                From, 
                fun kafe_protocol_metadata:response/1, 
                State);
+% @hidden
 handle_call({offset, ReplicatID, Topics}, From, State) ->
   send_request(kafe_protocol_offset:request(ReplicatID, Topics, State),
                From,
                fun kafe_protocol_offset:response/1,
                State);
+% @hidden
 handle_call({produce, Topic, Message, Options}, From, State) ->
   send_request(kafe_protocol_produce:request(Topic, Message, Options, State),
                From,
                fun kafe_protocol_produce:response/1,
                State);
+% @hidden
 handle_call({fetch, ReplicatID, TopicName, Options}, From, State) ->
   send_request(kafe_protocol_fetch:request(ReplicatID, TopicName, Options, State),
                From,
                fun kafe_protocol_fetch:response/1,
                State);
+% @hidden
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
+% @hidden
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
+% @hidden
 handle_info(
   {tcp, _, <<Size:32/signed, Remainder/binary>> = Packet},
   #{parts := <<>>} = State
  ) when Size == byte_size(Remainder) ->
   process_response(Packet, State);
+% @hidden
 handle_info(
   {tcp, _, Part}, 
   #{parts := <<Size:32/signed, _/binary>> = Parts} = State
  ) when byte_size(<<Parts/binary, Part/binary>>) >= Size -> 
   <<Size:32/signed, Packet:Size/bytes, Remainder/binary>> = <<Parts/binary, Part/binary>>,
   process_response(<<Size:32, Packet/binary>>, maps:update(parts, Remainder, State));
+% @hidden
 handle_info(
   {tcp, _, Part}, 
   #{parts := Parts, socket := Socket} = State
@@ -155,16 +177,20 @@ handle_info(
     {error, _} = Reason ->
       {stop, Reason, State}
   end;
+% @hidden
 handle_info({tcp_closed, _}, State) ->
   {stop, abnormal, State};
+% @hidden
 handle_info(_Info, State) ->
   lager:info("--- handle_info ~p", [_Info]),
   lager:info("--- state ~p", [State]),
   {noreply, State}.
 
+% @hidden
 terminate(_Reason, _State) ->
   ok.
 
+% @hidden
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
@@ -172,6 +198,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
+% @hidden
 send_request(#{packet := Packet, state := State2}, 
              From, 
              Handler, 
@@ -196,6 +223,7 @@ send_request(#{packet := Packet, state := State2},
       {stop, abnormal, Error, State1}
   end.
 
+% @hidden
 process_response(
   <<Size:32/signed, Packet:Size/bytes>>,
   #{requests := Requests, socket := Socket} = State

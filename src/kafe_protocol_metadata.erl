@@ -1,3 +1,4 @@
+% @hidden
 -module(kafe_protocol_metadata).
 
 -include("../include/kafe.hrl").

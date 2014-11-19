@@ -7,5 +7,4 @@ log
 *.txt*
 erl_crash.dump
 .eunit
-doc
 ext

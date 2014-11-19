@@ -1,3 +1,4 @@
+% @hidden
 -module(kafe_protocol_produce).
 
 -include("../include/kafe.hrl").

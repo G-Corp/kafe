@@ -1,3 +1,4 @@
+% @hidden
 -module(kafe_protocol).
 -export([
          request/3,
