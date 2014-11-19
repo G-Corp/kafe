@@ -114,7 +114,7 @@ Same as `kafe:fetch(ReplicatID, TopicName, #{})`
 Types:
 
 ```
-  ReplicatID = integer() % must alwaus be -1
+  ReplicatID = integer() % must always be -1
   TopicName = binary()
   Options = #{Option => Value}
     Option = atom()
