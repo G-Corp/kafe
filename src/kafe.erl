@@ -2,7 +2,7 @@
 %% @author Gregoire Lejeune <gl@finexkap.com>
 %% @copyright 2014 Finexkap
 %%
-%% A Kafka client un pure Erlang
+%% A Kafka client in pure Erlang
 %% @end
 -module(kafe).
 -behaviour(gen_server).
