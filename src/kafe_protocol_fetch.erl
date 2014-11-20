@@ -63,7 +63,6 @@ partitions(
              [#{partition => Partition,
                 error_code => kafe_error:code(ErrorCode),
                 high_watermaker_offset => HighwaterMarkOffset,
-                %message => <<"...">>} | Acc]).
                 message => message(MessageSet)} | Acc]).
 
 message(<<>>) ->
