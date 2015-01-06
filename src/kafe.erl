@@ -77,21 +77,21 @@ start_link() ->
 % @end
 -spec metadata() -> {ok, metadata()}.
 metadata() ->
-  gen_server:call(?SERVER, {metadata, []}).
+  gen_server:call(?SERVER, {metadata, []}, infinity).
 
 % @doc
 % Return metadata for the given topics
 % @end
 -spec metadata(topics()) -> {ok, metadata()}.
 metadata(Topics) when is_list(Topics) ->
-  gen_server:call(?SERVER, {metadata, Topics}).
+  gen_server:call(?SERVER, {metadata, Topics}, infinity).
 
 % @doc
 % Get offet for the given topics and replicat
 % @end
 -spec offset(replicat(), topics()) -> {ok, [topic_partition_info()]}.
 offset(ReplicatID, Topics) ->
-  gen_server:call(?SERVER, {offset, ReplicatID, Topics}).
+  gen_server:call(?SERVER, {offset, ReplicatID, Topics}, infinity).
 
 % @equiv produce(Topic, Message, #{})
 -spec produce(topic_name(), message()) -> {ok, [topic_partition_info()]}.
@@ -103,7 +103,7 @@ produce(Topic, Message) ->
 % @end
 -spec produce(topic_name(), message(), produce_options()) -> {ok, [topic_partition_info()]}.
 produce(Topic, Message, Options) ->
-  gen_server:call(?SERVER, {produce, Topic, Message, Options}).
+  gen_server:call(?SERVER, {produce, Topic, Message, Options}, infinity).
 
 % @equiv fetch(ReplicatID, TopicName, #{})
 -spec fetch(replicat(), topic_name()) -> {ok, [message_set()]}.
@@ -117,7 +117,7 @@ fetch(ReplicatID, TopicName) ->
 % @end
 -spec fetch(replicat(), topic_name(), fetch_options()) -> {ok, [message_set()]}.
 fetch(ReplicatID, TopicName, Options) ->
-  gen_server:call(?SERVER, {fetch, ReplicatID, TopicName, Options}).
+  gen_server:call(?SERVER, {fetch, ReplicatID, TopicName, Options}, infinity).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
