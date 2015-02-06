@@ -26,7 +26,7 @@ doc:
 	@rm -rf doc
 	@./make_doc
 
-dev:
+dev: compile
 	@erl -pa ebin include deps/*/ebin deps/*/include -config config/kafe.config
 
 analyze: checkplt

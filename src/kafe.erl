@@ -1,6 +1,6 @@
 %% @doc
-%% @author Gregoire Lejeune <gl@finexkap.com>
-%% @copyright 2014 Finexkap
+%% @author Gregoire Lejeune (gl@finexkap.com)
+%% @copyright 2014-2015 Finexkap
 %%
 %% A Kafka client in pure Erlang
 %% @end
@@ -113,7 +113,7 @@ fetch(ReplicatID, TopicName) ->
 % @doc
 % Fetch messages
 %
-% > ReplicatID must *always* be -1
+% ReplicatID must *always* be -1
 % @end
 -spec fetch(replicat(), topic_name(), fetch_options()) -> {ok, [message_set()]}.
 fetch(ReplicatID, TopicName, Options) ->
@@ -125,14 +125,19 @@ fetch(ReplicatID, TopicName, Options) ->
 
 % @hidden
 init(_) ->
-  KafkaIP = case application:get_env(kafe, host) of
-              {ok, IP} -> IP;
-              _ -> ?DEFAULT_IP
-            end,
-  KafkaPort = case application:get_env(kafe, port) of
-                {ok, Port} -> Port;
-                _ -> ?DEFAULT_PORT
-              end,
+  KafkaBrokers = case application:get_env(kafe, brokers) of
+                   {ok, Brokers} -> Brokers;
+                   _ ->
+                     KafkaIP = case application:get_env(kafe, host) of
+                                 {ok, Host} -> Host;
+                                 _ -> ?DEFAULT_IP
+                               end,
+                     KafkaPort = case application:get_env(kafe, port) of
+                                   {ok, Port} -> Port;
+                                   _ -> ?DEFAULT_PORT
+                                 end,
+                     [{KafkaIP, KafkaPort}]
+                 end,
   ClientID = case application:get_env(kafe, client_id) of
                {ok, CID} -> eutils:to_binary(CID);
                _ -> ?DEFAULT_CLIENT_ID
@@ -149,10 +154,17 @@ init(_) ->
              {ok, Off} -> Off;
              _ -> ?DEFAULT_OFFSET
            end,
-  case gen_tcp:connect(KafkaIP, KafkaPort, [{mode, binary}, {active, once}]) of
-    {ok, Socket} ->
-      {ok, #{host => KafkaIP, 
-             port => KafkaPort, 
+  BrokersUpdateFreq = case application:get_env(kafe, brockers_update_frequency) of
+                        {ok, Frequency} -> Frequency;
+                        _ -> ?DEFAULT_BROCKER_UPDATE
+                      end,
+  case get_connection(KafkaBrokers) of
+    {Socket, {Host1, Port1}, Brokers1} ->
+      erlang:send_after(1000, self(), update_brokers),
+      {ok, #{host => Host1,
+             port => Port1,
+             brokers => Brokers1,
+             brockers_update_frequency => BrokersUpdateFreq,
              socket => Socket,
              api_version => ApiVersion,
              correlation_id => CorrelationID,
@@ -161,8 +173,9 @@ init(_) ->
              parts => <<>>,
              offset => Offset
             }};
-    {error, Reason} ->
-      {stop, Reason}
+    undefined ->
+      lager:error("No brocker available."),
+      {error, no_broker_available}
   end.
 
 % @hidden
@@ -222,8 +235,22 @@ handle_info(
       {stop, Reason, State}
   end;
 % @hidden
-handle_info({tcp_closed, _}, State) ->
-  {stop, abnormal, State};
+handle_info({tcp_closed, _}, #{brokers := Brokers} = State) ->
+  case get_connection(Brokers) of
+    undefined ->
+      {stop, no_broker_available, State};
+    {Socket, {Host, Port}, Brokers1} ->
+      {noreply, maps:merge(State, 
+                           #{host => Host,
+                             port => Port,
+                             brokers => Brokers1,
+                             socket => Socket})}
+  end;
+% @hidden
+handle_info(update_brokers, #{brockers_update_frequency := Frequency} = State) ->
+  lager:info("Update brokers list..."),
+  erlang:send_after(Frequency, self(), update_brokers),
+  {noreply, State};
 % @hidden
 handle_info(_Info, State) ->
   lager:info("--- handle_info ~p", [_Info]),
@@ -291,3 +318,18 @@ process_response(
       end
   end.
 
+% @hidden
+get_connection([]) -> undefined;
+get_connection([{Host, Port} | Rest] = Brokers) ->
+  try
+    case gen_tcp:connect(Host, Port, [{mode, binary}, {active, once}]) of
+      {ok, Socket} ->
+        lager:info("Start connection with brocker @ ~s:~p", [Host, Port]),
+        {Socket, {Host, Port}, Brokers};
+      {error, Reason} ->
+        get_connection(Rest)
+    end
+  catch
+    _:_ ->
+      get_connection(Rest)
+  end.
