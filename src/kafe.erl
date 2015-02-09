@@ -154,9 +154,9 @@ init(_) ->
              {ok, Off} -> Off;
              _ -> ?DEFAULT_OFFSET
            end,
-  BrokersUpdateFreq = case application:get_env(kafe, brockers_update_frequency) of
+  BrokersUpdateFreq = case application:get_env(kafe, brokers_update_frequency) of
                         {ok, Frequency} -> Frequency;
-                        _ -> ?DEFAULT_BROCKER_UPDATE
+                        _ -> ?DEFAULT_BROKER_UPDATE
                       end,
   case get_connection(KafkaBrokers) of
     {Socket, {Host1, Port1}, Brokers1} ->
@@ -164,7 +164,7 @@ init(_) ->
       {ok, #{host => Host1,
              port => Port1,
              brokers => Brokers1,
-             brockers_update_frequency => BrokersUpdateFreq,
+             brokers_update_frequency => BrokersUpdateFreq,
              socket => Socket,
              api_version => ApiVersion,
              correlation_id => CorrelationID,
@@ -174,7 +174,7 @@ init(_) ->
              offset => Offset
             }};
     undefined ->
-      lager:error("No brocker available."),
+      lager:error("No broker available."),
       {error, no_broker_available}
   end.
 
@@ -247,7 +247,7 @@ handle_info({tcp_closed, _}, #{brokers := Brokers} = State) ->
                              socket => Socket})}
   end;
 % @hidden
-handle_info(update_brokers, #{brockers_update_frequency := Frequency} = State) ->
+handle_info(update_brokers, #{brokers_update_frequency := Frequency} = State) ->
   lager:info("Update brokers list..."),
   erlang:send_after(Frequency, self(), update_brokers),
   {noreply, State};
@@ -324,7 +324,7 @@ get_connection([{Host, Port} | Rest] = Brokers) ->
   try
     case gen_tcp:connect(Host, Port, [{mode, binary}, {active, once}]) of
       {ok, Socket} ->
-        lager:info("Start connection with brocker @ ~s:~p", [Host, Port]),
+        lager:info("Start connection with broker @ ~s:~p", [Host, Port]),
         {Socket, {Host, Port}, Brokers};
       {error, Reason} ->
         get_connection(Rest)
