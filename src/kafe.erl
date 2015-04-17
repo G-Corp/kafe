@@ -72,50 +72,57 @@
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+% @spec metadata() -> {ok, metadata()}
 % @doc
 % Return kafka metadata
 % @end
--spec metadata() -> {ok, metadata()}.
+%
 metadata() ->
   gen_server:call(?SERVER, {metadata, []}, infinity).
 
+% @spec metadata(topics()) -> {ok, metadata()}
 % @doc
 % Return metadata for the given topics
 % @end
--spec metadata(topics()) -> {ok, metadata()}.
+%
 metadata(Topics) when is_list(Topics) ->
   gen_server:call(?SERVER, {metadata, Topics}, infinity).
 
+% @spec offset(replicat(), topics()) -> {ok, [topic_partition_info()]}
 % @doc
 % Get offet for the given topics and replicat
 % @end
--spec offset(replicat(), topics()) -> {ok, [topic_partition_info()]}.
+%
 offset(ReplicatID, Topics) ->
   gen_server:call(?SERVER, {offset, ReplicatID, Topics}, infinity).
 
+% @spec produce(topic_name(), message()) -> {ok, [topic_partition_info()]}
 % @equiv produce(Topic, Message, #{})
--spec produce(topic_name(), message()) -> {ok, [topic_partition_info()]}.
+%
 produce(Topic, Message) ->
   produce(Topic, Message, #{}).
 
+% @spec produce(topic_name(), message(), produce_options()) -> {ok, [topic_partition_info()]}
 % @doc
 % Send a message
 % @end
--spec produce(topic_name(), message(), produce_options()) -> {ok, [topic_partition_info()]}.
+%
 produce(Topic, Message, Options) ->
   gen_server:call(?SERVER, {produce, Topic, Message, Options}, infinity).
 
+% @spec fetch(replicat(), topic_name()) -> {ok, [message_set()]}
 % @equiv fetch(ReplicatID, TopicName, #{})
--spec fetch(replicat(), topic_name()) -> {ok, [message_set()]}.
+%
 fetch(ReplicatID, TopicName) ->
   fetch(ReplicatID, TopicName, #{}).
 
+% @spec fetch(replicat(), topic_name(), fetch_options()) -> {ok, [message_set()]}
 % @doc
 % Fetch messages
 %
 % ReplicatID must *always* be -1
 % @end
--spec fetch(replicat(), topic_name(), fetch_options()) -> {ok, [message_set()]}.
+%
 fetch(ReplicatID, TopicName, Options) ->
   gen_server:call(?SERVER, {fetch, ReplicatID, TopicName, Options}, infinity).
 
@@ -125,39 +132,18 @@ fetch(ReplicatID, TopicName, Options) ->
 
 % @hidden
 init(_) ->
-  KafkaBrokers = case application:get_env(kafe, brokers) of
-                   {ok, Brokers} -> Brokers;
-                   _ ->
-                     KafkaIP = case application:get_env(kafe, host) of
-                                 {ok, Host} -> Host;
-                                 _ -> ?DEFAULT_IP
-                               end,
-                     KafkaPort = case application:get_env(kafe, port) of
-                                   {ok, Port} -> Port;
-                                   _ -> ?DEFAULT_PORT
-                                 end,
-                     [{KafkaIP, KafkaPort}]
-                 end,
-  ClientID = case application:get_env(kafe, client_id) of
-               {ok, CID} -> eutils:to_binary(CID);
-               _ -> ?DEFAULT_CLIENT_ID
-             end,
-  CorrelationID = case application:get_env(kafe, correlation_id) of
-                    {ok, CorrID} -> CorrID;
-                    _ -> ?DEFAULT_CORRELATION_ID
-                  end,
-  ApiVersion = case application:get_env(kafe, api_version) of
-                 {ok, Version} -> Version;
-                 _ -> ?DEFAULT_API_VERSION
-               end,
-  Offset = case application:get_env(kafe, offset) of
-             {ok, Off} -> Off;
-             _ -> ?DEFAULT_OFFSET
-           end,
-  BrokersUpdateFreq = case application:get_env(kafe, brokers_update_frequency) of
-                        {ok, Frequency} -> Frequency;
-                        _ -> ?DEFAULT_BROKER_UPDATE
-                      end,
+  KafkaBrokers = application:get_env(kafe, brokers, 
+                                     [
+                                      {
+                                       application:get_env(kafe, host, ?DEFAULT_IP),
+                                       application:get_env(kafe, port, ?DEFAULT_PORT)
+                                      }
+                                     ]),
+  ClientID = application:get_env(kafe, client_id, ?DEFAULT_CLIENT_ID),
+  CorrelationID = application:get_env(kafe, correlation_id, ?DEFAULT_CORRELATION_ID),
+  ApiVersion = application:get_env(kafe, api_version, ?DEFAULT_API_VERSION),
+  Offset = application:get_env(kafe, offset, ?DEFAULT_OFFSET),
+  BrokersUpdateFreq = application:get_env(kafe, brokers_update_frequency, ?DEFAULT_BROKER_UPDATE),
   case get_connection(KafkaBrokers) of
     {Socket, {Host1, Port1}, Brokers1} ->
       erlang:send_after(1000, self(), update_brokers),

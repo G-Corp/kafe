@@ -7,44 +7,49 @@
 %% to do this with 'rebar doc'.
 %%
 main([]) ->
-    code:add_patha("ebin"),
-    code:add_patha("deps/edown/ebin"),
-    Default = "nexkap",
-    U = case os:getenv("TGT") of
-	    [] -> Default;
-	    false -> Default;
-	    Str   -> Str
-	end,
-    TopURL = top_url(U),
-    io:fwrite("Making edown docs for [~s]...~n", [TopURL]),
+  code:add_patha("ebin"),
+  code:add_patha("deps/edown/ebin"),
+  Default = "nexkap",
+  U = case os:getenv("TGT") of
+        [] -> Default;
+        false -> Default;
+        Str   -> Str
+      end,
+  TopURL = top_url(U),
+  io:fwrite("Making edown docs for [~s]...~n", [TopURL]),
+  try
     R = edoc:application(kafe, ".",
-			 [{doclet, edown_doclet},
-			  {source_path, ["src"]},
-			  {app_default,"http://www.erlang.org/doc/man"},
-			  {stylesheet, ""},  % don't copy stylesheet.css
-			  {image, ""},       % don't copy erlang.png
-        {edown_target, target()},
-			  {top_level_readme,
-			   {"./documentation.md", TopURL}}]),
+                         [{doclet, edown_doclet},
+                          {source_path, ["src"]},
+                          {app_default,"http://www.erlang.org/doc/man"},
+                          {stylesheet, ""},  % don't copy stylesheet.css
+                          {image, ""},       % don't copy erlang.png
+                          {edown_target, target()},
+                          {top_level_readme,
+                           {"./documentation.md", TopURL}}]),
     case R of
-	ok ->
-	    halt();
-	Err ->
-	    io:fwrite("~p~n", [Err]),
-	    halt(1)
-    end.
+      ok ->
+        halt();
+      Err ->
+        io:format("==> ~p~n", [Err]),
+        halt(1)
+    end
+  catch
+    Error:Reason ->
+      io:format("Error ~p : ~p~n", [Error, Reason])
+  end.
 
 top_url(User) ->
-    case os:getenv("EDOWN_TOP_URL") of
-        false ->
-            "http://github.com/" ++ User ++ "/kafe";
-        URL ->
-            URL
-    end.
+  case os:getenv("EDOWN_TOP_URL") of
+    false ->
+      "http://github.com/" ++ User ++ "/kafe";
+    URL ->
+      URL
+  end.
 
 target() ->
-    case os:getenv("EDOWN_TARGET") of
-        false -> github;
-        "github" -> github;
-        "stash"  -> stash
-    end.
+  case os:getenv("EDOWN_TARGET") of
+    false -> github;
+    "github" -> github;
+    "stash"  -> stash
+  end.
