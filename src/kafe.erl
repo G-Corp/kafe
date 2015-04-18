@@ -15,28 +15,29 @@
 -type replicat() :: integer().
 -type leader() :: integer().
 -type isr() :: integer().
--type partition() :: #{error_code => error_code(), id => id(), isr => [isr()], leader => leader(), replicas => [replicat()]}.
 -type topic_name() :: binary().
--type topic() :: #{error_code => error_code(), name => topic_name(), partitions => [partition()]}.
 -type host() :: binary().
--type broker() :: #{host => host(), id => id(), port => port()}.
--type metadata() :: #{brokers => [broker()], topics => [topic()]}.
 -type max_bytes() :: integer().
 -type fetch_offset() :: integer().
 -type partition_number() :: integer().
--type partition_def() :: {partition_number(), fetch_offset(), max_bytes()}.
--type topics() :: [topic_name()] | [{topic_name(), [partition_def()]}].
 -type offset() :: integer().
--type partition_info() :: #{error_code => error_code(), id => id(), offsets => [offset()]}.
--type topic_partition_info() :: #{name => topic_name(), partitions => [partition_info()]}.
 -type key() :: binary().
 -type value() :: binary().
--type message() :: value() | {key(), value()}.
--type produce_options() :: #{timeout => integer(), required_acks => integer(), partition => integer()}.
--type fetch_options() :: #{partition => integer(), offset => integer(), max_bytes => integer(), min_bytes => integer(), max_wait_time => integer()}.
 -type high_watermaker_offset() :: integer().
 -type attributes() :: integer().
 -type crc() :: integer().
+
+-type partition() :: #{error_code => error_code(), id => id(), isr => [isr()], leader => leader(), replicas => [replicat()]}.
+-type topic() :: #{error_code => error_code(), name => topic_name(), partitions => [partition()]}.
+-type broker() :: #{host => host(), id => id(), port => port()}.
+-type metadata() :: #{brokers => [broker()], topics => [topic()]}.
+-type partition_def() :: {partition_number(), fetch_offset(), max_bytes()}.
+-type topics() :: [topic_name()] | [{topic_name(), [partition_def()]}].
+-type partition_info() :: #{error_code => error_code(), id => id(), offsets => [offset()]}.
+-type topic_partition_info() :: #{name => topic_name(), partitions => [partition_info()]}.
+-type message() :: value() | {key(), value()}.
+-type produce_options() :: #{timeout => integer(), required_acks => integer(), partition => integer()}.
+-type fetch_options() :: #{partition => integer(), offset => integer(), max_bytes => integer(), min_bytes => integer(), max_wait_time => integer()}.
 -type message_data() :: #{offset => offset(), crc => crc(), attributes => attributes(), key => key(), value => value()}.
 -type partition_message() :: #{partition => partition_number(), error_code => error_code(), high_watermaker_offset => high_watermaker_offset(), message => [message_data()]}.
 -type message_set() :: #{name => topic_name(), partitions => [partition_message()]}.
@@ -72,57 +73,52 @@
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-% @spec metadata() -> {ok, metadata()}
 % @doc
 % Return kafka metadata
-% @end
 %
+% [protocol](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest)
+% @end
+-spec metadata() -> {ok, metadata()}.
 metadata() ->
   gen_server:call(?SERVER, {metadata, []}, infinity).
 
-% @spec metadata(topics()) -> {ok, metadata()}
 % @doc
 % Return metadata for the given topics
 % @end
-%
+-spec metadata(topics()) -> {ok, metadata()}.
 metadata(Topics) when is_list(Topics) ->
   gen_server:call(?SERVER, {metadata, Topics}, infinity).
 
-% @spec offset(replicat(), topics()) -> {ok, [topic_partition_info()]}
 % @doc
 % Get offet for the given topics and replicat
 % @end
-%
+-spec offset(replicat(), topics()) -> {ok, [topic_partition_info()]}.
 offset(ReplicatID, Topics) ->
   gen_server:call(?SERVER, {offset, ReplicatID, Topics}, infinity).
 
-% @spec produce(topic_name(), message()) -> {ok, [topic_partition_info()]}
 % @equiv produce(Topic, Message, #{})
-%
+-spec produce(topic_name(), message()) -> {ok, [topic_partition_info()]}.
 produce(Topic, Message) ->
   produce(Topic, Message, #{}).
 
-% @spec produce(topic_name(), message(), produce_options()) -> {ok, [topic_partition_info()]}
 % @doc
 % Send a message
 % @end
-%
+-spec produce(topic_name(), message(), produce_options()) -> {ok, [topic_partition_info()]}.
 produce(Topic, Message, Options) ->
   gen_server:call(?SERVER, {produce, Topic, Message, Options}, infinity).
 
-% @spec fetch(replicat(), topic_name()) -> {ok, [message_set()]}
 % @equiv fetch(ReplicatID, TopicName, #{})
-%
+-spec fetch(replicat(), topic_name()) -> {ok, [message_set()]}.
 fetch(ReplicatID, TopicName) ->
   fetch(ReplicatID, TopicName, #{}).
 
-% @spec fetch(replicat(), topic_name(), fetch_options()) -> {ok, [message_set()]}
 % @doc
 % Fetch messages
 %
 % ReplicatID must *always* be -1
 % @end
-%
+-spec fetch(replicat(), topic_name(), fetch_options()) -> {ok, [message_set()]}.
 fetch(ReplicatID, TopicName, Options) ->
   gen_server:call(?SERVER, {fetch, ReplicatID, TopicName, Options}, infinity).
 
