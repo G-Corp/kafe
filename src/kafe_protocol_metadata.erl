@@ -99,7 +99,3 @@ replicas(0, Remainder, Acc) ->
 replicas(N, <<Replica:32/signed, Remainder/binary>>, Acc) ->
   replicas(N-1, Remainder, [Replica | Acc]).
 
-
-
-
-

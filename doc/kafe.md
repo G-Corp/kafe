@@ -44,6 +44,42 @@ broker() = #{host =&gt; <a href="#type-host">host()</a>, id =&gt; <a href="#type
 
 
 
+### <a name="type-consumer_group">consumer_group()</a> ###
+
+
+
+<pre><code>
+consumer_group() = binary()
+</code></pre>
+
+
+
+
+
+### <a name="type-consumer_metadata">consumer_metadata()</a> ###
+
+
+
+<pre><code>
+consumer_metadata() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, coordinator_id =&gt; <a href="#type-coordinator_id">coordinator_id()</a>, coordinator_host =&gt; <a href="#type-host">host()</a>, coordinator_port =&gt; port()}
+</code></pre>
+
+
+
+
+
+### <a name="type-coordinator_id">coordinator_id()</a> ###
+
+
+
+<pre><code>
+coordinator_id() = integer()
+</code></pre>
+
+
+
+
+
 ### <a name="type-crc">crc()</a> ###
 
 
@@ -61,7 +97,7 @@ crc() = integer()
 
 
 <pre><code>
-error_code() = atom()
+error_code() = integer()
 </code></pre>
 
 
@@ -382,7 +418,8 @@ value() = binary()
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_broker-2">add_broker/2</a></td><td></td></tr><tr><td valign="top"><a href="#consumer_metadata-1">consumer_metadata/1</a></td><td>
+Consumer Metadata Request.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
 Fetch messages.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td> 
 Return kafka metadata.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td>
 Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td>
@@ -394,6 +431,29 @@ Send a message.</td></tr></table>
 
 ## Function Details ##
 
+<a name="add_broker-2"></a>
+
+### add_broker/2 ###
+
+
+<pre><code>
+add_broker(Host::<a href="#type-host">host()</a>, Port::port()) -&gt; ok
+</code></pre>
+<br />
+
+
+<a name="consumer_metadata-1"></a>
+
+### consumer_metadata/1 ###
+
+
+<pre><code>
+consumer_metadata(ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>) -&gt; {ok, <a href="#type-consumer_metadata">consumer_metadata()</a>}
+</code></pre>
+<br />
+
+
+Consumer Metadata Request
 <a name="fetch-2"></a>
 
 ### fetch/2 ###
