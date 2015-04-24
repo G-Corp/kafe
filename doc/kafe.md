@@ -529,7 +529,7 @@ Fetch messages
 
 Options:
 
-* `partition :: integer()` : The id of the partition the fetch is for (default : 0).
+* `partition :: integer()` : The id of the partition the fetch is for (default : partition with the highiest offset).
 
 * `offset :: integer()` : The offset to begin this fetch from (default : last offset for the partition)
 

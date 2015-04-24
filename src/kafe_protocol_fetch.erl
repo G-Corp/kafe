@@ -10,16 +10,33 @@
         ]).
 
 run(ReplicaID, TopicName, Options) ->
-  todo.
-%  gen_server:call(kafe:broker(TopicName, Partition),
-%                  {call, 
-%                   fun ?MODULE:request/2, [ReplicaID, TopicName, Options],
-%                   fun ?MODULE:response/1},
-%                  infinity).
+  {Partition, Offset} = case {maps:get(partition, Options, undefined),
+                              maps:get(offset, Options, undefined)} of
+                          {undefined, undefined} ->
+                            kafe:max_offset(TopicName);
+                          {Partition1, undefined} ->
+                            kafe:max_offset(TopicName, Partition1);
+                          {undefined, Offset1} ->
+                            kafe:partition_for_offset(TopicName, Offset1);
+                          R -> R
+                        end,
+  Offset2 = if
+              Offset > 0 -> Offset - 1;
+              true -> Offset
+            end,
+  Options1 = maps:put(partition, Partition, 
+                      maps:put(offset, Offset2, Options)),
+  Broker = kafe:broker(TopicName, Partition),
+  lager:debug("Fetch ~p (partition #~p, offset ~p) on ~p", [TopicName, Partition, Offset, Broker]),
+  gen_server:call(Broker,
+                  {call, 
+                   fun ?MODULE:request/4, [ReplicaID, TopicName, Options1],
+                   fun ?MODULE:response/1},
+                  infinity).
 
-request(ReplicaID, TopicName, Options, #{offset := LastOffset} = State) ->
+request(ReplicaID, TopicName, Options, State) ->
   Partition = maps:get(partition, Options, ?DEFAULT_FETCH_PARTITION),
-  Offset = maps:get(offset, Options, LastOffset),
+  Offset = maps:get(offset, Options),
   MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
   MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
   MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
@@ -34,7 +51,7 @@ request(ReplicaID, TopicName, Options, #{offset := LastOffset} = State) ->
       Partition:32/signed,
       Offset:64/signed,
       MaxBytes:32/signed>>,
-    maps:update(offset, Offset + 1, State)).
+    State).
 
 response(<<NumberOfTopics:32/signed, Remainder/binary>>) ->
   {ok, response(NumberOfTopics, Remainder)}.

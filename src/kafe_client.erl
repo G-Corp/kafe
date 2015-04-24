@@ -36,7 +36,6 @@ init({Addr, Port}) ->
       ApiVersion = application:get_env(kafe, api_version, ?DEFAULT_API_VERSION),
       CorrelationID = application:get_env(kafe, correlation_id, ?DEFAULT_CORRELATION_ID),
       ClientID = application:get_env(kafe, client_id, ?DEFAULT_CLIENT_ID),
-      Offset = application:get_env(kafe, offset, ?DEFAULT_OFFSET),
       {ok, #{
          ip => Addr,
          port => Port,
@@ -44,7 +43,6 @@ init({Addr, Port}) ->
          api_version => ApiVersion,
          correlation_id => CorrelationID,
          client_id => ClientID,
-         offset => Offset,
          requests => orddict:new(),
          parts => <<>>
         }};

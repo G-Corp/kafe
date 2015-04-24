@@ -25,7 +25,9 @@
          first_broker/0,
          broker/2,
          topics/0,
-         state/0
+         max_offset/1,
+         max_offset/2,
+         partition_for_offset/2
         ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -81,15 +83,54 @@ first_broker() ->
 
 % @hidden
 broker(Topic, Partition) ->
-  gen_server:call(?SERVER, {broker, Topic, Partition}, infinity).
+  case gen_server:call(?SERVER, {broker, Topic, Partition}, infinity) of
+    undefined -> first_broker();
+    Broker -> Broker
+  end.
 
 % @hidden
 topics() ->
   gen_server:call(?SERVER, topics, infinity).
 
 % @hidden
-state() ->
-  gen_server:call(?SERVER, state, infinity).
+max_offset(TopicName) ->
+  case offset([TopicName]) of
+    {ok, [#{partitions := Partitions}]} ->
+      lists:foldl(fun(#{id := P, offsets := [O|_]}, {_, Offset} = Acc) ->
+                      if
+                        O > Offset -> {P, O};
+                        true -> Acc
+                      end
+                  end, {?DEFAULT_OFFSET_PARTITION, 0}, Partitions);
+    {ok, _} ->
+      {?DEFAULT_OFFSET_PARTITION, 0}
+  end.
+
+% @hidden
+max_offset(TopicName, Partition) ->
+  case offset([{TopicName, [{Partition, ?DEFAULT_OFFSET_TIME, ?DEFAULT_OFFSET_MAX_SIZE}]}]) of
+    {ok, 
+     [#{partitions := [#{id := Partition, 
+                         offsets := [Offset|_]}]}]
+    } ->
+      {Partition, Offset};
+    {ok, _} ->
+      {Partition, 0}
+  end.
+
+% @hidden
+partition_for_offset(TopicName, Offset) ->
+  case offset([TopicName]) of
+    {ok, [#{partitions := Partitions}]} ->
+      lists:foldl(fun(#{id := P, offsets := [O|_]}, {_, Offset1} = Acc) ->
+                      if
+                        O >= Offset1 -> {P, Offset1};
+                        true -> Acc
+                      end
+                  end, {0, Offset}, Partitions);
+    {ok, _} ->
+      {?DEFAULT_OFFSET_PARTITION, Offset}
+  end.
 
 % @equiv metadata([])
 metadata() ->
@@ -112,7 +153,7 @@ metadata(Topics) when is_list(Topics) ->
   kafe_protocol_metadata:run(Topics).
 
 % @equiv offset(-1, Topics)
-offset(Topics) ->
+offset(Topics) when is_list(Topics)->
   offset(-1, Topics).
 
 % @doc
@@ -126,7 +167,7 @@ offset(Topics) ->
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetRequest">Kafka protocol documentation</a>.
 % @end
 -spec offset(replicat(), topics()) -> {ok, [topic_partition_info()]}.
-offset(ReplicatID, Topics) ->
+offset(ReplicatID, Topics) when is_integer(ReplicatID), is_list(Topics) ->
   kafe_protocol_offset:run(ReplicatID, Topics).
 
 % @equiv produce(Topic, Message, #{})
@@ -180,7 +221,7 @@ fetch(TopicName, Options) when is_binary(TopicName), is_map(Options) ->
 %
 % Options:
 % <ul>
-% <li><tt>partition :: integer()</tt> : The id of the partition the fetch is for (default : 0).</li>
+% <li><tt>partition :: integer()</tt> : The id of the partition the fetch is for (default : partition with the highiest offset).</li>
 % <li><tt>offset :: integer()</tt> : The offset to begin this fetch from (default : last offset for the partition)</li>
 % <li><tt>max_bytes :: integer()</tt> : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 % 1)/</li>

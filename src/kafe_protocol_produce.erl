@@ -13,7 +13,7 @@ run(Topic, Message, Options) ->
   Partition = maps:get(partition, Options, ?DEFAULT_PRODUCE_PARTITION),
   gen_server:call(kafe:broker(Topic, Partition),
                   {call, 
-                   fun ?MODULE:request/2, [Topic, Message, Options],
+                   fun ?MODULE:request/4, [Topic, Message, Options],
                    fun ?MODULE:response/1},
                   infinity).
 
