@@ -4,13 +4,17 @@
 -include("../include/kafe.hrl").
 
 -export([
-         request/1,
+         run/1,
          request/2,
          response/1
         ]).
 
-request(State) ->
-    request([], State).
+run(Topics) ->
+  gen_server:call(kafe:first_broker(),
+                  {call, 
+                   fun ?MODULE:request/2, [Topics],
+                   fun ?MODULE:response/1},
+                  infinity).
 
 request(TopicNames, State) ->
   kafe_protocol:request(

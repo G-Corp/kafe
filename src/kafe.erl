@@ -1,15 +1,35 @@
-%% @doc
-%% @author Gregoire Lejeune (gl@finexkap.com)
-%% @copyright 2014-2015 Finexkap
-%%
-%% A Kafka client in pure Erlang
-%% @end
 -module(kafe).
 -behaviour(gen_server).
 
 -include("../include/kafe.hrl").
 -include_lib("kernel/include/inet.hrl").
 -define(SERVER, ?MODULE).
+
+-export([
+         metadata/0,
+         metadata/1,
+         offset/1,
+         offset/2,
+         produce/2,
+         produce/3,
+         fetch/1,
+         fetch/2,
+         fetch/3,
+         consumer_metadata/1,
+         offset_fetch/3,
+         offset_commit/6
+        ]).
+
+-export([
+         start_link/0,
+         first_broker/0,
+         broker/2,
+         topics/0,
+         state/0
+        ]).
+
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+         terminate/2, code_change/3]).
 
 -type error_code() :: atom().
 -type id() :: integer().
@@ -51,108 +71,150 @@
 -type partition_offset_def() :: #{partition => partition_number(), offset => offset(), metadata_info => metadata_info(), error_code => error_code()}.
 -type offset_set() :: #{name => topic_name(), partitions_offset => [partition_offset_def()]}.
 
-%% ------------------------------------------------------------------
-%% API Function Exports
-%% ------------------------------------------------------------------
-
--export([start_link/0]).
-
--export([
-         add_broker/2,
-         brockers/0,
-         metadata/0,
-         metadata/1,
-         offset/2,
-         produce/2,
-         produce/3,
-         fetch/2,
-         fetch/3,
-         consumer_metadata/1,
-         offset_fetch/3
-        ]).
-
-%% ------------------------------------------------------------------
-%% gen_server Function Exports
-%% ------------------------------------------------------------------
-
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
-
-%% ------------------------------------------------------------------
-%% API Function Definitions
-%% ------------------------------------------------------------------
-
 % @hidden
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-% @doc
-% @end
--spec add_broker(host(), port()) -> ok.
-add_broker(Host, Port) ->
-  gen_server:call(?SERVER, {add_broker, Host, Port}, infinity).
+% @hidden
+first_broker() ->
+  gen_server:call(?SERVER, first_broker, infinity).
 
-% @doc
-% @end
--spec brockers() -> {ok, [string()]}.
-brockers() ->
-  gen_server:call(?SERVER, brokers, infinity).
+% @hidden
+broker(Topic, Partition) ->
+  gen_server:call(?SERVER, {broker, Topic, Partition}, infinity).
 
-% @doc
-% Return kafka metadata
-%
-% [protocol](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest)
-% @end
--spec metadata() -> {ok, metadata()}.
+% @hidden
+topics() ->
+  gen_server:call(?SERVER, topics, infinity).
+
+% @hidden
+state() ->
+  gen_server:call(?SERVER, state, infinity).
+
+% @equiv metadata([])
 metadata() ->
-  gen_server:call(?SERVER, {metadata, []}, infinity).
+  metadata([]).
 
 % @doc
 % Return metadata for the given topics
+%
+% Example:
+% <pre>
+% Metadata = kafe:metadata([&lt;&lt;"topic1"&gt;&gt;, &lt;&lt;"topic2"&gt;&gt;]).
+% </pre>
+%
+% This example return all metadata for <tt>topic1</tt> and <tt>topic2</tt>
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest">Kafka protocol documentation</a>.
 % @end
--spec metadata(topics()) -> {ok, metadata()}.
+-spec metadata([topic_name()]) -> {ok, metadata()}.
 metadata(Topics) when is_list(Topics) ->
-  gen_server:call(?SERVER, {metadata, Topics}, infinity).
+  kafe_protocol_metadata:run(Topics).
+
+% @equiv offset(-1, Topics)
+offset(Topics) ->
+  offset(-1, Topics).
 
 % @doc
 % Get offet for the given topics and replicat
+%
+% Example:
+% <pre>
+% Offset = kafe:offet(-1, [&lt;&lt;"topic1"&gt;&gt;, {&lt;&lt;"topic2"&gt;&gt;, [{0, -1, 1}, {2, -1, 1}]}]).
+% </pre>
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetRequest">Kafka protocol documentation</a>.
 % @end
 -spec offset(replicat(), topics()) -> {ok, [topic_partition_info()]}.
 offset(ReplicatID, Topics) ->
-  gen_server:call(?SERVER, {offset, ReplicatID, Topics}, infinity).
+  kafe_protocol_offset:run(ReplicatID, Topics).
 
 % @equiv produce(Topic, Message, #{})
--spec produce(topic_name(), message()) -> {ok, [topic_partition_info()]}.
 produce(Topic, Message) ->
   produce(Topic, Message, #{}).
 
 % @doc
 % Send a message
+%
+% Options:
+% <ul>
+% <li><tt>timeout :: integer()</tt> : This provides a maximum time in milliseconds the server can await the receipt of the number of acknowledgements in
+% RequiredAcks. The timeout is not an exact limit on the request time for a few reasons: (1) it does not include network latency, (2) the timer begins at the
+% beginning of the processing of this request so if many requests are queued due to server overload that wait time will not be included, (3) we will not
+% terminate a local write so if the local write time exceeds this timeout it will not be respected. To get a hard timeout of this type the client should use the
+% socket timeout. (default: 5000)</li>
+% <li><tt>required_acks :: integer()</tt> : This field indicates how many acknowledgements the servers should receive before responding to the request. If it is
+% 0 the server will not send any response (this is the only case where the server will not reply to a request). If it is 1, the server will wait the data is
+% written to the local log before sending a response. If it is -1 the server will block until the message is committed by all in sync replicas before sending a
+% response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server will never wait for more
+% acknowledgements than there are in-sync replicas). (default: 0)</li>
+% <li><tt>partition :: integer()</tt> : The partition that data is being published to. (default: 0)</li>
+% </ul>
+%
+% Example:
+% <pre>
+% Response = kafe:product(&lt;&lt;"topic"&gt;&gt;, &lt;&lt;"a simple message"&gt;&gt;, #{timeout =&gt; 1000, partition =&gt; 0}).
+% Response1 = kafe:product(&lt;&lt;"topic"&gt;&gt;, {&lt;&lt;"key"&gt;&gt;, &lt;&lt;"Another simple message"&gt;&gt;}).
+% </pre>
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI">Kafka protocol documentation</a>.
 % @end
 -spec produce(topic_name(), message(), produce_options()) -> {ok, [topic_partition_info()]}.
 produce(Topic, Message, Options) ->
-  gen_server:call(?SERVER, {produce, Topic, Message, Options}, infinity).
+  kafe_protocol_produce:run(Topic, Message, Options).
+
+% @equiv fetch(-1, TopicName, #{})
+fetch(TopicName) when is_binary(TopicName) ->
+  fetch(-1, TopicName, #{}).
 
 % @equiv fetch(ReplicatID, TopicName, #{})
--spec fetch(replicat(), topic_name()) -> {ok, [message_set()]}.
-fetch(ReplicatID, TopicName) ->
-  fetch(ReplicatID, TopicName, #{}).
+fetch(ReplicatID, TopicName) when is_integer(ReplicatID), is_binary(TopicName) ->
+  fetch(ReplicatID, TopicName, #{});
+% @equiv fetch(-1, TopicName, Options)
+fetch(TopicName, Options) when is_binary(TopicName), is_map(Options) ->
+  fetch(-1, TopicName, Options).
+
 
 % @doc
 % Fetch messages
 %
-% ReplicatID must *always* be -1
+% Options:
+% <ul>
+% <li><tt>partition :: integer()</tt> : The id of the partition the fetch is for (default : 0).</li>
+% <li><tt>offset :: integer()</tt> : The offset to begin this fetch from (default : last offset for the partition)</li>
+% <li><tt>max_bytes :: integer()</tt> : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
+% 1)/</li>
+% <li><tt>min_bytes :: integer()</tt> : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0
+% the server will always respond immediately, however if there is no new data since their last request they will just get back empty message sets. If this is
+% set to 1, the server will respond as soon as at least one partition has at least 1 byte of data or the specified timeout occurs. By setting higher values in
+% combination with the timeout the consumer can tune for throughput and trade a little additional latency for reading only large chunks of data (e.g. setting
+% MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait up to 100ms to try to accumulate 64k of data before responding) (default :
+% 1024*1024).</li>
+% <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
+% at the time the request is issued (default : 1).</li>
+% </ul>
+%
+% ReplicatID must <b>always</b> be -1.
+%
+% Example:
+% <pre>
+% Response = kafe:fetch(&lt;&lt;"topic"&gt;&gt;)
+% Response1 = kafe:fetch(&lt;&lt;"topic"&gt;&gt;, #{offset =&gt; 2, partition =&gt; 3}).
+% </pre>
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI">Kafka protocol documentation</a>.
 % @end
 -spec fetch(replicat(), topic_name(), fetch_options()) -> {ok, [message_set()]}.
-fetch(ReplicatID, TopicName, Options) ->
-  gen_server:call(?SERVER, {fetch, ReplicatID, TopicName, Options}, infinity).
+fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), is_binary(TopicName), is_map(Options) ->
+  kafe_protocol_fetch:run(ReplicatID, TopicName, Options).
 
 % @doc
 % Consumer Metadata Request
 % @end
 -spec consumer_metadata(consumer_group()) -> {ok, consumer_metadata()}.
 consumer_metadata(ConsumerGroup) ->
-  gen_server:call(?SERVER, {consumer_metadata, ConsumerGroup}, infinity).
+  % gen_server:call(?SERVER, {consumer_metadata, ConsumerGroup}, infinity).
+  todo.
 
 % @doc
 % Offset commit
@@ -165,11 +227,10 @@ offset_commit(Brocker, ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Ret
 % @end
 -spec offset_fetch(coordinator(), consumer_group(), offset_fetch_options()) -> {ok, [offset_set()]}.
 offset_fetch(Coordinator, ConsumerGroup, Options) ->
-  gen_server:call(?SERVER, {offset_fetch, Coordinator, ConsumerGroup, Options}, infinity).
+  % gen_server:call(?SERVER, {offset_fetch, Coordinator, ConsumerGroup, Options}, infinity).
+  todo.
 
-%% ------------------------------------------------------------------
-%% gen_server Function Definitions
-%% ------------------------------------------------------------------
+% Private
 
 % @hidden
 init(_) ->
@@ -180,70 +241,41 @@ init(_) ->
                                        application:get_env(kafe, port, ?DEFAULT_PORT)
                                       }
                                      ]),
-  ClientID = application:get_env(kafe, client_id, ?DEFAULT_CLIENT_ID),
-  CorrelationID = application:get_env(kafe, correlation_id, ?DEFAULT_CORRELATION_ID),
   ApiVersion = application:get_env(kafe, api_version, ?DEFAULT_API_VERSION),
+  CorrelationID = application:get_env(kafe, correlation_id, ?DEFAULT_CORRELATION_ID),
+  ClientID = application:get_env(kafe, client_id, ?DEFAULT_CLIENT_ID),
   Offset = application:get_env(kafe, offset, ?DEFAULT_OFFSET),
   BrokersUpdateFreq = application:get_env(kafe, brokers_update_frequency, ?DEFAULT_BROKER_UPDATE),
-  State = #{brockers_list => [],
-            brokers => #{},
+  State = #{brokers => #{},
+            brokers_list => [],
+            topics => #{},
             brokers_update_frequency => BrokersUpdateFreq,
-            kafka_brokers => KafkaBrokers,
             api_version => ApiVersion,
             correlation_id => CorrelationID,
             client_id => ClientID,
-            requests => orddict:new(),
-            parts => <<>>,
             offset => Offset
            },
-  State1 = get_connection(State),
-  lager:debug("Init state = ~p", [State1]),
-  {ok, State1}.
+  {ok, initialize(KafkaBrokers, State)}.
 
 % @hidden
-handle_call(brokers, _From, #{brockers_list := Brokers} = State) ->
-  {reply, {ok, Brokers}, State};
-% @hidden
-handle_call({add_broker, Host, Port}, _From, State) ->
-  {reply, ok, get_connection([{Host, Port}], State)};
-% @hidden
-handle_call({metadata, Topics}, From, State) ->
-  send_request(kafe_protocol_metadata:request(Topics, State), 
-               From, 
-               fun kafe_protocol_metadata:response/1, 
-               State);
-% @hidden
-handle_call({offset, ReplicatID, Topics}, From, State) ->
-  send_request(kafe_protocol_offset:request(ReplicatID, Topics, State),
-               From,
-               fun kafe_protocol_offset:response/1,
-               State);
-% @hidden
-handle_call({produce, Topic, Message, Options}, From, State) ->
-  send_request(kafe_protocol_produce:request(Topic, Message, Options, State),
-               From,
-               fun kafe_protocol_produce:response/1,
-               State);
-% @hidden
-handle_call({fetch, ReplicatID, TopicName, Options}, From, State) ->
-  send_request(kafe_protocol_fetch:request(ReplicatID, TopicName, Options, State),
-               From,
-               fun kafe_protocol_fetch:response/1,
-               State);
-% @hidden
-handle_call({consumer_metadata, ConsumerGroup}, From, State) ->
-  send_request(kafe_protocol_consumer_metadata:request(ConsumerGroup, State),
-               From,
-               fun kafe_protocol_consumer_metadata:response/1,
-               State);
-% @hidden
-handle_call({offset_fetch, Coordinator, ConsumerGroup, Options}, From, State) ->
-  send_request(kafe_protocol_consumer_offset_fetch:request(ConsumerGroup, Options, State),
-               From,
-               fun kafe_protocol_consumer_offset_fetch:response/1,
-               State,
-               Coordinator);
-% @hidden
+handle_call(first_broker, _From, State) ->
+  {reply, get_first_broker(State), State};
+handle_call({broker, Topic, Partition}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
+  case maps:get(Topic, Topics, undefined) of
+    undefined ->
+      {reply, undefined, State};
+    Brokers ->
+      case maps:get(Partition, Brokers, undefined) of
+        undefined ->
+          {reply, undefined, State};
+        Broker ->
+          {reply, maps:get(Broker, BrokersAddr, undefined), State}
+      end
+  end;
+handle_call(topics, _From, #{topics := Topics} = State) ->
+  {reply, Topics, State};
+handle_call(state, _From, State) ->
+  {reply, State, State};
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
@@ -252,130 +284,32 @@ handle_cast(_Msg, State) ->
   {noreply, State}.
 
 % @hidden
-handle_info(
-  {tcp, _, <<Size:32/signed, Remainder/binary>> = Packet},
-  #{parts := <<>>} = State
- ) when Size == byte_size(Remainder) ->
-  process_response(Packet, State);
-% @hidden
-handle_info(
-  {tcp, _, Part}, 
-  #{parts := <<Size:32/signed, _/binary>> = Parts} = State
- ) when byte_size(<<Parts/binary, Part/binary>>) >= Size -> 
-  <<Size:32/signed, Packet:Size/bytes, Remainder/binary>> = <<Parts/binary, Part/binary>>,
-  process_response(<<Size:32, Packet/binary>>, maps:update(parts, Remainder, State));
-% @hidden
-handle_info(
-  {tcp, Socket, Part}, 
-  #{parts := Parts} = State
- ) ->
-  case inet:setopts(Socket, [{active, once}]) of
-    ok ->
-      {noreply, maps:update(parts, <<Parts/binary, Part/binary>>, State)};
-    {error, _} = Reason ->
-      {stop, Reason, State}
-  end;
-% @hidden
-handle_info({tcp_closed, Socket}, State) ->
-  lager:info("Connections close ~p ...", [Socket]),
-  {noreply, get_connection(State)};
-% @hidden
-handle_info(update_brokers, #{brokers_update_frequency := Frequency} = State) ->
-  lager:info("Update brokers list..."),
-  erlang:send_after(Frequency, self(), update_brokers),
-  {noreply, State};
-% @hidden
-handle_info(Info, State) ->
-  lager:info("Invalid message : ~p", [Info]),
-  lager:info("--- State ~p", [State]),
+handle_info(_Info, State) ->
   {noreply, State}.
 
 % @hidden
-terminate(_Reason, #{brockers_list := BrokersList, brokers := BrokersInfo}) ->
-  lager:debug("Terminate !!!"),
-  _ = lists:foreach(fun(Broker) ->
-                        case maps:get(Broker, BrokersInfo, undefined) of
-                          #{socket := Socket} ->
-                            gen_tcp:close(Socket);
-                          _ -> pass
-                        end
-                    end, BrokersList),
+terminate(_Reason, _State) ->
   ok.
 
 % @hidden
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
-%% ------------------------------------------------------------------
-%% Internal Function Definitions
-%% ------------------------------------------------------------------
-
 % @hidden
-send_request(Request, From, Handler, State) ->
-  send_request(Request, From, Handler, State, undefined).
-
-% @hidden
-send_request(#{packet := Packet, state := State2}, 
-             From, 
-             Handler, 
-             #{correlation_id := CorrelationId, 
-               requests := Requests, 
-               brockers_list := BrokersList,
-               brokers := BrokersInfo} = State1,
-            Coordinator) ->
-  lager:debug("Coordinator = ~p", [Coordinator]),
-  case get_socket(BrokersList, BrokersInfo, broker_name(Coordinator)) of
-    error ->
-      {stop, abnormal, no_available_socket, State1};
-    Socket ->
-      case gen_tcp:send(Socket, Packet) of
-        ok ->
-          case inet:setopts(Socket, [{active, once}]) of
-            ok ->
-              {noreply, 
-               maps:update(
-                 requests, 
-                 orddict:store(CorrelationId, 
-                               #{from => From, handler => Handler, socket => Socket}, 
-                               Requests), 
-                 State2)};
-            {error, _} = Error ->
-              {stop, abnormal, Error, State1}
-          end;
-        {error, _} = Error ->
-          {stop, abnormal, Error, State1}
-      end
-  end.
-
-% @hidden
-process_response(
-  <<Size:32/signed, Packet:Size/bytes>>,
-  #{requests := Requests} = State
- ) ->
-  <<CorrelationId:32/signed, Remainder/bytes>> = Packet,
-  case orddict:find(CorrelationId, Requests) of
-    {ok, #{from := From, handler := ResponseHandler, socket := Socket}} ->
-      _ = gen_server:reply(From, ResponseHandler(Remainder)),
-      case inet:setopts(Socket, [{active, once}]) of
-        ok ->
-          {noreply, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};
-        {error, _} = Reason ->
-          {stop, Reason, State}
-      end;
-    error ->
-      {noreply, State} %;
-  end.
-
-% @hidden
-get_connection(#{kafka_brokers := KafkaBrokers} = State) ->
-  get_connection(KafkaBrokers, State).
+initialize(KafkaBrokers, State) ->
+  State1 = get_connection(KafkaBrokers, State),
+  {ok, Metadata} =  gen_server:call(get_first_broker(State1),
+                                    {call, 
+                                     fun kafe_protocol_metadata:request/2, [[]],
+                                     fun kafe_protocol_metadata:response/1},
+                                    infinity),
+  update_state_with_metadata(Metadata, State1).
 
 % @hidden
 get_connection([], State) -> 
   State;
-get_connection([{Host, Port}|KafkaBrokers], #{brockers_list := BrokersList,
-                                              brokers := BrokersInfo} = State) ->
-  lager:debug("Get connection for ~p:~p", [Host, Port]),
+get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList, brokers := Brokers} = State) ->
+  lager:debug("Get connection for ~s:~p", [Host, Port]),
   try
     case inet:gethostbyname(Host) of
       {ok, #hostent{h_name = Hostname, 
@@ -384,59 +318,57 @@ get_connection([{Host, Port}|KafkaBrokers], #{brockers_list := BrokersList,
         case get_host(AddrsList, Hostname, AddrType) of
           undefined ->
             lager:debug("Can't retrieve host for ~p:~p", [Host, Port]),
-            get_connection(KafkaBrokers, State);
+            get_connection(Rest, State);
           {BrokerAddr, BrokerHostList} ->
             case lists:foldl(fun(E, Acc) ->
-                                 BrockerFullName = broker_name(E, Port),
-                                 case elists:include(BrokersList, BrockerFullName) of
+                                 BrokerFullName = kafe_utils:broker_name(E, Port),
+                                 case elists:include(BrokersList, BrokerFullName) of
                                    true -> Acc;
-                                   _ -> [BrockerFullName|Acc]
+                                   _ -> [BrokerFullName|Acc]
                                  end
                              end, [], BrokerHostList) of
               [] ->
                 lager:debug("All host already registered for ~p:~p", [enet:ip_to_str(BrokerAddr), Port]),
-                get_connection(KafkaBrokers, State);
+                get_connection(Rest, State);
               BrokerHostList1 ->
-                case gen_tcp:connect(BrokerAddr, Port, [{mode, binary}, {active, once}]) of
-                  {ok, Socket} ->
-                    lager:info("Start connection with broker @ ~s:~p / ~p", 
-                               [enet:ip_to_str(BrokerAddr), Port, BrokerHostList1]),
-                    State1 = maps:put(brockers_list, BrokerHostList1 ++ BrokersList, State),
-                    State2 = lists:foldl(fun(BrokerHost, StateAcc) ->
-                                             maps:put(
-                                               brokers, 
-                                               maps:put(BrokerHost, #{ 
-                                                          host => BrokerHost,
-                                                          addr => BrokerAddr,
-                                                          port => Port,
-                                                          socket => Socket
-                                                         }, BrokersInfo),
-                                               StateAcc
-                                              )
-                                         end, State1, BrokerHostList1),
-                    get_connection(KafkaBrokers, State2);
+                case kafe_client_sup:start_child(BrokerAddr, Port) of
+                  {ok, BrokerID} ->
+                    lager:debug("Reference ~p to ~p", [BrokerID, BrokerHostList1]),
+                    Brokers1 = lists:foldl(fun(BrokerHost, Acc) ->
+                                               maps:put(BrokerHost, BrokerID, Acc)
+                                           end, Brokers, BrokerHostList1),
+                    get_connection(Rest, maps:put(brokers_list, BrokerHostList1 ++ BrokersList, maps:put(brokers, Brokers1, State)));
                   {error, Reason} ->
                     lager:debug("Connection faild to ~p:~p : ~p", [enet:ip_to_str(BrokerAddr), Port, Reason]),
-                    get_connection(KafkaBrokers, State)
+                    get_connection(Rest, State)
                 end
             end
         end;
       {error, Reason} ->
         lager:debug("Can't retrieve host by name for ~p:~p : ~p", [Host, Port, Reason]),
-        get_connection(KafkaBrokers, State)
+        get_connection(Rest, State)
     end
   catch
     Type:Reason1 ->
       lager:debug("Error while get connection for ~p:~p : ~p:~p", [Host, Port, Type, Reason1]),
-      get_connection(KafkaBrokers, State)
+      get_connection(Rest, State)
   end.
 
 % @hidden
-broker_name(undefined) -> undefined;
-broker_name({Host, Port}) -> broker_name(Host, Port).
-% @hidden
-broker_name(Host, Port) ->
-  eutils:to_string(Host) ++ ":" ++ eutils:to_string(Port). 
+update_state_with_metadata(#{brokers := Brokers, topics := Topics}, State) ->
+  {Brokers1, State2} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, State1}) ->
+                                       {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
+                                        get_connection([{eutils:to_string(Host), Port}], State1)}
+                                   end, {#{}, State}, Brokers),
+
+  Topics1 = lists:foldl(fun(#{name := Topic, partitions := Partitions}, Acc) ->
+                            maps:put(Topic, 
+                                     lists:foldl(fun(#{id := ID, leader := Leader}, Acc1) ->
+                                                     maps:put(ID, maps:get(Leader, Brokers1), Acc1)
+                                                 end, #{}, Partitions), 
+                                     Acc)
+                        end, #{}, Topics),
+  maps:put(topics, Topics1, State2).
 
 % @hidden
 get_host([], _, _) -> undefined;
@@ -453,27 +385,6 @@ get_host([Addr|Rest], Hostname, AddrType) ->
   end.
 
 % @hidden
-get_socket([], _, _) -> error;
-get_socket([Broker|Rest], BrokersInfo, undefined) ->
-  case get_socket(<<>>, BrokersInfo, Broker) of
-    error ->
-      get_socket(Rest, BrokersInfo, undefined);
-    Socket ->
-      Socket
-  end;
-get_socket(_, BrokersInfo, Coordinator) ->
-  lager:debug("Retrieve socket for ~p", [Coordinator]),
-  case maps:get(Coordinator, BrokersInfo, undefined) of
-    undefined -> 
-      lager:debug("Socket undefined for coordinator ~p", [Coordinator]),
-      error;
-    #{socket := Socket} ->
-      case inet:setopts(Socket, [{active, once}]) of
-        ok ->
-          lager:debug("Socket found for ~p", [Coordinator]),
-          Socket;
-        {error, _} ->
-          lager:debug("Socket faild for ~p", [Coordinator]),
-          error
-      end
-  end.
+get_first_broker(#{brokers := Brokers}) ->
+  [Broker|_] = maps:values(Brokers),
+  Broker.

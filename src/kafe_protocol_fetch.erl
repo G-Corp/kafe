@@ -4,14 +4,19 @@
 -include("../include/kafe.hrl").
 
 -export([
+         run/3,
          request/4,
          response/1
         ]).
 
-%% Options:
-%%   * timeout :: integer()       (default: 5000)
-%%   * required_acks :: integer() (default: 0)
-%%   * partition :: integer()     (default: 0)
+run(ReplicaID, TopicName, Options) ->
+  todo.
+%  gen_server:call(kafe:broker(TopicName, Partition),
+%                  {call, 
+%                   fun ?MODULE:request/2, [ReplicaID, TopicName, Options],
+%                   fun ?MODULE:response/1},
+%                  infinity).
+
 request(ReplicaID, TopicName, Options, #{offset := LastOffset} = State) ->
   Partition = maps:get(partition, Options, ?DEFAULT_FETCH_PARTITION),
   Offset = maps:get(offset, Options, LastOffset),

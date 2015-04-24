@@ -24,7 +24,7 @@ test: compile
 doc:
 	@rm -f documentation.md
 	@rm -rf doc
-	@$(REBAR) doc skip_deps=true
+	@$(REBAR) doc
 
 dev: compile
 	@erl -pa ebin include deps/*/ebin deps/*/include -config config/kafe.config

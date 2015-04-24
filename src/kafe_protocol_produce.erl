@@ -4,9 +4,18 @@
 -include("../include/kafe.hrl").
 
 -export([
+         run/3,
          request/4,
          response/1
         ]).
+
+run(Topic, Message, Options) ->
+  Partition = maps:get(partition, Options, ?DEFAULT_PRODUCE_PARTITION),
+  gen_server:call(kafe:broker(Topic, Partition),
+                  {call, 
+                   fun ?MODULE:request/2, [Topic, Message, Options],
+                   fun ?MODULE:response/1},
+                  infinity).
 
 %% Options:
 %%   * timeout :: integer()       (default: 5000)

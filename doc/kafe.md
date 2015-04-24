@@ -5,13 +5,7 @@
 * [Function Index](#index)
 * [Function Details](#functions)
 
-Copyright (c) 2014-2015 Finexkap
-
-A Kafka client in pure Erlang
-
 __Behaviours:__ [`gen_server`](gen_server.md).
-
-__Authors:__ [`Gregoire Lejeune (gl@finexkap.com)`](mailto:Gregoire Lejeune (gl@finexkap.com)).
 
 <a name="types"></a>
 
@@ -68,6 +62,18 @@ consumer_metadata() = #{error_code =&gt; <a href="#type-error_code">error_code()
 
 
 
+### <a name="type-coordinator">coordinator()</a> ###
+
+
+
+<pre><code>
+coordinator() = {<a href="#type-host">host()</a>, port()}
+</code></pre>
+
+
+
+
+
 ### <a name="type-coordinator_id">coordinator_id()</a> ###
 
 
@@ -97,7 +103,7 @@ crc() = integer()
 
 
 <pre><code>
-error_code() = integer()
+error_code() = atom()
 </code></pre>
 
 
@@ -260,12 +266,48 @@ metadata() = #{brokers =&gt; [<a href="#type-broker">broker()</a>], topics =&gt;
 
 
 
+### <a name="type-metadata_info">metadata_info()</a> ###
+
+
+
+<pre><code>
+metadata_info() = binary()
+</code></pre>
+
+
+
+
+
 ### <a name="type-offset">offset()</a> ###
 
 
 
 <pre><code>
 offset() = integer()
+</code></pre>
+
+
+
+
+
+### <a name="type-offset_fetch_options">offset_fetch_options()</a> ###
+
+
+
+<pre><code>
+offset_fetch_options() = [<a href="#type-topic_name">topic_name()</a>] | [{<a href="#type-topic_name">topic_name()</a>, [<a href="#type-partition_number">partition_number()</a>]}]
+</code></pre>
+
+
+
+
+
+### <a name="type-offset_set">offset_set()</a> ###
+
+
+
+<pre><code>
+offset_set() = #{name =&gt; <a href="#type-topic_name">topic_name()</a>, partitions_offset =&gt; [<a href="#type-partition_offset_def">partition_offset_def()</a>]}
 </code></pre>
 
 
@@ -326,6 +368,18 @@ partition_message() = #{partition =&gt; <a href="#type-partition_number">partiti
 
 <pre><code>
 partition_number() = integer()
+</code></pre>
+
+
+
+
+
+### <a name="type-partition_offset_def">partition_offset_def()</a> ###
+
+
+
+<pre><code>
+partition_offset_def() = #{partition =&gt; <a href="#type-partition_number">partition_number()</a>, offset =&gt; <a href="#type-offset">offset()</a>, metadata_info =&gt; <a href="#type-metadata_info">metadata_info()</a>, error_code =&gt; <a href="#type-error_code">error_code()</a>}
 </code></pre>
 
 
@@ -418,29 +472,19 @@ value() = binary()
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_broker-2">add_broker/2</a></td><td></td></tr><tr><td valign="top"><a href="#consumer_metadata-1">consumer_metadata/1</a></td><td>
-Consumer Metadata Request.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
-Fetch messages.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td> 
-Return kafka metadata.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td>
-Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td>
-Get offet for the given topics and replicat.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#consumer_metadata-1">consumer_metadata/1</a></td><td>
+Consumer Metadata Request.</td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
+Fetch messages.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td>Equivalent to <a href="#metadata-1"><tt>metadata([])</tt></a>.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td> 
+Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#offset-1">offset/1</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, Topics)</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td> 
+Get offet for the given topics and replicat.</td></tr><tr><td valign="top"><a href="#offset_commit-6">offset_commit/6</a></td><td>
+Offset commit.</td></tr><tr><td valign="top"><a href="#offset_fetch-3">offset_fetch/3</a></td><td>
+Offset fetch.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
 Send a message.</td></tr></table>
 
 
 <a name="functions"></a>
 
 ## Function Details ##
-
-<a name="add_broker-2"></a>
-
-### add_broker/2 ###
-
-
-<pre><code>
-add_broker(Host::<a href="#type-host">host()</a>, Port::port()) -&gt; ok
-</code></pre>
-<br />
-
 
 <a name="consumer_metadata-1"></a>
 
@@ -454,15 +498,18 @@ consumer_metadata(ConsumerGroup::<a href="#type-consumer_group">consumer_group()
 
 
 Consumer Metadata Request
+<a name="fetch-1"></a>
+
+### fetch/1 ###
+
+`fetch(TopicName) -> any()`
+
+Equivalent to [`fetch(-1, TopicName, #{})`](#fetch-3).
 <a name="fetch-2"></a>
 
 ### fetch/2 ###
 
-
-<pre><code>
-fetch(ReplicatID::<a href="#type-replicat">replicat()</a>, TopicName::<a href="#type-topic_name">topic_name()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]}
-</code></pre>
-<br />
+`fetch(ReplicatID, TopicName) -> any()`
 
 Equivalent to [`fetch(ReplicatID, TopicName, #{})`](#fetch-3).
 <a name="fetch-3"></a>
@@ -480,35 +527,83 @@ fetch(ReplicatID::<a href="#type-replicat">replicat()</a>, TopicName::<a href="#
 Fetch messages
 
 
-ReplicatID must *always* be -1
+Options:
+
+* `partition :: integer()` : The id of the partition the fetch is for (default : 0).
+
+* `offset :: integer()` : The offset to begin this fetch from (default : last offset for the partition)
+
+* `max_bytes :: integer()` : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
+1)/
+
+* `min_bytes :: integer()` : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0
+the server will always respond immediately, however if there is no new data since their last request they will just get back empty message sets. If this is
+set to 1, the server will respond as soon as at least one partition has at least 1 byte of data or the specified timeout occurs. By setting higher values in
+combination with the timeout the consumer can tune for throughput and trade a little additional latency for reading only large chunks of data (e.g. setting
+MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait up to 100ms to try to accumulate 64k of data before responding) (default :
+1024*1024).
+
+* `max_wait_time :: integer()` : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
+at the time the request is issued (default : 1).
+
+
+
+
+ReplicatID must __always__ be -1.
+
+
+Example:
+
+```
+
+ Response = kafe:fetch(<<"topic">>)
+ Response1 = kafe:fetch(<<"topic">>, #{offset => 2, partition => 3}).
+```
+
+
+For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI).
 <a name="metadata-0"></a>
 
 ### metadata/0 ###
 
+`metadata() -> any()`
 
-<pre><code>
-metadata() -&gt; {ok, <a href="#type-metadata">metadata()</a>}
-</code></pre>
-<br />
-
-
- 
-Return kafka metadata
-
-
-[protocol](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest)
+Equivalent to [`metadata([])`](#metadata-1).
 <a name="metadata-1"></a>
 
 ### metadata/1 ###
 
 
 <pre><code>
-metadata(Topics::<a href="#type-topics">topics()</a>) -&gt; {ok, <a href="#type-metadata">metadata()</a>}
+metadata(Topics::[<a href="#type-topic_name">topic_name()</a>]) -&gt; {ok, <a href="#type-metadata">metadata()</a>}
 </code></pre>
 <br />
 
 
+ 
 Return metadata for the given topics
+
+
+Example:
+
+```
+
+ Metadata = kafe:metadata([<<"topic1">>, <<"topic2">>]).
+```
+
+
+
+This example return all metadata for `topic1` and `topic2`
+
+
+For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest).
+<a name="offset-1"></a>
+
+### offset/1 ###
+
+`offset(Topics) -> any()`
+
+Equivalent to [`offset(-1, Topics)`](#offset-2).
 <a name="offset-2"></a>
 
 ### offset/2 ###
@@ -520,16 +615,44 @@ offset(ReplicatID::<a href="#type-replicat">replicat()</a>, Topics::<a href="#ty
 <br />
 
 
+ 
 Get offet for the given topics and replicat
+
+
+Example:
+
+```
+
+ Offset = kafe:offet(-1, [<<"topic1">>, {<<"topic2">>, [{0, -1, 1}, {2, -1, 1}]}]).
+```
+
+
+For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetRequest).
+<a name="offset_commit-6"></a>
+
+### offset_commit/6 ###
+
+`offset_commit(Brocker, ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, X6) -> any()`
+
+
+Offset commit
+<a name="offset_fetch-3"></a>
+
+### offset_fetch/3 ###
+
+
+<pre><code>
+offset_fetch(Coordinator::<a href="#type-coordinator">coordinator()</a>, ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>, Options::<a href="#type-offset_fetch_options">offset_fetch_options()</a>) -&gt; {ok, [<a href="#type-offset_set">offset_set()</a>]}
+</code></pre>
+<br />
+
+
+Offset fetch
 <a name="produce-2"></a>
 
 ### produce/2 ###
 
-
-<pre><code>
-produce(Topic::<a href="#type-topic_name">topic_name()</a>, Message::<a href="#type-message">message()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]}
-</code></pre>
-<br />
+`produce(Topic, Message) -> any()`
 
 Equivalent to [`produce(Topic, Message, #{})`](#produce-3).
 <a name="produce-3"></a>
@@ -543,4 +666,35 @@ produce(Topic::<a href="#type-topic_name">topic_name()</a>, Message::<a href="#t
 <br />
 
 
+ 
 Send a message
+
+
+Options:
+
+* `timeout :: integer()` : This provides a maximum time in milliseconds the server can await the receipt of the number of acknowledgements in
+RequiredAcks. The timeout is not an exact limit on the request time for a few reasons: (1) it does not include network latency, (2) the timer begins at the
+beginning of the processing of this request so if many requests are queued due to server overload that wait time will not be included, (3) we will not
+terminate a local write so if the local write time exceeds this timeout it will not be respected. To get a hard timeout of this type the client should use the
+socket timeout. (default: 5000)
+
+* `required_acks :: integer()` : This field indicates how many acknowledgements the servers should receive before responding to the request. If it is
+0 the server will not send any response (this is the only case where the server will not reply to a request). If it is 1, the server will wait the data is
+written to the local log before sending a response. If it is -1 the server will block until the message is committed by all in sync replicas before sending a
+response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server will never wait for more
+acknowledgements than there are in-sync replicas). (default: 0)
+
+* `partition :: integer()` : The partition that data is being published to. (default: 0)
+
+
+
+Example:
+
+```
+
+ Response = kafe:product(<<"topic">>, <<"a simple message">>, #{timeout => 1000, partition => 0}).
+ Response1 = kafe:product(<<"topic">>, {<<"key">>, <<"Another simple message">>}).
+```
+
+
+For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI).
