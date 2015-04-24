@@ -62,18 +62,6 @@ consumer_metadata() = #{error_code =&gt; <a href="#type-error_code">error_code()
 
 
 
-### <a name="type-coordinator">coordinator()</a> ###
-
-
-
-<pre><code>
-coordinator() = {<a href="#type-host">host()</a>, port()}
-</code></pre>
-
-
-
-
-
 ### <a name="type-coordinator_id">coordinator_id()</a> ###
 
 
@@ -477,7 +465,7 @@ Consumer Metadata Request.</td></tr><tr><td valign="top"><a href="#fetch-1">fetc
 Fetch messages.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td>Equivalent to <a href="#metadata-1"><tt>metadata([])</tt></a>.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td> 
 Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#offset-1">offset/1</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, Topics)</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td> 
 Get offet for the given topics and replicat.</td></tr><tr><td valign="top"><a href="#offset_commit-6">offset_commit/6</a></td><td>
-Offset commit.</td></tr><tr><td valign="top"><a href="#offset_fetch-3">offset_fetch/3</a></td><td>
+Offset commit.</td></tr><tr><td valign="top"><a href="#offset_fetch-2">offset_fetch/2</a></td><td>
 Offset fetch.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
 Send a message.</td></tr></table>
 
@@ -636,13 +624,13 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 
 
 Offset commit
-<a name="offset_fetch-3"></a>
+<a name="offset_fetch-2"></a>
 
-### offset_fetch/3 ###
+### offset_fetch/2 ###
 
 
 <pre><code>
-offset_fetch(Coordinator::<a href="#type-coordinator">coordinator()</a>, ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>, Options::<a href="#type-offset_fetch_options">offset_fetch_options()</a>) -&gt; {ok, [<a href="#type-offset_set">offset_set()</a>]}
+offset_fetch(ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>, Options::<a href="#type-offset_fetch_options">offset_fetch_options()</a>) -&gt; {ok, [<a href="#type-offset_set">offset_set()</a>]}
 </code></pre>
 <br />
 

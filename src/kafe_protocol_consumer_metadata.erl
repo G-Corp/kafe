@@ -4,9 +4,17 @@
 -include("../include/kafe.hrl").
 
 -export([
+         run/1,
          request/2,
          response/1
         ]).
+
+run(ConsumerGroup) ->
+  gen_server:call(kafe:first_broker(),
+                  {call, 
+                   fun ?MODULE:request/2, [ConsumerGroup],
+                   fun ?MODULE:response/1},
+                  infinity).
 
 request(ConsumerGroup, State) ->
   kafe_protocol:request(

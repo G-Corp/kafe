@@ -16,7 +16,7 @@
          fetch/2,
          fetch/3,
          consumer_metadata/1,
-         offset_fetch/3,
+         offset_fetch/2,
          offset_commit/6
         ]).
 
@@ -24,6 +24,7 @@
          start_link/0,
          first_broker/0,
          broker/2,
+         broker_by_name/1,
          topics/0,
          max_offset/1,
          max_offset/2,
@@ -68,7 +69,6 @@
 -type partition_message() :: #{partition => partition_number(), error_code => error_code(), high_watermaker_offset => high_watermaker_offset(), message => [message_data()]}.
 -type message_set() :: #{name => topic_name(), partitions => [partition_message()]}.
 -type consumer_metadata() :: #{error_code => error_code(), coordinator_id => coordinator_id(), coordinator_host => host(),  coordinator_port => port()}.
--type coordinator() :: {host(), port()}.
 -type offset_fetch_options() :: [topic_name()] | [{topic_name(), [partition_number()]}].
 -type partition_offset_def() :: #{partition => partition_number(), offset => offset(), metadata_info => metadata_info(), error_code => error_code()}.
 -type offset_set() :: #{name => topic_name(), partitions_offset => [partition_offset_def()]}.
@@ -84,6 +84,13 @@ first_broker() ->
 % @hidden
 broker(Topic, Partition) ->
   case gen_server:call(?SERVER, {broker, Topic, Partition}, infinity) of
+    undefined -> first_broker();
+    Broker -> Broker
+  end.
+
+% @hidden
+broker_by_name(BrokerName) ->
+  case gen_server:call(?SERVER, {broker_by_name, BrokerName}, infinity) of
     undefined -> first_broker();
     Broker -> Broker
   end.
@@ -254,8 +261,7 @@ fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), is_binary(Top
 % @end
 -spec consumer_metadata(consumer_group()) -> {ok, consumer_metadata()}.
 consumer_metadata(ConsumerGroup) ->
-  % gen_server:call(?SERVER, {consumer_metadata, ConsumerGroup}, infinity).
-  todo.
+  kafe_protocol_consumer_metadata:run(ConsumerGroup).
 
 % @doc
 % Offset commit
@@ -266,10 +272,9 @@ offset_commit(Brocker, ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Ret
 % @doc
 % Offset fetch
 % @end
--spec offset_fetch(coordinator(), consumer_group(), offset_fetch_options()) -> {ok, [offset_set()]}.
-offset_fetch(Coordinator, ConsumerGroup, Options) ->
-  % gen_server:call(?SERVER, {offset_fetch, Coordinator, ConsumerGroup, Options}, infinity).
-  todo.
+-spec offset_fetch(consumer_group(), offset_fetch_options()) -> {ok, [offset_set()]}.
+offset_fetch(ConsumerGroup, Options) ->
+  kafe_protocol_consumer_offset_fetch:run(ConsumerGroup, Options).
 
 % Private
 
@@ -313,6 +318,8 @@ handle_call({broker, Topic, Partition}, _From, #{topics := Topics, brokers := Br
           {reply, maps:get(Broker, BrokersAddr, undefined), State}
       end
   end;
+handle_call({broker_by_name, BrokerName}, _From, #{brokers := BrokersAddr} = State) -> 
+  {reply, maps:get(eutils:to_string(BrokerName), BrokersAddr, undefined), State};
 handle_call(topics, _From, #{topics := Topics} = State) ->
   {reply, Topics, State};
 handle_call(state, _From, State) ->

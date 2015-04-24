@@ -13,19 +13,15 @@ run(ReplicaID, TopicName, Options) ->
   {Partition, Offset} = case {maps:get(partition, Options, undefined),
                               maps:get(offset, Options, undefined)} of
                           {undefined, undefined} ->
-                            kafe:max_offset(TopicName);
+                            clean_offset(kafe:max_offset(TopicName));
                           {Partition1, undefined} ->
-                            kafe:max_offset(TopicName, Partition1);
+                            clean_offset(kafe:max_offset(TopicName, Partition1));
                           {undefined, Offset1} ->
                             kafe:partition_for_offset(TopicName, Offset1);
                           R -> R
                         end,
-  Offset2 = if
-              Offset > 0 -> Offset - 1;
-              true -> Offset
-            end,
   Options1 = maps:put(partition, Partition, 
-                      maps:put(offset, Offset2, Options)),
+                      maps:put(offset, Offset, Options)),
   Broker = kafe:broker(TopicName, Partition),
   lager:debug("Fetch ~p (partition #~p, offset ~p) on ~p", [TopicName, Partition, Offset, Broker]),
   gen_server:call(Broker,
@@ -57,6 +53,12 @@ response(<<NumberOfTopics:32/signed, Remainder/binary>>) ->
   {ok, response(NumberOfTopics, Remainder)}.
 
 % Private
+
+clean_offset({Partition, Offset}) ->
+  {Partition, if
+                Offset > 0 -> Offset - 1;
+                true -> Offset
+              end}.
 
 response(0, _) ->
     [];

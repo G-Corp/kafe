@@ -4,9 +4,18 @@
 -include("../include/kafe.hrl").
 
 -export([
+         run/2,
          request/3,
          response/1
         ]).
+
+run(ConsumerGroup, Options) ->
+  {ok, #{coordinator_host := BrokerName}} = kafe:consumer_metadata(ConsumerGroup),
+  gen_server:call(kafe:broker_by_name(BrokerName),
+                  {call, 
+                   fun ?MODULE:request/3, [ConsumerGroup, Options],
+                   fun ?MODULE:response/1},
+                  infinity).
 
 request(ConsumerGroup, Options, State) ->
   kafe_protocol:request(
