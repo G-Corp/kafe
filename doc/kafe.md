@@ -24,96 +24,12 @@ __Authors:__ Grégoire Lejeune ([`gl@finexkap.com`](mailto:gl@finexkap.com)).
 
 
 
-### <a name="type-attributes">attributes()</a> ###
-
-
-
-<pre><code>
-attributes() = integer()
-</code></pre>
-
-
-
-
-
-### <a name="type-broker">broker()</a> ###
-
-
-
-<pre><code>
-broker() = #{host =&gt; <a href="#type-host">host()</a>, id =&gt; <a href="#type-id">id()</a>, port =&gt; port()}
-</code></pre>
-
-
-
-
-
-### <a name="type-consumer_group">consumer_group()</a> ###
-
-
-
-<pre><code>
-consumer_group() = binary()
-</code></pre>
-
-
-
-
-
-### <a name="type-consumer_groupe_generation_id">consumer_groupe_generation_id()</a> ###
-
-
-
-<pre><code>
-consumer_groupe_generation_id() = integer()
-</code></pre>
-
-
-
-
-
-### <a name="type-consumer_id">consumer_id()</a> ###
-
-
-
-<pre><code>
-consumer_id() = binary()
-</code></pre>
-
-
-
-
-
 ### <a name="type-consumer_metadata">consumer_metadata()</a> ###
 
 
 
 <pre><code>
-consumer_metadata() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, coordinator_id =&gt; <a href="#type-coordinator_id">coordinator_id()</a>, coordinator_host =&gt; <a href="#type-host">host()</a>, coordinator_port =&gt; port()}
-</code></pre>
-
-
-
-
-
-### <a name="type-coordinator_id">coordinator_id()</a> ###
-
-
-
-<pre><code>
-coordinator_id() = integer()
-</code></pre>
-
-
-
-
-
-### <a name="type-crc">crc()</a> ###
-
-
-
-<pre><code>
-crc() = integer()
+consumer_metadata() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, coordinator_id =&gt; integer(), coordinator_host =&gt; binary(), coordinator_port =&gt; port()}
 </code></pre>
 
 
@@ -125,19 +41,7 @@ crc() = integer()
 
 
 <pre><code>
-error_code() = atom()
-</code></pre>
-
-
-
-
-
-### <a name="type-fetch_offset">fetch_offset()</a> ###
-
-
-
-<pre><code>
-fetch_offset() = integer()
+error_code() = no_error | unknown | offset_out_of_range | invalid_message | unknown_topic_or_partition | invalid_message_size | leader_not_available | not_leader_for_partition | request_timed_out | broker_not_available | replica_not_available | message_size_too_large | stale_controller_epoch | offset_metadata_too_large | offsets_load_in_progress | consumer_coordinator_not_available | not_coordinator_for_consumer
 </code></pre>
 
 
@@ -156,108 +60,12 @@ fetch_options() = #{partition =&gt; integer(), offset =&gt; integer(), max_bytes
 
 
 
-### <a name="type-high_watermaker_offset">high_watermaker_offset()</a> ###
-
-
-
-<pre><code>
-high_watermaker_offset() = integer()
-</code></pre>
-
-
-
-
-
-### <a name="type-host">host()</a> ###
-
-
-
-<pre><code>
-host() = binary()
-</code></pre>
-
-
-
-
-
-### <a name="type-id">id()</a> ###
-
-
-
-<pre><code>
-id() = integer()
-</code></pre>
-
-
-
-
-
-### <a name="type-isr">isr()</a> ###
-
-
-
-<pre><code>
-isr() = integer()
-</code></pre>
-
-
-
-
-
-### <a name="type-key">key()</a> ###
-
-
-
-<pre><code>
-key() = binary()
-</code></pre>
-
-
-
-
-
-### <a name="type-leader">leader()</a> ###
-
-
-
-<pre><code>
-leader() = integer()
-</code></pre>
-
-
-
-
-
-### <a name="type-max_bytes">max_bytes()</a> ###
-
-
-
-<pre><code>
-max_bytes() = integer()
-</code></pre>
-
-
-
-
-
 ### <a name="type-message">message()</a> ###
 
 
 
 <pre><code>
-message() = <a href="#type-value">value()</a> | {<a href="#type-key">key()</a>, <a href="#type-value">value()</a>}
-</code></pre>
-
-
-
-
-
-### <a name="type-message_data">message_data()</a> ###
-
-
-
-<pre><code>
-message_data() = #{offset =&gt; <a href="#type-offset">offset()</a>, crc =&gt; <a href="#type-crc">crc()</a>, attributes =&gt; <a href="#type-attributes">attributes()</a>, key =&gt; <a href="#type-key">key()</a>, value =&gt; <a href="#type-value">value()</a>}
+message() = binary() | {binary(), binary()}
 </code></pre>
 
 
@@ -269,7 +77,7 @@ message_data() = #{offset =&gt; <a href="#type-offset">offset()</a>, crc =&gt; <
 
 
 <pre><code>
-message_set() = #{name =&gt; <a href="#type-topic_name">topic_name()</a>, partitions =&gt; [<a href="#type-partition_message">partition_message()</a>]}
+message_set() = #{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integer(), error_code =&gt; <a href="#type-error_code">error_code()</a>, high_watermaker_offset =&gt; integer(), message =&gt; [#{offset =&gt; integer(), crc =&gt; integer(), attributes =&gt; integer(), key =&gt; binary(), value =&gt; binary()}]}]}
 </code></pre>
 
 
@@ -281,31 +89,7 @@ message_set() = #{name =&gt; <a href="#type-topic_name">topic_name()</a>, partit
 
 
 <pre><code>
-metadata() = #{brokers =&gt; [<a href="#type-broker">broker()</a>], topics =&gt; [<a href="#type-topic">topic()</a>]}
-</code></pre>
-
-
-
-
-
-### <a name="type-metadata_info">metadata_info()</a> ###
-
-
-
-<pre><code>
-metadata_info() = binary()
-</code></pre>
-
-
-
-
-
-### <a name="type-offset">offset()</a> ###
-
-
-
-<pre><code>
-offset() = integer()
+metadata() = #{brokers =&gt; [#{host =&gt; binary(), id =&gt; integer(), port =&gt; port()}], topics =&gt; [#{error_code =&gt; <a href="#type-error_code">error_code()</a>, name =&gt; binary(), partitions =&gt; [#{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), isr =&gt; [integer()], leader =&gt; integer(), replicas =&gt; [integer()]}]}]}
 </code></pre>
 
 
@@ -317,7 +101,7 @@ offset() = integer()
 
 
 <pre><code>
-offset_commit_option() = [{<a href="#type-topic_name">topic_name()</a>, [{<a href="#type-partition_number">partition_number()</a>, <a href="#type-offset">offset()</a>, <a href="#type-metadata_info">metadata_info()</a>}]}]
+offset_commit_option() = [{binary(), [{integer(), integer(), binary()}]}]
 </code></pre>
 
 
@@ -329,19 +113,7 @@ offset_commit_option() = [{<a href="#type-topic_name">topic_name()</a>, [{<a hre
 
 
 <pre><code>
-offset_commit_option_v1() = [{<a href="#type-topic_name">topic_name()</a>, [{<a href="#type-partition_number">partition_number()</a>, <a href="#type-offset">offset()</a>, <a href="#type-timestamp">timestamp()</a>, <a href="#type-metadata_info">metadata_info()</a>}]}]
-</code></pre>
-
-
-
-
-
-### <a name="type-offset_commit_partition_set">offset_commit_partition_set()</a> ###
-
-
-
-<pre><code>
-offset_commit_partition_set() = #{partition =&gt; <a href="#type-partition_number">partition_number()</a>, error_code =&gt; <a href="#type-error_code">error_code()</a>}
+offset_commit_option_v1() = [{binary(), [{integer(), integer(), integer(), binary()}]}]
 </code></pre>
 
 
@@ -353,7 +125,7 @@ offset_commit_partition_set() = #{partition =&gt; <a href="#type-partition_numbe
 
 
 <pre><code>
-offset_commit_set() = [#{name =&gt; <a href="#type-topic_name">topic_name()</a>, partitions =&gt; [<a href="#type-offset_commit_partition_set">offset_commit_partition_set()</a>]}]
+offset_commit_set() = [#{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integer(), error_code =&gt; <a href="#type-error_code">error_code()</a>}]}]
 </code></pre>
 
 
@@ -365,7 +137,7 @@ offset_commit_set() = [#{name =&gt; <a href="#type-topic_name">topic_name()</a>,
 
 
 <pre><code>
-offset_fetch_options() = [<a href="#type-topic_name">topic_name()</a>] | [{<a href="#type-topic_name">topic_name()</a>, [<a href="#type-partition_number">partition_number()</a>]}]
+offset_fetch_options() = [binary()] | [{binary(), [integer()]}]
 </code></pre>
 
 
@@ -377,79 +149,7 @@ offset_fetch_options() = [<a href="#type-topic_name">topic_name()</a>] | [{<a hr
 
 
 <pre><code>
-offset_fetch_set() = #{name =&gt; <a href="#type-topic_name">topic_name()</a>, partitions_offset =&gt; [<a href="#type-partition_offset_def">partition_offset_def()</a>]}
-</code></pre>
-
-
-
-
-
-### <a name="type-partition">partition()</a> ###
-
-
-
-<pre><code>
-partition() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; <a href="#type-id">id()</a>, isr =&gt; [<a href="#type-isr">isr()</a>], leader =&gt; <a href="#type-leader">leader()</a>, replicas =&gt; [<a href="#type-replicat">replicat()</a>]}
-</code></pre>
-
-
-
-
-
-### <a name="type-partition_def">partition_def()</a> ###
-
-
-
-<pre><code>
-partition_def() = {<a href="#type-partition_number">partition_number()</a>, <a href="#type-fetch_offset">fetch_offset()</a>, <a href="#type-max_bytes">max_bytes()</a>}
-</code></pre>
-
-
-
-
-
-### <a name="type-partition_info">partition_info()</a> ###
-
-
-
-<pre><code>
-partition_info() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; <a href="#type-id">id()</a>, offsets =&gt; [<a href="#type-offset">offset()</a>]}
-</code></pre>
-
-
-
-
-
-### <a name="type-partition_message">partition_message()</a> ###
-
-
-
-<pre><code>
-partition_message() = #{partition =&gt; <a href="#type-partition_number">partition_number()</a>, error_code =&gt; <a href="#type-error_code">error_code()</a>, high_watermaker_offset =&gt; <a href="#type-high_watermaker_offset">high_watermaker_offset()</a>, message =&gt; [<a href="#type-message_data">message_data()</a>]}
-</code></pre>
-
-
-
-
-
-### <a name="type-partition_number">partition_number()</a> ###
-
-
-
-<pre><code>
-partition_number() = integer()
-</code></pre>
-
-
-
-
-
-### <a name="type-partition_offset_def">partition_offset_def()</a> ###
-
-
-
-<pre><code>
-partition_offset_def() = #{partition =&gt; <a href="#type-partition_number">partition_number()</a>, offset =&gt; <a href="#type-offset">offset()</a>, metadata_info =&gt; <a href="#type-metadata_info">metadata_info()</a>, error_code =&gt; <a href="#type-error_code">error_code()</a>}
+offset_fetch_set() = #{name =&gt; binary(), partitions_offset =&gt; [#{partition =&gt; integer(), offset =&gt; integer(), metadata_info =&gt; binary(), error_code =&gt; <a href="#type-error_code">error_code()</a>}]}
 </code></pre>
 
 
@@ -468,72 +168,12 @@ produce_options() = #{timeout =&gt; integer(), required_acks =&gt; integer(), pa
 
 
 
-### <a name="type-replicat">replicat()</a> ###
-
-
-
-<pre><code>
-replicat() = integer()
-</code></pre>
-
-
-
-
-
-### <a name="type-retention_time">retention_time()</a> ###
-
-
-
-<pre><code>
-retention_time() = integer()
-</code></pre>
-
-
-
-
-
-### <a name="type-timestamp">timestamp()</a> ###
-
-
-
-<pre><code>
-timestamp() = integer()
-</code></pre>
-
-
-
-
-
-### <a name="type-topic">topic()</a> ###
-
-
-
-<pre><code>
-topic() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, name =&gt; <a href="#type-topic_name">topic_name()</a>, partitions =&gt; [<a href="#type-partition">partition()</a>]}
-</code></pre>
-
-
-
-
-
-### <a name="type-topic_name">topic_name()</a> ###
-
-
-
-<pre><code>
-topic_name() = binary()
-</code></pre>
-
-
-
-
-
 ### <a name="type-topic_partition_info">topic_partition_info()</a> ###
 
 
 
 <pre><code>
-topic_partition_info() = #{name =&gt; <a href="#type-topic_name">topic_name()</a>, partitions =&gt; [<a href="#type-partition_info">partition_info()</a>]}
+topic_partition_info() = #{name =&gt; binary(), partitions =&gt; [#{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), offsets =&gt; [integer()]}]}
 </code></pre>
 
 
@@ -545,19 +185,7 @@ topic_partition_info() = #{name =&gt; <a href="#type-topic_name">topic_name()</a
 
 
 <pre><code>
-topics() = [<a href="#type-topic_name">topic_name()</a>] | [{<a href="#type-topic_name">topic_name()</a>, [<a href="#type-partition_def">partition_def()</a>]}]
-</code></pre>
-
-
-
-
-
-### <a name="type-value">value()</a> ###
-
-
-
-<pre><code>
-value() = binary()
+topics() = [binary()] | [{binary(), [{integer(), integer(), integer()}]}]
 </code></pre>
 
 
@@ -588,7 +216,7 @@ Send a message.</td></tr></table>
 
 
 <pre><code>
-consumer_metadata(ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>) -&gt; {ok, <a href="#type-consumer_metadata">consumer_metadata()</a>}
+consumer_metadata(ConsumerGroup::binary()) -&gt; {ok, <a href="#type-consumer_metadata">consumer_metadata()</a>}
 </code></pre>
 <br />
 
@@ -618,7 +246,7 @@ Equivalent to [`fetch(ReplicatID, TopicName, #{})`](#fetch-3).
 
 
 <pre><code>
-fetch(ReplicatID::<a href="#type-replicat">replicat()</a>, TopicName::<a href="#type-topic_name">topic_name()</a>, Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]}
+fetch(ReplicatID::integer(), TopicName::binary(), Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]}
 </code></pre>
 <br />
 
@@ -675,7 +303,7 @@ Equivalent to [`metadata([])`](#metadata-1).
 
 
 <pre><code>
-metadata(Topics::[<a href="#type-topic_name">topic_name()</a>]) -&gt; {ok, <a href="#type-metadata">metadata()</a>}
+metadata(Topics::[binary()]) -&gt; {ok, <a href="#type-metadata">metadata()</a>}
 </code></pre>
 <br />
 
@@ -710,7 +338,7 @@ Equivalent to [`offset(-1, Topics)`](#offset-2).
 
 
 <pre><code>
-offset(ReplicatID::<a href="#type-replicat">replicat()</a>, Topics::<a href="#type-topics">topics()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]}
+offset(ReplicatID::integer(), Topics::<a href="#type-topics">topics()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]}
 </code></pre>
 <br />
 
@@ -734,7 +362,7 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 
 
 <pre><code>
-offset_commit(ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>, Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
+offset_commit(ConsumerGroup::binary(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
 </code></pre>
 <br />
 
@@ -750,7 +378,7 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 
 
 <pre><code>
-offset_commit(ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>, ConsumerGroupGenerationId::<a href="#type-consumer_groupe_generation_id">consumer_groupe_generation_id()</a>, ConsumerId::<a href="#type-consumer_id">consumer_id()</a>, Topics::<a href="#type-offset_commit_option_v1">offset_commit_option_v1()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
+offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), ConsumerId::binary(), Topics::<a href="#type-offset_commit_option_v1">offset_commit_option_v1()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
 </code></pre>
 <br />
 
@@ -766,7 +394,7 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 
 
 <pre><code>
-offset_commit(ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>, ConsumerGroupGenerationId::<a href="#type-consumer_groupe_generation_id">consumer_groupe_generation_id()</a>, ConsumerId::<a href="#type-consumer_id">consumer_id()</a>, RetentionTime::<a href="#type-retention_time">retention_time()</a>, Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
+offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), ConsumerId::binary(), RetentionTime::integer(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
 </code></pre>
 <br />
 
@@ -782,7 +410,7 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 
 
 <pre><code>
-offset_fetch(ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>, Options::<a href="#type-offset_fetch_options">offset_fetch_options()</a>) -&gt; {ok, [<a href="#type-offset_fetch_set">offset_fetch_set()</a>]}
+offset_fetch(ConsumerGroup::binary(), Options::<a href="#type-offset_fetch_options">offset_fetch_options()</a>) -&gt; {ok, [<a href="#type-offset_fetch_set">offset_fetch_set()</a>]}
 </code></pre>
 <br />
 
@@ -805,7 +433,7 @@ Equivalent to [`produce(Topic, Message, #{})`](#produce-3).
 
 
 <pre><code>
-produce(Topic::<a href="#type-topic_name">topic_name()</a>, Message::<a href="#type-message">message()</a>, Options::<a href="#type-produce_options">produce_options()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]}
+produce(Topic::binary(), Message::<a href="#type-message">message()</a>, Options::<a href="#type-produce_options">produce_options()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]}
 </code></pre>
 <br />
 

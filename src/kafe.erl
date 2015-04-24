@@ -45,52 +45,59 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--type error_code() :: atom().
--type id() :: integer().
--type replicat() :: integer().
--type leader() :: integer().
--type isr() :: integer().
--type topic_name() :: binary().
--type host() :: binary().
--type max_bytes() :: integer().
--type fetch_offset() :: integer().
--type partition_number() :: integer().
--type offset() :: integer().
--type key() :: binary().
--type value() :: binary().
--type high_watermaker_offset() :: integer().
--type attributes() :: integer().
--type crc() :: integer().
--type consumer_group() :: binary().
--type coordinator_id() :: integer().
--type metadata_info() :: binary().
--type consumer_groupe_generation_id() :: integer().
--type consumer_id() :: binary().
--type retention_time() :: integer().
--type timestamp() :: integer().
-
--type partition() :: #{error_code => error_code(), id => id(), isr => [isr()], leader => leader(), replicas => [replicat()]}.
--type topic() :: #{error_code => error_code(), name => topic_name(), partitions => [partition()]}.
--type broker() :: #{host => host(), id => id(), port => port()}.
--type metadata() :: #{brokers => [broker()], topics => [topic()]}.
--type partition_def() :: {partition_number(), fetch_offset(), max_bytes()}.
--type topics() :: [topic_name()] | [{topic_name(), [partition_def()]}].
--type partition_info() :: #{error_code => error_code(), id => id(), offsets => [offset()]}.
--type topic_partition_info() :: #{name => topic_name(), partitions => [partition_info()]}.
--type message() :: value() | {key(), value()}.
+-type error_code() :: no_error
+                      | unknown
+                      | offset_out_of_range
+                      | invalid_message
+                      | unknown_topic_or_partition
+                      | invalid_message_size
+                      | leader_not_available
+                      | not_leader_for_partition
+                      | request_timed_out
+                      | broker_not_available
+                      | replica_not_available
+                      | message_size_too_large
+                      | stale_controller_epoch
+                      | offset_metadata_too_large
+                      | offsets_load_in_progress
+                      | consumer_coordinator_not_available
+                      | not_coordinator_for_consumer.
+-type metadata() :: #{brokers => [#{host => binary(), 
+                                    id => integer(), 
+                                    port => port()}], 
+                      topics => [#{error_code => error_code(), 
+                                   name => binary(), 
+                                   partitions => [#{error_code => error_code(), 
+                                                    id => integer(), 
+                                                    isr => [integer()], 
+                                                    leader => integer(), 
+                                                    replicas => [integer()]}]}]}.
+-type topics() :: [binary()] | [{binary(), [{integer(), integer(), integer()}]}].
+-type topic_partition_info() :: #{name => binary(), partitions => [#{error_code => error_code(), id => integer(), offsets => [integer()]}]}.
+-type message() :: binary() | {binary(), binary()}.
 -type produce_options() :: #{timeout => integer(), required_acks => integer(), partition => integer()}.
 -type fetch_options() :: #{partition => integer(), offset => integer(), max_bytes => integer(), min_bytes => integer(), max_wait_time => integer()}.
--type message_data() :: #{offset => offset(), crc => crc(), attributes => attributes(), key => key(), value => value()}.
--type partition_message() :: #{partition => partition_number(), error_code => error_code(), high_watermaker_offset => high_watermaker_offset(), message => [message_data()]}.
--type message_set() :: #{name => topic_name(), partitions => [partition_message()]}.
--type consumer_metadata() :: #{error_code => error_code(), coordinator_id => coordinator_id(), coordinator_host => host(),  coordinator_port => port()}.
--type offset_fetch_options() :: [topic_name()] | [{topic_name(), [partition_number()]}].
--type partition_offset_def() :: #{partition => partition_number(), offset => offset(), metadata_info => metadata_info(), error_code => error_code()}.
--type offset_fetch_set() :: #{name => topic_name(), partitions_offset => [partition_offset_def()]}.
--type offset_commit_partition_set() :: #{partition => partition_number(), error_code => error_code()}.
--type offset_commit_option() :: [{topic_name(), [{partition_number(), offset(), metadata_info()}]}].
--type offset_commit_option_v1() :: [{topic_name(), [{partition_number(), offset(), timestamp(), metadata_info()}]}].
--type offset_commit_set() :: [#{name => topic_name(), partitions => [offset_commit_partition_set()]}].
+-type message_set() :: #{name => binary(), 
+                         partitions => [#{partition => integer(), 
+                                          error_code => error_code(), 
+                                          high_watermaker_offset => integer(), 
+                                          message => [#{offset => integer(), 
+                                                        crc => integer(), 
+                                                        attributes => integer(), 
+                                                        key => binary(), 
+                                                        value => binary()}]}]}.
+-type consumer_metadata() :: #{error_code => error_code(), coordinator_id => integer(), coordinator_host => binary(),  coordinator_port => port()}.
+-type offset_fetch_options() :: [binary()] | [{binary(), [integer()]}].
+-type offset_fetch_set() :: #{name => binary(), 
+                              partitions_offset => [#{partition => integer(), 
+                                                      offset => integer(), 
+                                                      metadata_info => binary(), 
+                                                      error_code => error_code()}]}.
+-type offset_commit_set() :: [#{name => binary(), 
+                                partitions => [#{partition => integer(), 
+                                                 error_code => error_code()}]}].
+-type offset_commit_option() :: [{binary(), [{integer(), integer(), binary()}]}].
+-type offset_commit_option_v1() :: [{binary(), [{integer(), integer(), integer(), binary()}]}].
 
 % @hidden
 start_link() ->
@@ -179,7 +186,7 @@ metadata() ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest">Kafka protocol documentation</a>.
 % @end
--spec metadata([topic_name()]) -> {ok, metadata()}.
+-spec metadata([binary()]) -> {ok, metadata()}.
 metadata(Topics) when is_list(Topics) ->
   kafe_protocol_metadata:run(Topics).
 
@@ -197,7 +204,7 @@ offset(Topics) when is_list(Topics)->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetRequest">Kafka protocol documentation</a>.
 % @end
--spec offset(replicat(), topics()) -> {ok, [topic_partition_info()]}.
+-spec offset(integer(), topics()) -> {ok, [topic_partition_info()]}.
 offset(ReplicatID, Topics) when is_integer(ReplicatID), is_list(Topics) ->
   kafe_protocol_offset:run(ReplicatID, Topics).
 
@@ -231,7 +238,7 @@ produce(Topic, Message) ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI">Kafka protocol documentation</a>.
 % @end
--spec produce(topic_name(), message(), produce_options()) -> {ok, [topic_partition_info()]}.
+-spec produce(binary(), message(), produce_options()) -> {ok, [topic_partition_info()]}.
 produce(Topic, Message, Options) ->
   kafe_protocol_produce:run(Topic, Message, Options).
 
@@ -276,7 +283,7 @@ fetch(TopicName, Options) when is_binary(TopicName), is_map(Options) ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI">Kafka protocol documentation</a>.
 % @end
--spec fetch(replicat(), topic_name(), fetch_options()) -> {ok, [message_set()]}.
+-spec fetch(integer(), binary(), fetch_options()) -> {ok, [message_set()]}.
 fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), is_binary(TopicName), is_map(Options) ->
   kafe_protocol_fetch:run(ReplicatID, TopicName, Options).
 
@@ -285,7 +292,7 @@ fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), is_binary(Top
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest">Kafka protocol documentation</a>.
 % @end
--spec consumer_metadata(consumer_group()) -> {ok, consumer_metadata()}.
+-spec consumer_metadata(binary()) -> {ok, consumer_metadata()}.
 consumer_metadata(ConsumerGroup) ->
   kafe_protocol_consumer_metadata:run(ConsumerGroup).
 
@@ -294,7 +301,7 @@ consumer_metadata(ConsumerGroup) ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(consumer_group(), offset_commit_option()) -> {ok, [offset_commit_set()]}.
+-spec offset_commit(binary(), offset_commit_option()) -> {ok, [offset_commit_set()]}.
 offset_commit(ConsumerGroup, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v0(ConsumerGroup, 
                                               Topics).
@@ -304,7 +311,7 @@ offset_commit(ConsumerGroup, Topics) ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(consumer_group(), consumer_groupe_generation_id(), consumer_id(), offset_commit_option_v1()) -> {ok, [offset_commit_set()]}.
+-spec offset_commit(binary(), integer(), binary(), offset_commit_option_v1()) -> {ok, [offset_commit_set()]}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v1(ConsumerGroup, 
                                               ConsumerGroupGenerationId, 
@@ -316,7 +323,7 @@ offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(consumer_group(), consumer_groupe_generation_id(), consumer_id(), retention_time(), offset_commit_option()) -> {ok, [offset_commit_set()]}.
+-spec offset_commit(binary(), integer(), binary(), integer(), offset_commit_option()) -> {ok, [offset_commit_set()]}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v2(ConsumerGroup, 
                                               ConsumerGroupGenerationId, 
@@ -329,7 +336,7 @@ offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTim
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetFetchRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_fetch(consumer_group(), offset_fetch_options()) -> {ok, [offset_fetch_set()]}.
+-spec offset_fetch(binary(), offset_fetch_options()) -> {ok, [offset_fetch_set()]}.
 offset_fetch(ConsumerGroup, Options) ->
   kafe_protocol_consumer_offset_fetch:run(ConsumerGroup, Options).
 
