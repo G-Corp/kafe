@@ -1,3 +1,9 @@
+% @author Grégoire Lejeune <gl@finexkap.com>
+% @copyright 2014-2015 Finexkap
+% @since 2014
+% @doc
+% A Kafka client for Erlang
+% @end
 -module(kafe).
 -behaviour(gen_server).
 

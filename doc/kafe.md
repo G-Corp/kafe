@@ -1,11 +1,21 @@
 
 
 # Module kafe #
+* [Description](#description)
 * [Data Types](#types)
 * [Function Index](#index)
 * [Function Details](#functions)
 
+
+
+A Kafka client for Erlang.
+Copyright (c) 2014-2015 Finexkap
+
+__Introduced in:__ 2014
+
 __Behaviours:__ [`gen_server`](gen_server.md).
+
+__Authors:__ Grégoire Lejeune ([`gl@finexkap.com`](mailto:gl@finexkap.com)).
 
 <a name="types"></a>
 
