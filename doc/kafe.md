@@ -50,6 +50,30 @@ consumer_group() = binary()
 
 
 
+### <a name="type-consumer_groupe_generation_id">consumer_groupe_generation_id()</a> ###
+
+
+
+<pre><code>
+consumer_groupe_generation_id() = integer()
+</code></pre>
+
+
+
+
+
+### <a name="type-consumer_id">consumer_id()</a> ###
+
+
+
+<pre><code>
+consumer_id() = binary()
+</code></pre>
+
+
+
+
+
 ### <a name="type-consumer_metadata">consumer_metadata()</a> ###
 
 
@@ -278,6 +302,54 @@ offset() = integer()
 
 
 
+### <a name="type-offset_commit_option">offset_commit_option()</a> ###
+
+
+
+<pre><code>
+offset_commit_option() = [{<a href="#type-topic_name">topic_name()</a>, [{<a href="#type-partition_number">partition_number()</a>, <a href="#type-offset">offset()</a>, <a href="#type-metadata_info">metadata_info()</a>}]}]
+</code></pre>
+
+
+
+
+
+### <a name="type-offset_commit_option_v1">offset_commit_option_v1()</a> ###
+
+
+
+<pre><code>
+offset_commit_option_v1() = [{<a href="#type-topic_name">topic_name()</a>, [{<a href="#type-partition_number">partition_number()</a>, <a href="#type-offset">offset()</a>, <a href="#type-timestamp">timestamp()</a>, <a href="#type-metadata_info">metadata_info()</a>}]}]
+</code></pre>
+
+
+
+
+
+### <a name="type-offset_commit_partition_set">offset_commit_partition_set()</a> ###
+
+
+
+<pre><code>
+offset_commit_partition_set() = #{partition =&gt; <a href="#type-partition_number">partition_number()</a>, error_code =&gt; <a href="#type-error_code">error_code()</a>}
+</code></pre>
+
+
+
+
+
+### <a name="type-offset_commit_set">offset_commit_set()</a> ###
+
+
+
+<pre><code>
+offset_commit_set() = [#{name =&gt; <a href="#type-topic_name">topic_name()</a>, partitions =&gt; [<a href="#type-offset_commit_partition_set">offset_commit_partition_set()</a>]}]
+</code></pre>
+
+
+
+
+
 ### <a name="type-offset_fetch_options">offset_fetch_options()</a> ###
 
 
@@ -290,12 +362,12 @@ offset_fetch_options() = [<a href="#type-topic_name">topic_name()</a>] | [{<a hr
 
 
 
-### <a name="type-offset_set">offset_set()</a> ###
+### <a name="type-offset_fetch_set">offset_fetch_set()</a> ###
 
 
 
 <pre><code>
-offset_set() = #{name =&gt; <a href="#type-topic_name">topic_name()</a>, partitions_offset =&gt; [<a href="#type-partition_offset_def">partition_offset_def()</a>]}
+offset_fetch_set() = #{name =&gt; <a href="#type-topic_name">topic_name()</a>, partitions_offset =&gt; [<a href="#type-partition_offset_def">partition_offset_def()</a>]}
 </code></pre>
 
 
@@ -398,6 +470,30 @@ replicat() = integer()
 
 
 
+### <a name="type-retention_time">retention_time()</a> ###
+
+
+
+<pre><code>
+retention_time() = integer()
+</code></pre>
+
+
+
+
+
+### <a name="type-timestamp">timestamp()</a> ###
+
+
+
+<pre><code>
+timestamp() = integer()
+</code></pre>
+
+
+
+
+
 ### <a name="type-topic">topic()</a> ###
 
 
@@ -460,12 +556,14 @@ value() = binary()
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#consumer_metadata-1">consumer_metadata/1</a></td><td>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#consumer_metadata-1">consumer_metadata/1</a></td><td> 
 Consumer Metadata Request.</td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
 Fetch messages.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td>Equivalent to <a href="#metadata-1"><tt>metadata([])</tt></a>.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td> 
 Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#offset-1">offset/1</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, Topics)</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td> 
-Get offet for the given topics and replicat.</td></tr><tr><td valign="top"><a href="#offset_commit-6">offset_commit/6</a></td><td>
-Offset commit.</td></tr><tr><td valign="top"><a href="#offset_fetch-2">offset_fetch/2</a></td><td>
+Get offet for the given topics and replicat.</td></tr><tr><td valign="top"><a href="#offset_commit-2">offset_commit/2</a></td><td> 
+Offset commit v0.</td></tr><tr><td valign="top"><a href="#offset_commit-4">offset_commit/4</a></td><td> 
+Offset commit v1.</td></tr><tr><td valign="top"><a href="#offset_commit-5">offset_commit/5</a></td><td> 
+Offset commit v2.</td></tr><tr><td valign="top"><a href="#offset_fetch-2">offset_fetch/2</a></td><td> 
 Offset fetch.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
 Send a message.</td></tr></table>
 
@@ -485,7 +583,11 @@ consumer_metadata(ConsumerGroup::<a href="#type-consumer_group">consumer_group()
 <br />
 
 
+ 
 Consumer Metadata Request
+
+
+For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest).
 <a name="fetch-1"></a>
 
 ### fetch/1 ###
@@ -616,26 +718,70 @@ Example:
 
 
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetRequest).
-<a name="offset_commit-6"></a>
+<a name="offset_commit-2"></a>
 
-### offset_commit/6 ###
-
-`offset_commit(Brocker, ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, X6) -> any()`
+### offset_commit/2 ###
 
 
-Offset commit
+<pre><code>
+offset_commit(ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>, Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
+</code></pre>
+<br />
+
+
+ 
+Offset commit v0
+
+
+For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
+<a name="offset_commit-4"></a>
+
+### offset_commit/4 ###
+
+
+<pre><code>
+offset_commit(ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>, ConsumerGroupGenerationId::<a href="#type-consumer_groupe_generation_id">consumer_groupe_generation_id()</a>, ConsumerId::<a href="#type-consumer_id">consumer_id()</a>, Topics::<a href="#type-offset_commit_option_v1">offset_commit_option_v1()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
+</code></pre>
+<br />
+
+
+ 
+Offset commit v1
+
+
+For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
+<a name="offset_commit-5"></a>
+
+### offset_commit/5 ###
+
+
+<pre><code>
+offset_commit(ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>, ConsumerGroupGenerationId::<a href="#type-consumer_groupe_generation_id">consumer_groupe_generation_id()</a>, ConsumerId::<a href="#type-consumer_id">consumer_id()</a>, RetentionTime::<a href="#type-retention_time">retention_time()</a>, Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
+</code></pre>
+<br />
+
+
+ 
+Offset commit v2
+
+
+For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
 <a name="offset_fetch-2"></a>
 
 ### offset_fetch/2 ###
 
 
 <pre><code>
-offset_fetch(ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>, Options::<a href="#type-offset_fetch_options">offset_fetch_options()</a>) -&gt; {ok, [<a href="#type-offset_set">offset_set()</a>]}
+offset_fetch(ConsumerGroup::<a href="#type-consumer_group">consumer_group()</a>, Options::<a href="#type-offset_fetch_options">offset_fetch_options()</a>) -&gt; {ok, [<a href="#type-offset_fetch_set">offset_fetch_set()</a>]}
 </code></pre>
 <br />
 
 
+ 
 Offset fetch
+
+
+For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetFetchRequest).
 <a name="produce-2"></a>
 
 ### produce/2 ###

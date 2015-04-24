@@ -72,5 +72,6 @@ partitions_offset(N,
                     Remainder,
                     [#{partition => Partition, 
                        offset => Offset, 
-                       metadata_info => Metadata, 
+                       metadata => Metadata, 
                        error_code => kafe_error:code(ErrorCode)} | Acc]).
+

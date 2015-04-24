@@ -5,6 +5,7 @@
 -include_lib("kernel/include/inet.hrl").
 -define(SERVER, ?MODULE).
 
+% Public API
 -export([
          metadata/0,
          metadata/1,
@@ -17,9 +18,12 @@
          fetch/3,
          consumer_metadata/1,
          offset_fetch/2,
-         offset_commit/6
+         offset_commit/2,
+         offset_commit/4,
+         offset_commit/5
         ]).
 
+% Internal API
 -export([
          start_link/0,
          first_broker/0,
@@ -28,7 +32,8 @@
          topics/0,
          max_offset/1,
          max_offset/2,
-         partition_for_offset/2
+         partition_for_offset/2,
+         api_version/0
         ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -53,6 +58,10 @@
 -type consumer_group() :: binary().
 -type coordinator_id() :: integer().
 -type metadata_info() :: binary().
+-type consumer_groupe_generation_id() :: integer().
+-type consumer_id() :: binary().
+-type retention_time() :: integer().
+-type timestamp() :: integer().
 
 -type partition() :: #{error_code => error_code(), id => id(), isr => [isr()], leader => leader(), replicas => [replicat()]}.
 -type topic() :: #{error_code => error_code(), name => topic_name(), partitions => [partition()]}.
@@ -71,7 +80,11 @@
 -type consumer_metadata() :: #{error_code => error_code(), coordinator_id => coordinator_id(), coordinator_host => host(),  coordinator_port => port()}.
 -type offset_fetch_options() :: [topic_name()] | [{topic_name(), [partition_number()]}].
 -type partition_offset_def() :: #{partition => partition_number(), offset => offset(), metadata_info => metadata_info(), error_code => error_code()}.
--type offset_set() :: #{name => topic_name(), partitions_offset => [partition_offset_def()]}.
+-type offset_fetch_set() :: #{name => topic_name(), partitions_offset => [partition_offset_def()]}.
+-type offset_commit_partition_set() :: #{partition => partition_number(), error_code => error_code()}.
+-type offset_commit_option() :: [{topic_name(), [{partition_number(), offset(), metadata_info()}]}].
+-type offset_commit_option_v1() :: [{topic_name(), [{partition_number(), offset(), timestamp(), metadata_info()}]}].
+-type offset_commit_set() :: [#{name => topic_name(), partitions => [offset_commit_partition_set()]}].
 
 % @hidden
 start_link() ->
@@ -138,6 +151,11 @@ partition_for_offset(TopicName, Offset) ->
     {ok, _} ->
       {?DEFAULT_OFFSET_PARTITION, Offset}
   end.
+
+% @hidden
+api_version() ->
+  gen_server:call(?SERVER, api_version, infinity).
+
 
 % @equiv metadata([])
 metadata() ->
@@ -258,21 +276,54 @@ fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), is_binary(Top
 
 % @doc
 % Consumer Metadata Request
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest">Kafka protocol documentation</a>.
 % @end
 -spec consumer_metadata(consumer_group()) -> {ok, consumer_metadata()}.
 consumer_metadata(ConsumerGroup) ->
   kafe_protocol_consumer_metadata:run(ConsumerGroup).
 
 % @doc
-% Offset commit
+% Offset commit v0
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
-offset_commit(Brocker, ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, [TopicName, [Partition, Offset, Metadata]]) ->
-  todo.
+-spec offset_commit(consumer_group(), offset_commit_option()) -> {ok, [offset_commit_set()]}.
+offset_commit(ConsumerGroup, Topics) ->
+  kafe_protocol_consumer_offset_commit:run_v0(ConsumerGroup, 
+                                              Topics).
+
+% @doc
+% Offset commit v1
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
+% @end
+-spec offset_commit(consumer_group(), consumer_groupe_generation_id(), consumer_id(), offset_commit_option_v1()) -> {ok, [offset_commit_set()]}.
+offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
+  kafe_protocol_consumer_offset_commit:run_v1(ConsumerGroup, 
+                                              ConsumerGroupGenerationId, 
+                                              ConsumerId, 
+                                              Topics).
+
+% @doc
+% Offset commit v2
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
+% @end
+-spec offset_commit(consumer_group(), consumer_groupe_generation_id(), consumer_id(), retention_time(), offset_commit_option()) -> {ok, [offset_commit_set()]}.
+offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics) ->
+  kafe_protocol_consumer_offset_commit:run_v2(ConsumerGroup, 
+                                              ConsumerGroupGenerationId, 
+                                              ConsumerId, 
+                                              RetentionTime, 
+                                              Topics).
 
 % @doc
 % Offset fetch
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetFetchRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_fetch(consumer_group(), offset_fetch_options()) -> {ok, [offset_set()]}.
+-spec offset_fetch(consumer_group(), offset_fetch_options()) -> {ok, [offset_fetch_set()]}.
 offset_fetch(ConsumerGroup, Options) ->
   kafe_protocol_consumer_offset_fetch:run(ConsumerGroup, Options).
 
@@ -322,6 +373,8 @@ handle_call({broker_by_name, BrokerName}, _From, #{brokers := BrokersAddr} = Sta
   {reply, maps:get(eutils:to_string(BrokerName), BrokersAddr, undefined), State};
 handle_call(topics, _From, #{topics := Topics} = State) ->
   {reply, Topics, State};
+handle_call(api_version, _From, #{api_version := Version} = State) ->
+  {reply, Version, State};
 handle_call(state, _From, State) ->
   {reply, State, State};
 handle_call(_Request, _From, State) ->
