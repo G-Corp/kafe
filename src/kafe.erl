@@ -23,6 +23,7 @@
          fetch/2,
          fetch/3,
          consumer_metadata/1,
+         offset_fetch/1,
          offset_fetch/2,
          offset_commit/2,
          offset_commit/4,
@@ -336,6 +337,11 @@ offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTim
                                               RetentionTime, 
                                               Topics).
 
+% @equiv offset_fetch(ConsumerGroup, [])
+-spec offset_fetch(binary()) -> {ok, [offset_fetch_set()]}.
+offset_fetch(ConsumerGroup) ->
+  offset_fetch(ConsumerGroup, []).
+
 % @doc
 % Offset fetch
 %
@@ -406,7 +412,7 @@ handle_cast(_Msg, State) ->
 
 % @hidden
 handle_info(update_brokers, #{brokers_update_frequency := Frequency} = State) ->
-  lager:info("Update brokers list..."),
+  lager:debug("Update brokers list..."),
   State1 = update_state_with_metadata(remove_dead_brokers(State)),
   erlang:send_after(Frequency, self(), update_brokers),
   {noreply, State1};

@@ -201,7 +201,7 @@ Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#of
 Get offet for the given topics and replicat.</td></tr><tr><td valign="top"><a href="#offset_commit-2">offset_commit/2</a></td><td> 
 Offset commit v0.</td></tr><tr><td valign="top"><a href="#offset_commit-4">offset_commit/4</a></td><td> 
 Offset commit v1.</td></tr><tr><td valign="top"><a href="#offset_commit-5">offset_commit/5</a></td><td> 
-Offset commit v2.</td></tr><tr><td valign="top"><a href="#offset_fetch-2">offset_fetch/2</a></td><td> 
+Offset commit v2.</td></tr><tr><td valign="top"><a href="#offset_fetch-1">offset_fetch/1</a></td><td>Equivalent to <a href="#offset_fetch-2"><tt>offset_fetch(ConsumerGroup, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#offset_fetch-2">offset_fetch/2</a></td><td> 
 Offset fetch.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
 Send a message.</td></tr></table>
 
@@ -404,6 +404,17 @@ Offset commit v2
 
 
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
+<a name="offset_fetch-1"></a>
+
+### offset_fetch/1 ###
+
+
+<pre><code>
+offset_fetch(ConsumerGroup::binary()) -&gt; {ok, [<a href="#type-offset_fetch_set">offset_fetch_set()</a>]}
+</code></pre>
+<br />
+
+Equivalent to [`offset_fetch(ConsumerGroup, [])`](#offset_fetch-2).
 <a name="offset_fetch-2"></a>
 
 ### offset_fetch/2 ###

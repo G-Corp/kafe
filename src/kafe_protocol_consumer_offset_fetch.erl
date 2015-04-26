@@ -10,10 +10,14 @@
         ]).
 
 run(ConsumerGroup, Options) ->
+  Options1 = if
+               Options =:= [] -> maps:keys(kafe:topics());
+               true -> Options
+             end,
   {ok, #{coordinator_host := BrokerName}} = kafe:consumer_metadata(ConsumerGroup),
   gen_server:call(kafe:broker_by_name(BrokerName),
                   {call, 
-                   fun ?MODULE:request/3, [ConsumerGroup, Options],
+                   fun ?MODULE:request/3, [ConsumerGroup, Options1],
                    fun ?MODULE:response/1},
                   infinity).
 
@@ -42,7 +46,7 @@ topics([{TopicName, Partitions}|Rest], Result) ->
              ))/binary
          >>);
 topics([TopicName|Rest], Result) ->
-  topics([{TopicName, []}|Rest], Result).
+  topics([{TopicName, maps:keys(maps:get(TopicName, kafe:topics(), #{}))}|Rest], Result).
 
 response(0, <<>>) ->
   [];
