@@ -56,6 +56,13 @@ handle_call({call, Request, RequestParams, Response}, From, State) ->
                From,
                Response,
                State);
+handle_call(alive, _From, #{socket := Socket} = State) ->
+  case inet:setopts(Socket, [{active, once}]) of
+    ok ->
+      {reply, ok, State};
+    {error, _} = Reason ->
+      {reply, Reason, State}
+  end;
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
@@ -91,7 +98,9 @@ handle_info(Info, State) ->
   lager:info("--- State ~p", [State]),
   {noreply, State}.
 
-terminate(_Reason, _State) ->
+terminate(_Reason, #{socket := Socket}) ->
+  lager:debug("Terminate..."),
+  _ = gen_tcp:close(Socket),
   ok.
 
 code_change(_OldVsn, State, _Extra) ->

@@ -3,7 +3,7 @@
 
 -behaviour(supervisor).
 
--export([start_link/0, start_child/2]).
+-export([start_link/0, start_child/2, stop_child/1]).
 -export([init/1]).
 
 -define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
@@ -27,6 +27,13 @@ start_child(Addr, Port) ->
       {ok, ClientID};
     E ->
       E
+  end.
+
+stop_child(ID) ->
+  case supervisor:terminate_child(?MODULE, ID) of
+    ok ->
+      supervisor:delete_child(?MODULE, ID);
+    E -> E
   end.
 
 init([]) ->

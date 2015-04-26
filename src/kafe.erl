@@ -39,7 +39,8 @@
          max_offset/1,
          max_offset/2,
          partition_for_offset/2,
-         api_version/0
+         api_version/0,
+         state/0
         ]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -168,6 +169,10 @@ partition_for_offset(TopicName, Offset) ->
 % @hidden
 api_version() ->
   gen_server:call(?SERVER, api_version, infinity).
+
+% @hidden
+state() ->
+  gen_server:call(?SERVER, state, infinity).
 
 
 % @equiv metadata([])
@@ -365,7 +370,9 @@ init(_) ->
             client_id => ClientID,
             offset => Offset
            },
-  {ok, initialize(KafkaBrokers, State)}.
+  State1 = update_state_with_metadata(get_connection(KafkaBrokers, State)),
+  erlang:send_after(BrokersUpdateFreq, self(), update_brokers),
+  {ok, State1}.
 
 % @hidden
 handle_call(first_broker, _From, State) ->
@@ -398,6 +405,12 @@ handle_cast(_Msg, State) ->
   {noreply, State}.
 
 % @hidden
+handle_info(update_brokers, #{brokers_update_frequency := Frequency} = State) ->
+  lager:info("Update brokers list..."),
+  State1 = update_state_with_metadata(remove_dead_brokers(State)),
+  erlang:send_after(Frequency, self(), update_brokers),
+  {noreply, State1};
+% @hidden
 handle_info(_Info, State) ->
   {noreply, State}.
 
@@ -408,16 +421,6 @@ terminate(_Reason, _State) ->
 % @hidden
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
-
-% @hidden
-initialize(KafkaBrokers, State) ->
-  State1 = get_connection(KafkaBrokers, State),
-  {ok, Metadata} =  gen_server:call(get_first_broker(State1),
-                                    {call, 
-                                     fun kafe_protocol_metadata:request/2, [[]],
-                                     fun kafe_protocol_metadata:response/1},
-                                    infinity),
-  update_state_with_metadata(Metadata, State1).
 
 % @hidden
 get_connection([], State) -> 
@@ -469,7 +472,13 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList, brokers := Br
   end.
 
 % @hidden
-update_state_with_metadata(#{brokers := Brokers, topics := Topics}, State) ->
+update_state_with_metadata(State) ->
+  {ok, #{brokers := Brokers, 
+         topics := Topics}} =  gen_server:call(get_first_broker(State),
+                                               {call, 
+                                                fun kafe_protocol_metadata:request/2, [[]],
+                                                fun kafe_protocol_metadata:response/1},
+                                               infinity),
   {Brokers1, State2} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, State1}) ->
                                        {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
                                         get_connection([{eutils:to_string(Host), Port}], State1)}
@@ -483,6 +492,22 @@ update_state_with_metadata(#{brokers := Brokers, topics := Topics}, State) ->
                                      Acc)
                         end, #{}, Topics),
   maps:put(topics, Topics1, State2).
+
+% @hidden
+remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
+  lists:foldl(fun(Broker, #{brokers := Brokers1, brokers_list := BrokersList1} = State1) ->
+                  BrokerID = maps:get(Broker, Brokers1),
+                  case gen_server:call(BrokerID, alive, infinity) of
+                    ok -> 
+                      State1;
+                    {error, Reason} ->
+                      _ = kafe_client_sup:stop_child(BrokerID),
+                      lager:debug("Broker ~p not alive : ~p", [Broker, Reason]),
+                      maps:put(brokers_list, 
+                               lists:delete(Broker, BrokersList1), 
+                               maps:put(brokers, maps:remove(Broker, Brokers1), State1))
+                  end
+              end, State, BrokersList).
 
 % @hidden
 get_host([], _, _) -> undefined;
@@ -500,5 +525,12 @@ get_host([Addr|Rest], Hostname, AddrType) ->
 
 % @hidden
 get_first_broker(#{brokers := Brokers}) ->
-  [Broker|_] = maps:values(Brokers),
-  Broker.
+  get_first_broker(maps:values(Brokers));
+get_first_broker([]) -> undefined;
+get_first_broker([Broker|Rest]) ->
+  case gen_server:call(Broker, alive, infinity) of
+    ok -> Broker;
+    {error, Reason} ->
+      lager:debug("Broker ~p is not alive : ~p", [Broker, Reason]),
+      get_first_broker(Rest)
+  end.
