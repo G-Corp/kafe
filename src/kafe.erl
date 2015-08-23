@@ -27,7 +27,8 @@
          offset_fetch/2,
          offset_commit/2,
          offset_commit/4,
-         offset_commit/5
+         offset_commit/5,
+         offsets/2
         ]).
 
 % Internal API
@@ -539,4 +540,47 @@ get_first_broker([Broker|Rest]) ->
     {error, Reason} ->
       lager:debug("Broker ~p is not alive : ~p", [Broker, Reason]),
       get_first_broker(Rest)
+  end.
+
+% @doc
+% Return the list of unread offsets for a given topic and consumer group
+% @end
+-spec offsets(binary(), binary()) -> [{integer(), integer()}] | error.
+offsets(TopicName, ConsumerGroup) ->
+  NoError = kafe_error:code(0),
+  case offset([TopicName]) of
+    {ok, [#{name := TopicName, partitions := Partitions}]} ->
+      lists:foldl(
+        fun(#{id := PartitionID, offsets := [Offset|_]}, Acc) ->
+            Offset1 = Offset - 1,
+            if  
+              Offset1 >= 0 ->
+                case offset_fetch(ConsumerGroup, [{TopicName, [PartitionID]}]) of
+                  {ok,[#{name := TopicName,
+                         partitions_offset := [#{offset := CurrentOffset,
+                                                 partition := PartitionID}]}]} ->
+                    if  
+                      CurrentOffset < Offset1 ->
+                        case offset_commit(ConsumerGroup, 
+                                                [{TopicName, [{PartitionID, Offset1, <<>>}]}]) of
+                          {ok, [#{name := TopicName, 
+                                  partitions := [#{partition := PartitionID, 
+                                                   error_code := ErrorCode}]}]} when ErrorCode =:= NoError ->
+                            Acc ++ [{PartitionID, O} || O <- lists:seq(CurrentOffset + 1, Offset1)];
+                          _ ->
+                            Acc 
+                        end;
+                      true ->
+                        Acc 
+                    end;
+                  _ ->  
+                    Acc 
+                end;
+              true ->
+                Acc 
+            end 
+        end, [], Partitions);
+    _ ->  
+      lager:info("Can't retriece offsets for topic ~p", [TopicName]),
+      error
   end.
