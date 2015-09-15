@@ -1,39 +1,19 @@
-REBAR = ./rebar
+PROJECT = kafe
+DEPS = lager edown eutils
+dep_lager = git https://github.com/basho/lager.git master
+dep_edown = git https://github.com/homeswap/edown.git master
+dep_eutils = git https://github.com/emedia-project/eutils.git master
+include erlang.mk
 
-.PHONY: compile get-deps test doc
+ERLC_OPTS = +debug_info +'{parse_transform, lager_transform}'
+EDOC_OPTS = {doclet, edown_doclet} \
+						, {app_default, "http://www.erlang.org/doc/man"} \
+						, {new, true} \
+						, {packages, false} \
+						, {stylesheet, ""} \
+						, {image, ""} \
+						, {top_level_readme, {"./documentation.md", "https://github.com/nexkap/kafe"}} 
 
-all: compile doc
-
-compile: get-deps
-	@$(REBAR) compile
-
-get-deps:
-	@$(REBAR) get-deps
-	@$(REBAR) check-deps
-
-clean:
-	@$(REBAR) clean
-	rm -f erl_crash.dump
-
-realclean: clean
-	@$(REBAR) delete-deps
-
-test: compile
-	@$(REBAR) skip_deps=true eunit
-
-doc:
-	@rm -f documentation.md
-	@rm -rf doc
-	@$(REBAR) doc
-
-dev: compile
+dev: deps app
 	@erl -pa ebin include deps/*/ebin deps/*/include -config config/kafe.config
 
-analyze: checkplt
-	@$(REBAR) skip_deps=true dialyze
-
-buildplt:
-	@$(REBAR) skip_deps=true build-plt
-
-checkplt: buildplt
-	@$(REBAR) skip_deps=true check-plt

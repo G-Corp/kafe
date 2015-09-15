@@ -1,4 +1,0 @@
-%% encoding: UTF-8
-{application,kafe}.
-{packages,[]}.
-{modules,[kafe]}.

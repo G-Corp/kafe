@@ -6,9 +6,8 @@
 * [Function Index](#index)
 * [Function Details](#functions)
 
-
-
 A Kafka client for Erlang.
+
 Copyright (c) 2014-2015 Finexkap
 
 __Introduced in:__ 2014
@@ -27,7 +26,6 @@ __Authors:__ Grégoire Lejeune ([`gl@finexkap.com`](mailto:gl@finexkap.com)).
 ### <a name="type-consumer_metadata">consumer_metadata()</a> ###
 
 
-
 <pre><code>
 consumer_metadata() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, coordinator_id =&gt; integer(), coordinator_host =&gt; binary(), coordinator_port =&gt; port()}
 </code></pre>
@@ -35,9 +33,7 @@ consumer_metadata() = #{error_code =&gt; <a href="#type-error_code">error_code()
 
 
 
-
 ### <a name="type-error_code">error_code()</a> ###
-
 
 
 <pre><code>
@@ -47,9 +43,7 @@ error_code() = no_error | unknown | offset_out_of_range | invalid_message | unkn
 
 
 
-
 ### <a name="type-fetch_options">fetch_options()</a> ###
-
 
 
 <pre><code>
@@ -59,9 +53,7 @@ fetch_options() = #{partition =&gt; integer(), offset =&gt; integer(), max_bytes
 
 
 
-
 ### <a name="type-message">message()</a> ###
-
 
 
 <pre><code>
@@ -71,9 +63,7 @@ message() = binary() | {binary(), binary()}
 
 
 
-
 ### <a name="type-message_set">message_set()</a> ###
-
 
 
 <pre><code>
@@ -83,9 +73,7 @@ message_set() = #{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integ
 
 
 
-
 ### <a name="type-metadata">metadata()</a> ###
-
 
 
 <pre><code>
@@ -95,9 +83,7 @@ metadata() = #{brokers =&gt; [#{host =&gt; binary(), id =&gt; integer(), port =&
 
 
 
-
 ### <a name="type-offset_commit_option">offset_commit_option()</a> ###
-
 
 
 <pre><code>
@@ -107,9 +93,7 @@ offset_commit_option() = [{binary(), [{integer(), integer(), binary()}]}]
 
 
 
-
 ### <a name="type-offset_commit_option_v1">offset_commit_option_v1()</a> ###
-
 
 
 <pre><code>
@@ -119,9 +103,7 @@ offset_commit_option_v1() = [{binary(), [{integer(), integer(), integer(), binar
 
 
 
-
 ### <a name="type-offset_commit_set">offset_commit_set()</a> ###
-
 
 
 <pre><code>
@@ -131,9 +113,7 @@ offset_commit_set() = [#{name =&gt; binary(), partitions =&gt; [#{partition =&gt
 
 
 
-
 ### <a name="type-offset_fetch_options">offset_fetch_options()</a> ###
-
 
 
 <pre><code>
@@ -143,9 +123,7 @@ offset_fetch_options() = [binary()] | [{binary(), [integer()]}]
 
 
 
-
 ### <a name="type-offset_fetch_set">offset_fetch_set()</a> ###
-
 
 
 <pre><code>
@@ -155,9 +133,7 @@ offset_fetch_set() = #{name =&gt; binary(), partitions_offset =&gt; [#{partition
 
 
 
-
 ### <a name="type-produce_options">produce_options()</a> ###
-
 
 
 <pre><code>
@@ -167,9 +143,7 @@ produce_options() = #{timeout =&gt; integer(), required_acks =&gt; integer(), pa
 
 
 
-
 ### <a name="type-topic_partition_info">topic_partition_info()</a> ###
-
 
 
 <pre><code>
@@ -179,15 +153,12 @@ topic_partition_info() = #{name =&gt; binary(), partitions =&gt; [#{error_code =
 
 
 
-
 ### <a name="type-topics">topics()</a> ###
-
 
 
 <pre><code>
 topics() = [binary()] | [{binary(), [{integer(), integer(), integer()}]}]
 </code></pre>
-
 
 <a name="index"></a>
 
@@ -202,7 +173,8 @@ Get offet for the given topics and replicat.</td></tr><tr><td valign="top"><a hr
 Offset commit v0.</td></tr><tr><td valign="top"><a href="#offset_commit-4">offset_commit/4</a></td><td> 
 Offset commit v1.</td></tr><tr><td valign="top"><a href="#offset_commit-5">offset_commit/5</a></td><td> 
 Offset commit v2.</td></tr><tr><td valign="top"><a href="#offset_fetch-1">offset_fetch/1</a></td><td>Equivalent to <a href="#offset_fetch-2"><tt>offset_fetch(ConsumerGroup, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#offset_fetch-2">offset_fetch/2</a></td><td> 
-Offset fetch.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
+Offset fetch.</td></tr><tr><td valign="top"><a href="#offsets-2">offsets/2</a></td><td>
+Return the list of unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
 Send a message.</td></tr></table>
 
 
@@ -214,18 +186,16 @@ Send a message.</td></tr></table>
 
 ### consumer_metadata/1 ###
 
-
 <pre><code>
 consumer_metadata(ConsumerGroup::binary()) -&gt; {ok, <a href="#type-consumer_metadata">consumer_metadata()</a>}
 </code></pre>
 <br />
 
 
- 
 Consumer Metadata Request
 
-
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest).
+
 <a name="fetch-1"></a>
 
 ### fetch/1 ###
@@ -233,6 +203,7 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 `fetch(TopicName) -> any()`
 
 Equivalent to [`fetch(-1, TopicName, #{})`](#fetch-3).
+
 <a name="fetch-2"></a>
 
 ### fetch/2 ###
@@ -240,10 +211,10 @@ Equivalent to [`fetch(-1, TopicName, #{})`](#fetch-3).
 `fetch(ReplicatID, TopicName) -> any()`
 
 Equivalent to [`fetch(ReplicatID, TopicName, #{})`](#fetch-3).
+
 <a name="fetch-3"></a>
 
 ### fetch/3 ###
-
 
 <pre><code>
 fetch(ReplicatID::integer(), TopicName::binary(), Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]}
@@ -251,9 +222,7 @@ fetch(ReplicatID::integer(), TopicName::binary(), Options::<a href="#type-fetch_
 <br />
 
 
- 
 Fetch messages
-
 
 Options:
 
@@ -275,10 +244,7 @@ MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait
 at the time the request is issued (default : 1).
 
 
-
-
 ReplicatID must __always__ be -1.
-
 
 Example:
 
@@ -288,8 +254,8 @@ Example:
  Response1 = kafe:fetch(<<"topic">>, #{offset => 2, partition => 3}).
 ```
 
-
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI).
+
 <a name="metadata-0"></a>
 
 ### metadata/0 ###
@@ -297,10 +263,10 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 `metadata() -> any()`
 
 Equivalent to [`metadata([])`](#metadata-1).
+
 <a name="metadata-1"></a>
 
 ### metadata/1 ###
-
 
 <pre><code>
 metadata(Topics::[binary()]) -&gt; {ok, <a href="#type-metadata">metadata()</a>}
@@ -308,9 +274,7 @@ metadata(Topics::[binary()]) -&gt; {ok, <a href="#type-metadata">metadata()</a>}
 <br />
 
 
- 
 Return metadata for the given topics
-
 
 Example:
 
@@ -319,12 +283,10 @@ Example:
  Metadata = kafe:metadata([<<"topic1">>, <<"topic2">>]).
 ```
 
-
-
 This example return all metadata for `topic1` and `topic2`
 
-
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest).
+
 <a name="offset-1"></a>
 
 ### offset/1 ###
@@ -332,10 +294,10 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 `offset(Topics) -> any()`
 
 Equivalent to [`offset(-1, Topics)`](#offset-2).
+
 <a name="offset-2"></a>
 
 ### offset/2 ###
-
 
 <pre><code>
 offset(ReplicatID::integer(), Topics::<a href="#type-topics">topics()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]}
@@ -343,9 +305,7 @@ offset(ReplicatID::integer(), Topics::<a href="#type-topics">topics()</a>) -&gt;
 <br />
 
 
- 
 Get offet for the given topics and replicat
-
 
 Example:
 
@@ -354,12 +314,11 @@ Example:
  Offset = kafe:offet(-1, [<<"topic1">>, {<<"topic2">>, [{0, -1, 1}, {2, -1, 1}]}]).
 ```
 
-
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetRequest).
+
 <a name="offset_commit-2"></a>
 
 ### offset_commit/2 ###
-
 
 <pre><code>
 offset_commit(ConsumerGroup::binary(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
@@ -367,15 +326,13 @@ offset_commit(ConsumerGroup::binary(), Topics::<a href="#type-offset_commit_opti
 <br />
 
 
- 
 Offset commit v0
 
-
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
+
 <a name="offset_commit-4"></a>
 
 ### offset_commit/4 ###
-
 
 <pre><code>
 offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), ConsumerId::binary(), Topics::<a href="#type-offset_commit_option_v1">offset_commit_option_v1()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
@@ -383,15 +340,13 @@ offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), Con
 <br />
 
 
- 
 Offset commit v1
 
-
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
+
 <a name="offset_commit-5"></a>
 
 ### offset_commit/5 ###
-
 
 <pre><code>
 offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), ConsumerId::binary(), RetentionTime::integer(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
@@ -399,15 +354,13 @@ offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), Con
 <br />
 
 
- 
 Offset commit v2
 
-
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
+
 <a name="offset_fetch-1"></a>
 
 ### offset_fetch/1 ###
-
 
 <pre><code>
 offset_fetch(ConsumerGroup::binary()) -&gt; {ok, [<a href="#type-offset_fetch_set">offset_fetch_set()</a>]}
@@ -415,10 +368,10 @@ offset_fetch(ConsumerGroup::binary()) -&gt; {ok, [<a href="#type-offset_fetch_se
 <br />
 
 Equivalent to [`offset_fetch(ConsumerGroup, [])`](#offset_fetch-2).
+
 <a name="offset_fetch-2"></a>
 
 ### offset_fetch/2 ###
-
 
 <pre><code>
 offset_fetch(ConsumerGroup::binary(), Options::<a href="#type-offset_fetch_options">offset_fetch_options()</a>) -&gt; {ok, [<a href="#type-offset_fetch_set">offset_fetch_set()</a>]}
@@ -426,11 +379,21 @@ offset_fetch(ConsumerGroup::binary(), Options::<a href="#type-offset_fetch_optio
 <br />
 
 
- 
 Offset fetch
 
-
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetFetchRequest).
+
+<a name="offsets-2"></a>
+
+### offsets/2 ###
+
+<pre><code>
+offsets(TopicName::binary(), ConsumerGroup::binary()) -&gt; [{integer(), integer()}] | error
+</code></pre>
+<br />
+
+Return the list of unread offsets for a given topic and consumer group
+
 <a name="produce-2"></a>
 
 ### produce/2 ###
@@ -438,10 +401,10 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 `produce(Topic, Message) -> any()`
 
 Equivalent to [`produce(Topic, Message, #{})`](#produce-3).
+
 <a name="produce-3"></a>
 
 ### produce/3 ###
-
 
 <pre><code>
 produce(Topic::binary(), Message::<a href="#type-message">message()</a>, Options::<a href="#type-produce_options">produce_options()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]}
@@ -449,9 +412,7 @@ produce(Topic::binary(), Message::<a href="#type-message">message()</a>, Options
 <br />
 
 
- 
 Send a message
-
 
 Options:
 
@@ -470,7 +431,6 @@ acknowledgements than there are in-sync replicas). (default: 0)
 * `partition :: integer()` : The partition that data is being published to. (default: 0)
 
 
-
 Example:
 
 ```
@@ -479,5 +439,5 @@ Example:
  Response1 = kafe:product(<<"topic">>, {<<"key">>, <<"Another simple message">>}).
 ```
 
-
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI).
+

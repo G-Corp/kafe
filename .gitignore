@@ -10,3 +10,5 @@ erl_crash.dump
 .eunit
 ext
 .rebar
+.erlang.mk
+kafe.d
