@@ -76,8 +76,8 @@ handle_info(
   process_response(Packet, State);
 handle_info(
   {tcp, _, Part}, 
-  #{parts := <<Size:32/signed, _/binary>> = Parts} = State
- ) when byte_size(<<Parts/binary, Part/binary>>) >= Size -> 
+  #{parts := <<Size:32/signed, CParts/binary>> = Parts} = State
+ ) when byte_size(<<CParts/binary, Part/binary>>) >= Size -> 
   <<Size:32/signed, Packet:Size/bytes, Remainder/binary>> = <<Parts/binary, Part/binary>>,
   process_response(<<Size:32, Packet/binary>>, maps:update(parts, Remainder, State));
 handle_info(
