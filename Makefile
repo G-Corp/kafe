@@ -15,7 +15,7 @@ EDOC_OPTS = {doclet, edown_doclet} \
 						, {packages, false} \
 						, {stylesheet, ""} \
 						, {image, ""} \
-						, {top_level_readme, {"./documentation.md", "https://github.com/nexkap/kafe"}} 
+						, {top_level_readme, {"./documentation.md", "https://github.com/homeswap/kafe"}} 
 
 dev: deps app
 	@erl -pa ebin include deps/*/ebin deps/*/include -config config/kafe.config
