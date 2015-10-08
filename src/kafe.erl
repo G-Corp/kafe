@@ -525,7 +525,7 @@ get_host([Addr|Rest], Hostname, AddrType) ->
         {ok, #hostent{h_name = Hostname1, h_aliases = HostAlias}} ->
           {Addr, lists:usort([Hostname|[Hostname1|HostAlias]])};
         _ ->
-          {Addr, Hostname}
+          {Addr, [Hostname]}
       end;
     _ -> get_host(Rest, Hostname, AddrType)
   end.
