@@ -576,7 +576,7 @@ offsets(TopicName, ConsumerGroup, Nth) ->
                                               _ -> Acc
                                             end
                                         end, [], Offsets),
-          lager:info("Offsets = ~p / CurrentOffsets = ~p / CombinedOffsets = ~p", [Offsets, CurrentOffsets, CombinedOffsets]),
+          lager:debug("Offsets = ~p / CurrentOffsets = ~p / CombinedOffsets = ~p", [Offsets, CurrentOffsets, CombinedOffsets]),
           {NewOffsets, Result} = get_offsets_list(CombinedOffsets, [], [], Nth),
           lists:foldl(fun({PartitionID, NewOffset}, Acc) ->
                           case offset_commit(ConsumerGroup, 
