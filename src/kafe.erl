@@ -28,7 +28,8 @@
          offset_commit/2,
          offset_commit/4,
          offset_commit/5,
-         offsets/2
+         offsets/2,
+         offsets/3
         ]).
 
 % Internal API
@@ -543,44 +544,80 @@ get_first_broker([Broker|Rest]) ->
   end.
 
 % @doc
-% Return the list of unread offsets for a given topic and consumer group
+% Return the list of the next Nth unread offsets for a given topic and consumer group
 % @end
--spec offsets(binary(), binary()) -> [{integer(), integer()}] | error.
-offsets(TopicName, ConsumerGroup) ->
+-spec offsets(binary(), binary(), integer()) -> [{integer(), integer()}] | error.
+offsets(TopicName, ConsumerGroup, Nth) ->
   NoError = kafe_error:code(0),
   case offset([TopicName]) of
     {ok, [#{name := TopicName, partitions := Partitions}]} ->
-      lists:foldl(
-        fun(#{id := PartitionID, offsets := [Offset|_]}, Acc) ->
-            Offset1 = Offset - 1,
-            if  
-              Offset1 >= 0 ->
-                case offset_fetch(ConsumerGroup, [{TopicName, [PartitionID]}]) of
-                  {ok,[#{name := TopicName,
-                         partitions_offset := [#{offset := CurrentOffset,
-                                                 partition := PartitionID}]}]} ->
-                    if  
-                      CurrentOffset < Offset1 ->
-                        case offset_commit(ConsumerGroup, 
-                                                [{TopicName, [{PartitionID, Offset1, <<>>}]}]) of
-                          {ok, [#{name := TopicName, 
-                                  partitions := [#{partition := PartitionID, 
-                                                   error_code := ErrorCode}]}]} when ErrorCode =:= NoError ->
-                            Acc ++ [{PartitionID, O} || O <- lists:seq(CurrentOffset + 1, Offset1)];
-                          _ ->
-                            Acc 
-                        end;
-                      true ->
-                        Acc 
-                    end;
-                  _ ->  
-                    Acc 
-                end;
-              true ->
-                Acc 
-            end 
-        end, [], Partitions);
+      {Offsets, PartitionsID} = lists:foldl(fun
+                                              (#{id := PartitionID, 
+                                                 offsets := [Offset|_], 
+                                                 error_code := NoError1}, 
+                                               {AccOffs, AccParts}) when NoError1 =:= NoError ->
+                                                {[{PartitionID, Offset - 1}|AccOffs], [PartitionID|AccParts]};
+                                              (_, Acc) ->
+                                                Acc
+                                            end, {[], []}, Partitions),
+      case offset_fetch(ConsumerGroup, [{TopicName, PartitionsID}]) of
+        {ok,[#{name := TopicName, partitions_offset := PartitionsOffset}]} ->
+          CurrentOffsets = lists:foldl(fun
+                                         (#{offset := Offset1, 
+                                            partition := PartitionID1}, 
+                                          Acc1) ->
+                                           [{PartitionID1, Offset1 + 1}|Acc1];
+                                          (_, Acc1) ->
+                                            Acc1
+                                       end, [], PartitionsOffset),
+          CombinedOffsets = lists:foldl(fun({P, O}, Acc) ->
+                                            case  lists:keyfind(P, 1, CurrentOffsets) of
+                                              {P, C} when C < O -> [{P, O, C}|Acc];
+                                              _ -> Acc
+                                            end
+                                        end, [], Offsets),
+          lager:info("Offsets = ~p / CurrentOffsets = ~p / CombinedOffsets = ~p", [Offsets, CurrentOffsets, CombinedOffsets]),
+          {NewOffsets, Result} = get_offsets_list(CombinedOffsets, [], [], Nth),
+          lists:foldl(fun({PartitionID, NewOffset}, Acc) ->
+                          case offset_commit(ConsumerGroup, 
+                                             [{TopicName, [{PartitionID, NewOffset, <<>>}]}]) of
+                            {ok, [#{name := TopicName, 
+                                    partitions := [#{partition := PartitionID, 
+                                                     error_code := ErrorCode}]}]} when ErrorCode =:= NoError ->
+                              Acc;
+                            _ ->
+                              delete_offset_for_partition(PartitionID, Acc) 
+                          end
+                      end, Result, NewOffsets);
+        _ ->
+          lager:info("Can't retriece offsets for consumer group ~p on topic ~p", [ConsumerGroup, TopicName]),
+          error
+      end;
     _ ->  
       lager:info("Can't retriece offsets for topic ~p", [TopicName]),
       error
   end.
+
+% @doc
+% Return the list of all unread offsets for a given topic and consumer group
+% @end
+-spec offsets(binary(), binary()) -> [{integer(), integer()}] | error.
+offsets(TopicName, ConsumerGroup) ->
+  offsets(TopicName, ConsumerGroup, -1).
+
+get_offsets_list(Offsets, Result, Final, Nth) when Offsets =/= [], length(Result) =/= Nth ->
+  [{PartitionID, MaxOffset, CurrentOffset}|SortedOffsets] = lists:sort(fun({_, O1, C1}, {_, O2, C2}) -> (C1 < C2) and (O1 < O2) end, Offsets),
+  Offsets1 = if
+               CurrentOffset + 1 > MaxOffset -> SortedOffsets;
+               true  -> [{PartitionID, MaxOffset, CurrentOffset + 1}|SortedOffsets]
+             end,
+  Final1 = lists:keystore(PartitionID, 1, Final, {PartitionID, CurrentOffset}),
+  get_offsets_list(Offsets1, [{PartitionID, CurrentOffset}|Result], Final1, Nth);
+get_offsets_list(_, Result, Final, _) -> {Final, lists:reverse(Result)}.
+
+delete_offset_for_partition(PartitionID, Offsets) ->
+  case lists:keyfind(PartitionID, 1, Offsets) of
+    false -> Offsets;
+    _ -> delete_offset_for_partition(PartitionID, lists:keydelete(PartitionID, 1, Offsets))
+  end.
+
