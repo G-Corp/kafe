@@ -72,14 +72,15 @@ handle_cast(_Msg, State) ->
 handle_info(
   {tcp, _, <<Size:32/signed, Remainder/binary>> = Packet},
   #{parts := <<>>} = State
- ) when Size == byte_size(Remainder) ->
-  process_response(Packet, State);
+ ) when Size =< byte_size(Remainder) ->
+  <<Size:32/signed, Packet1:Size/bytes, _Remainder1/binary>> = Packet,
+  process_response(<<Size:32, Packet1/binary>>, maps:update(parts, <<>>, State));
 handle_info(
   {tcp, _, Part}, 
   #{parts := <<Size:32/signed, CParts/binary>> = Parts} = State
  ) when byte_size(<<CParts/binary, Part/binary>>) >= Size -> 
-  <<Size:32/signed, Packet:Size/bytes, Remainder/binary>> = <<Parts/binary, Part/binary>>,
-  process_response(<<Size:32, Packet/binary>>, maps:update(parts, Remainder, State));
+  <<Size:32/signed, Packet:Size/bytes, _Remainder/binary>> = <<Parts/binary, Part/binary>>,
+  process_response(<<Size:32, Packet/binary>>, maps:update(parts, <<>>, State));
 handle_info(
   {tcp, Socket, Part}, 
   #{parts := Parts} = State
@@ -138,6 +139,7 @@ process_response(
   <<Size:32/signed, Packet:Size/bytes>>,
   #{requests := Requests} = State
  ) ->
+  lager:debug("Process response size : ~p", [Size]),
   <<CorrelationId:32/signed, Remainder/bytes>> = Packet,
   case orddict:find(CorrelationId, Requests) of
     {ok, #{from := From, handler := ResponseHandler, socket := Socket}} ->
