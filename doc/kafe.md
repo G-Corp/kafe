@@ -174,7 +174,8 @@ Offset commit v0.</td></tr><tr><td valign="top"><a href="#offset_commit-4">offse
 Offset commit v1.</td></tr><tr><td valign="top"><a href="#offset_commit-5">offset_commit/5</a></td><td> 
 Offset commit v2.</td></tr><tr><td valign="top"><a href="#offset_fetch-1">offset_fetch/1</a></td><td>Equivalent to <a href="#offset_fetch-2"><tt>offset_fetch(ConsumerGroup, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#offset_fetch-2">offset_fetch/2</a></td><td> 
 Offset fetch.</td></tr><tr><td valign="top"><a href="#offsets-2">offsets/2</a></td><td>
-Return the list of unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
+Return the list of all unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#offsets-3">offsets/3</a></td><td>
+Return the list of the next Nth unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
 Send a message.</td></tr></table>
 
 
@@ -392,7 +393,18 @@ offsets(TopicName::binary(), ConsumerGroup::binary()) -&gt; [{integer(), integer
 </code></pre>
 <br />
 
-Return the list of unread offsets for a given topic and consumer group
+Return the list of all unread offsets for a given topic and consumer group
+
+<a name="offsets-3"></a>
+
+### offsets/3 ###
+
+<pre><code>
+offsets(TopicName::binary(), ConsumerGroup::binary(), Nth::integer()) -&gt; [{integer(), integer()}] | error
+</code></pre>
+<br />
+
+Return the list of the next Nth unread offsets for a given topic and consumer group
 
 <a name="produce-2"></a>
 

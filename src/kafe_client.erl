@@ -30,12 +30,19 @@ start_link(ClientID, Addr, Port) ->
 %% ------------------------------------------------------------------
 
 init({Addr, Port}) ->
-  case gen_tcp:connect(Addr, Port, [{mode, binary}, {active, once}]) of
+  SndBuf = kafe_config:conf([kafe, socket, sndbuf], ?DEFAULT_SOCKET_SNDBUF),
+  RecBuf = kafe_config:conf([kafe, socker, recbuf], ?DEFAULT_SOCKET_RECBUF),
+  Buffer = lists:max([SndBuf, RecBuf, kafe_config:conf([kafe, socket, buffer], max(SndBuf, RecBuf))]),
+  case gen_tcp:connect(Addr, Port, [{mode, binary}, 
+                                    {active, once}, 
+                                    {sndbuf, SndBuf}, 
+                                    {recbuf, RecBuf},
+                                    {buffer, Buffer}]) of
     {ok, Socket} ->
       lager:info("Connect to broker @ ~s:~p", [enet:ip_to_str(Addr), Port]),
-      ApiVersion = application:get_env(kafe, api_version, ?DEFAULT_API_VERSION),
-      CorrelationID = application:get_env(kafe, correlation_id, ?DEFAULT_CORRELATION_ID),
-      ClientID = application:get_env(kafe, client_id, ?DEFAULT_CLIENT_ID),
+      ApiVersion = kafe_config:conf([kafe, api_version], ?DEFAULT_API_VERSION),
+      CorrelationID = kafe_config:conf([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
+      ClientID = kafe_config:conf([kafe, client_id], ?DEFAULT_CLIENT_ID),
       {ok, #{
          ip => Addr,
          port => Port,
@@ -44,7 +51,10 @@ init({Addr, Port}) ->
          correlation_id => CorrelationID,
          client_id => ClientID,
          requests => orddict:new(),
-         parts => <<>>
+         parts => <<>>,
+         sndbuf => SndBuf,
+         recbuf => RecBuf,
+         buffer => Buffer
         }};
     {error, Reason} ->
       lager:info("Connection faild to ~p:~p : ~p", [enet:ip_to_str(Addr), Port, Reason]),
@@ -56,8 +66,8 @@ handle_call({call, Request, RequestParams, Response}, From, State) ->
                From,
                Response,
                State);
-handle_call(alive, _From, #{socket := Socket} = State) ->
-  case inet:setopts(Socket, [{active, once}]) of
+handle_call(alive, _From, #{socket := Socket, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State) ->
+  case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
     ok ->
       {reply, ok, State};
     {error, _} = Reason ->
@@ -83,9 +93,9 @@ handle_info(
   process_response(<<Size:32, Packet/binary>>, maps:update(parts, <<>>, State));
 handle_info(
   {tcp, Socket, Part}, 
-  #{parts := Parts} = State
+  #{parts := Parts, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
  ) ->
-  case inet:setopts(Socket, [{active, once}]) of
+  case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
     ok ->
       {noreply, maps:update(parts, <<Parts/binary, Part/binary>>, State)};
     {error, _} = Reason ->
@@ -116,10 +126,13 @@ send_request(#{packet := Packet, state := State2},
              Handler, 
              #{correlation_id := CorrelationId, 
                requests := Requests, 
-               socket := Socket} = State1) ->
+               socket := Socket,
+               sndbuf := SndBuf,
+               recbuf := RecBuf,
+               buffer := Buffer} = State1) ->
   case gen_tcp:send(Socket, Packet) of
     ok ->
-      case inet:setopts(Socket, [{active, once}]) of
+      case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
         ok ->
           {noreply, 
            maps:update(
@@ -137,14 +150,14 @@ send_request(#{packet := Packet, state := State2},
 
 process_response(
   <<Size:32/signed, Packet:Size/bytes>>,
-  #{requests := Requests} = State
+  #{requests := Requests, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
  ) ->
   lager:debug("Process response size : ~p", [Size]),
   <<CorrelationId:32/signed, Remainder/bytes>> = Packet,
   case orddict:find(CorrelationId, Requests) of
     {ok, #{from := From, handler := ResponseHandler, socket := Socket}} ->
       _ = gen_server:reply(From, ResponseHandler(Remainder)),
-      case inet:setopts(Socket, [{active, once}]) of
+      case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
         ok ->
           {noreply, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};
         {error, _} = Reason ->

@@ -357,18 +357,18 @@ offset_fetch(ConsumerGroup, Options) ->
 
 % @hidden
 init(_) ->
-  KafkaBrokers = application:get_env(kafe, brokers, 
+  KafkaBrokers = kafe_config:conf([kafe, brokers], 
                                      [
                                       {
-                                       application:get_env(kafe, host, ?DEFAULT_IP),
-                                       application:get_env(kafe, port, ?DEFAULT_PORT)
+                                       kafe_config:conf([kafe, host], ?DEFAULT_IP),
+                                       kafe_config:conf([kafe, port], ?DEFAULT_PORT)
                                       }
                                      ]),
-  ApiVersion = application:get_env(kafe, api_version, ?DEFAULT_API_VERSION),
-  CorrelationID = application:get_env(kafe, correlation_id, ?DEFAULT_CORRELATION_ID),
-  ClientID = application:get_env(kafe, client_id, ?DEFAULT_CLIENT_ID),
-  Offset = application:get_env(kafe, offset, ?DEFAULT_OFFSET),
-  BrokersUpdateFreq = application:get_env(kafe, brokers_update_frequency, ?DEFAULT_BROKER_UPDATE),
+  ApiVersion = kafe_config:conf([kafe, api_version], ?DEFAULT_API_VERSION),
+  CorrelationID = kafe_config:conf([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
+  ClientID = kafe_config:conf([kafe, client_id], ?DEFAULT_CLIENT_ID),
+  Offset = kafe_config:conf([kafe, offset], ?DEFAULT_OFFSET),
+  BrokersUpdateFreq = kafe_config:conf([kafe, brokers_update_frequency], ?DEFAULT_BROKER_UPDATE),
   State = #{brokers => #{},
             brokers_list => [],
             topics => #{},
