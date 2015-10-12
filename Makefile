@@ -2,7 +2,7 @@ PROJECT = kafe
 
 DEPS = lager edown eutils
 dep_lager = git https://github.com/basho/lager.git master
-dep_edown = git https://github.com/homeswap/edown.git master
+dep_edown = git https://github.com/uwiger/edown.git master
 dep_eutils = git https://github.com/emedia-project/eutils.git master
 
 include erlang.mk
