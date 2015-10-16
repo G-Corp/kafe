@@ -491,7 +491,7 @@ update_state_with_metadata(State) ->
                                        {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
                                         get_connection([{eutils:to_string(Host), Port}], State1)}
                                    end, {#{}, State}, Brokers),
-
+  State3 = remove_unlisted_brokers(maps:values(Brokers1), State2),
   Topics1 = lists:foldl(fun(#{name := Topic, partitions := Partitions}, Acc) ->
                             maps:put(Topic, 
                                      lists:foldl(fun(#{id := ID, leader := Leader}, Acc1) ->
@@ -499,7 +499,20 @@ update_state_with_metadata(State) ->
                                                  end, #{}, Partitions), 
                                      Acc)
                         end, #{}, Topics),
-  maps:put(topics, Topics1, State2).
+  maps:put(topics, Topics1, State3).
+
+remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->
+  Brokers1 = maps:fold(fun(BrokerName, BrokerID, Acc) ->
+                           case lists:member(BrokerName, BrokersList) of
+                             true -> 
+                               maps:put(BrokerName, BrokerID, Acc);
+                             false ->
+                               _ = kafe_client_sup:stop_child(BrokerID),
+                               Acc
+                           end
+                       end, #{}, Brokers),
+  State#{brokers => Brokers1, brokers_list => BrokersList}.
+
 
 % @hidden
 remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
