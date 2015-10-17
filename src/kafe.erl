@@ -502,12 +502,20 @@ update_state_with_metadata(State) ->
   maps:put(topics, Topics1, State3).
 
 remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->
+  UnkillID = lists:foldl(fun(Broker, Acc) ->
+                             [maps:get(Broker, Brokers)|Acc]
+                         end, [], BrokersList),
   Brokers1 = maps:fold(fun(BrokerName, BrokerID, Acc) ->
                            case lists:member(BrokerName, BrokersList) of
                              true -> 
                                maps:put(BrokerName, BrokerID, Acc);
                              false ->
-                               _ = kafe_client_sup:stop_child(BrokerID),
+                               case lists:member(BrokerID, UnkillID) of
+                                 true -> 
+                                   ok;
+                                 false ->
+                                   _ = kafe_client_sup:stop_child(BrokerID)
+                               end,
                                Acc
                            end
                        end, #{}, Brokers),
