@@ -503,7 +503,10 @@ update_state_with_metadata(State) ->
 
 remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->
   UnkillID = lists:foldl(fun(Broker, Acc) ->
-                             [maps:get(Broker, Brokers)|Acc]
+                             case maps:get(Broker, Brokers, undefined) of
+                               undefined -> Acc;
+                               ID -> [ID|Acc]
+                             end 
                          end, [], BrokersList),
   Brokers1 = maps:fold(fun(BrokerName, BrokerID, Acc) ->
                            case lists:member(BrokerName, BrokersList) of
@@ -525,16 +528,23 @@ remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->
 % @hidden
 remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
   lists:foldl(fun(Broker, #{brokers := Brokers1, brokers_list := BrokersList1} = State1) ->
-                  BrokerID = maps:get(Broker, Brokers1),
-                  case gen_server:call(BrokerID, alive, infinity) of
-                    ok -> 
-                      State1;
-                    {error, Reason} ->
-                      _ = kafe_client_sup:stop_child(BrokerID),
-                      lager:debug("Broker ~p not alive : ~p", [Broker, Reason]),
+                  case maps:get(Broker, Brokers1, undefined) of
+                    undefined -> 
                       maps:put(brokers_list, 
                                lists:delete(Broker, BrokersList1), 
-                               maps:put(brokers, maps:remove(Broker, Brokers1), State1))
+                               State1);
+                    BrokerID ->
+
+                      case gen_server:call(BrokerID, alive, infinity) of
+                        ok -> 
+                          State1;
+                        {error, Reason} ->
+                          _ = kafe_client_sup:stop_child(BrokerID),
+                          lager:debug("Broker ~p not alive : ~p", [Broker, Reason]),
+                          maps:put(brokers_list, 
+                                   lists:delete(Broker, BrokersList1), 
+                                   maps:put(brokers, maps:remove(Broker, Brokers1), State1))
+                      end
                   end
               end, State, BrokersList).
 
