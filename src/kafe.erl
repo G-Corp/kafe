@@ -534,7 +534,6 @@ remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
                                lists:delete(Broker, BrokersList1), 
                                State1);
                     BrokerID ->
-
                       case gen_server:call(BrokerID, alive, infinity) of
                         ok -> 
                           State1;

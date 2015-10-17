@@ -25,6 +25,8 @@ start_child(Addr, Port) ->
       {ok, ClientID};
     {ok, _ChildPID, _Info} ->
       {ok, ClientID};
+    {error, {already_started, _}} ->
+      {ok, ClientID};
     E ->
       E
   end.
