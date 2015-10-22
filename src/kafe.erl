@@ -358,12 +358,8 @@ offset_fetch(ConsumerGroup, Options) ->
 % @hidden
 init(_) ->
   KafkaBrokers = kafe_config:conf([kafe, brokers], 
-                                     [
-                                      {
-                                       kafe_config:conf([kafe, host], ?DEFAULT_IP),
-                                       kafe_config:conf([kafe, port], ?DEFAULT_PORT)
-                                      }
-                                     ]),
+                                  [{kafe_config:conf([kafe, host], ?DEFAULT_IP),
+                                    kafe_config:conf([kafe, port], ?DEFAULT_PORT)}]),
   ApiVersion = kafe_config:conf([kafe, api_version], ?DEFAULT_API_VERSION),
   CorrelationID = kafe_config:conf([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
   ClientID = kafe_config:conf([kafe, client_id], ?DEFAULT_CLIENT_ID),
@@ -376,8 +372,7 @@ init(_) ->
             api_version => ApiVersion,
             correlation_id => CorrelationID,
             client_id => ClientID,
-            offset => Offset
-           },
+            offset => Offset},
   State1 = update_state_with_metadata(get_connection(KafkaBrokers, State)),
   erlang:send_after(BrokersUpdateFreq, self(), update_brokers),
   {ok, State1}.
