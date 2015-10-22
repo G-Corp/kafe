@@ -17,11 +17,16 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 
 ### Documentation ###
 
-See [documentation](blob/master/doc/kafe.md)
+See [documentation](doc/kafe.md)
 
 
 ### Contributing ###
-Fork it ( https://github.com/nexkap/kafe/fork )Create your feature branch (`git checkout -b my-new-feature`)Commit your changes (`git commit -am 'Add some feature'`)Push to the branch (`git push origin my-new-feature`)Create a new Pull Request
+1. Fork it ( https://github.com/nexkap/kafe/fork )
+1. Create your feature branch (`git checkout -b my-new-feature`)
+1. Commit your changes (`git commit -am 'Add some feature'`)
+1. Push to the branch (`git push origin my-new-feature`)
+1. Create a new Pull Request
+
 
 
 ### Licence ###

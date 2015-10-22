@@ -14,17 +14,17 @@
 
 <h3>Documentation</h3>
 
-See <a href="blob/master/doc/kafe.md">documentation</a>
+See <a href="doc/kafe.md">documentation</a>
 
 <h3>Contributing</h3>
 
-<ul>
-  <ol>Fork it ( https://github.com/nexkap/kafe/fork )</ol>
-  <ol>Create your feature branch (<tt>git checkout -b my-new-feature</tt>)</ol>
-  <ol>Commit your changes (<tt>git commit -am 'Add some feature'</tt>)</ol>
-  <ol>Push to the branch (<tt>git push origin my-new-feature</tt>)</ol>
-  <ol>Create a new Pull Request</ol>
-</ul>
+<ol>
+  <li>Fork it ( https://github.com/nexkap/kafe/fork )</li>
+  <li>Create your feature branch (<tt>git checkout -b my-new-feature</tt>)</li>
+  <li>Commit your changes (<tt>git commit -am 'Add some feature'</tt>)</li>
+  <li>Push to the branch (<tt>git push origin my-new-feature</tt>)</li>
+  <li>Create a new Pull Request</li>
+</ol>
 
 <h3>Licence</h3>
 
