@@ -481,25 +481,40 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList, brokers := Br
 
 % @hidden
 update_state_with_metadata(State) ->
-  {ok, #{brokers := Brokers, 
-         topics := Topics}} =  gen_server:call(get_first_broker(State),
-                                               {call, 
-                                                fun kafe_protocol_metadata:request/2, [[]],
-                                                fun kafe_protocol_metadata:response/1},
-                                               infinity),
-  {Brokers1, State2} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, State1}) ->
-                                       {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
-                                        get_connection([{eutils:to_string(Host), Port}], State1)}
-                                   end, {#{}, State}, Brokers),
-  State3 = remove_unlisted_brokers(maps:values(Brokers1), State2),
-  Topics1 = lists:foldl(fun(#{name := Topic, partitions := Partitions}, Acc) ->
-                            maps:put(Topic, 
-                                     lists:foldl(fun(#{id := ID, leader := Leader}, Acc1) ->
-                                                     maps:put(ID, maps:get(Leader, Brokers1), Acc1)
-                                                 end, #{}, Partitions), 
-                                     Acc)
-                        end, #{}, Topics),
-  maps:put(topics, Topics1, State3).
+  {State2, FirstBroker} = case get_first_broker(State) of
+                            undefined -> 
+                              KafkaBrokers = kafe_config:conf(
+                                               [kafe, brokers], 
+                                               [{kafe_config:conf([kafe, host], ?DEFAULT_IP),
+                                                 kafe_config:conf([kafe, port], ?DEFAULT_PORT)}]),
+                              State1 = get_connection(KafkaBrokers, State),
+                              {State1, get_first_broker(State1)};
+                            Broker -> {State, Broker}
+                          end,
+  case FirstBroker of
+    undefined ->
+      State;
+    _ ->
+      {ok, #{brokers := Brokers, 
+             topics := Topics}} =  gen_server:call(FirstBroker,
+                                                   {call, 
+                                                    fun kafe_protocol_metadata:request/2, [[]],
+                                                    fun kafe_protocol_metadata:response/1},
+                                                   infinity),
+      {Brokers1, State3} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, StateAcc}) ->
+                                           {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
+                                            get_connection([{eutils:to_string(Host), Port}], StateAcc)}
+                                       end, {#{}, State2}, Brokers),
+      State4 = remove_unlisted_brokers(maps:values(Brokers1), State3),
+      Topics1 = lists:foldl(fun(#{name := Topic, partitions := Partitions}, Acc) ->
+                                maps:put(Topic, 
+                                         lists:foldl(fun(#{id := ID, leader := Leader}, Acc1) ->
+                                                         maps:put(ID, maps:get(Leader, Brokers1), Acc1)
+                                                     end, #{}, Partitions), 
+                                         Acc)
+                            end, #{}, Topics),
+      maps:put(topics, Topics1, State4)
+  end.
 
 remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->
   UnkillID = lists:foldl(fun(Broker, Acc) ->
