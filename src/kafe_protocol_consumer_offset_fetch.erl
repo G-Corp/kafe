@@ -10,16 +10,19 @@
         ]).
 
 run(ConsumerGroup, Options) ->
-  Options1 = if
-               Options =:= [] -> maps:keys(kafe:topics());
-               true -> Options
-             end,
-  {ok, #{coordinator_host := BrokerName}} = kafe:consumer_metadata(ConsumerGroup),
-  gen_server:call(kafe:broker_by_name(BrokerName),
-                  {call, 
-                   fun ?MODULE:request/3, [ConsumerGroup, Options1],
-                   fun ?MODULE:response/1},
-                  infinity).
+  case kafe:consumer_metadata(ConsumerGroup) of
+    {ok, #{coordinator_host := BrokerName}} -> 
+      Options1 = if
+                   Options =:= [] -> maps:keys(kafe:topics());
+                   true -> Options
+                 end,
+      gen_server:call(kafe:broker_by_name(BrokerName),
+                      {call, 
+                       fun ?MODULE:request/3, [ConsumerGroup, Options1],
+                       fun ?MODULE:response/1},
+                      infinity);
+    E -> E
+  end.
 
 request(ConsumerGroup, Options, State) ->
   kafe_protocol:request(

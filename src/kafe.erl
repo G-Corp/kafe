@@ -13,6 +13,7 @@
 
 % Public API
 -export([
+         start/0,
          metadata/0,
          metadata/1,
          offset/1,
@@ -177,6 +178,11 @@ api_version() ->
 state() ->
   gen_server:call(?SERVER, state, infinity).
 
+% @doc
+% Start kafe application
+% @end
+start() ->
+  application:ensure_all_started(?MODULE).
 
 % @equiv metadata([])
 metadata() ->
@@ -357,9 +363,6 @@ offset_fetch(ConsumerGroup, Options) ->
 
 % @hidden
 init(_) ->
-  KafkaBrokers = kafe_config:conf([kafe, brokers], 
-                                  [{kafe_config:conf([kafe, host], ?DEFAULT_IP),
-                                    kafe_config:conf([kafe, port], ?DEFAULT_PORT)}]),
   ApiVersion = kafe_config:conf([kafe, api_version], ?DEFAULT_API_VERSION),
   CorrelationID = kafe_config:conf([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
   ClientID = kafe_config:conf([kafe, client_id], ?DEFAULT_CLIENT_ID),
@@ -373,7 +376,7 @@ init(_) ->
             correlation_id => CorrelationID,
             client_id => ClientID,
             offset => Offset},
-  State1 = update_state_with_metadata(get_connection(KafkaBrokers, State)),
+  State1 = update_state_with_metadata(init_connexions(State)),
   erlang:send_after(BrokersUpdateFreq, self(), update_brokers),
   {ok, State1}.
 
@@ -426,9 +429,18 @@ code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
 % @hidden
+init_connexions(State) ->
+  KafkaBrokers = kafe_config:conf(
+                   [kafe, brokers], 
+                   [{kafe_config:conf([kafe, host], ?DEFAULT_IP),
+                     kafe_config:conf([kafe, port], ?DEFAULT_PORT)}]),
+  get_connection(KafkaBrokers, State).
+
+% @hidden
 get_connection([], State) -> 
   State;
-get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList, brokers := Brokers} = State) ->
+get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList, 
+                                      brokers := Brokers} = State) ->
   lager:debug("Get connection for ~s:~p", [Host, Port]),
   try
     case inet:gethostbyname(Host) of
@@ -457,7 +469,8 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList, brokers := Br
                     Brokers1 = lists:foldl(fun(BrokerHost, Acc) ->
                                                maps:put(BrokerHost, BrokerID, Acc)
                                            end, Brokers, BrokerHostList1),
-                    get_connection(Rest, maps:put(brokers_list, BrokerHostList1 ++ BrokersList, maps:put(brokers, Brokers1, State)));
+                    get_connection(Rest, State#{brokers => Brokers1,
+                                                brokers_list => BrokerHostList1 ++ BrokersList});
                   {error, Reason} ->
                     lager:debug("Connection faild to ~p:~p : ~p", [enet:ip_to_str(BrokerAddr), Port, Reason]),
                     get_connection(Rest, State)
@@ -478,11 +491,7 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList, brokers := Br
 update_state_with_metadata(State) ->
   {State2, FirstBroker} = case get_first_broker(State) of
                             undefined -> 
-                              KafkaBrokers = kafe_config:conf(
-                                               [kafe, brokers], 
-                                               [{kafe_config:conf([kafe, host], ?DEFAULT_IP),
-                                                 kafe_config:conf([kafe, port], ?DEFAULT_PORT)}]),
-                              State1 = get_connection(KafkaBrokers, State),
+                              State1 = init_connexions(State),
                               {State1, get_first_broker(State1)};
                             Broker -> {State, Broker}
                           end,
@@ -511,6 +520,7 @@ update_state_with_metadata(State) ->
       maps:put(topics, Topics1, State4)
   end.
 
+% @hidden
 remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->
   UnkillID = lists:foldl(fun(Broker, Acc) ->
                              case maps:get(Broker, Brokers, undefined) of

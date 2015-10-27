@@ -10,11 +10,15 @@
         ]).
 
 run(ConsumerGroup) ->
-  gen_server:call(kafe:first_broker(),
-                  {call, 
-                   fun ?MODULE:request/2, [ConsumerGroup],
-                   fun ?MODULE:response/1},
-                  infinity).
+  case kafe:first_broker() of
+    undefined -> {error, no_broker_found};
+    Broker ->
+      gen_server:call(Broker,
+                      {call, 
+                       fun ?MODULE:request/2, [ConsumerGroup],
+                       fun ?MODULE:response/1},
+                      infinity)
+  end.
 
 request(ConsumerGroup, State) ->
   kafe_protocol:request(
