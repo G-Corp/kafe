@@ -640,11 +640,11 @@ offsets(TopicName, ConsumerGroup, Nth) ->
                           end
                       end, Result, NewOffsets);
         _ ->
-          lager:info("Can't retriece offsets for consumer group ~p on topic ~p", [ConsumerGroup, TopicName]),
+          lager:debug("Can't retriece offsets for consumer group ~p on topic ~p", [ConsumerGroup, TopicName]),
           error
       end;
     _ ->  
-      lager:info("Can't retriece offsets for topic ~p", [TopicName]),
+      lager:debug("Can't retriece offsets for topic ~p", [TopicName]),
       error
   end.
 
