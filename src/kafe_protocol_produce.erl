@@ -11,11 +11,15 @@
 
 run(Topic, Message, Options) ->
   Partition = maps:get(partition, Options, ?DEFAULT_PRODUCE_PARTITION),
-  gen_server:call(kafe:broker(Topic, Partition),
-                  {call, 
-                   fun ?MODULE:request/4, [Topic, Message, Options],
-                   fun ?MODULE:response/1},
-                  infinity).
+  case kafe:broker(Topic, Partition) of
+    undefined -> {error, no_broker_found};
+    Broker ->
+      gen_server:call(Broker,
+                      {call, 
+                       fun ?MODULE:request/4, [Topic, Message, Options],
+                       fun ?MODULE:response/1},
+                      infinity)
+  end.
 
 %% Options:
 %%   * timeout :: integer()       (default: 5000)

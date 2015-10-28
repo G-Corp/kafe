@@ -10,32 +10,37 @@
         ]).
 
 run(ReplicaID, Topics) ->
-  {ok, maps:fold(
-         fun(K, V, Acc) ->
-             [#{name => K, partitions => V}|Acc]
-         end, 
-         [], 
-         lists:foldl(
-           fun(#{name := Name, partitions := Partitions}, Acc) ->
-               case maps:get(Name, Acc, undefined) of
-                 undefined -> 
-                   maps:put(Name, Partitions, Acc);
-                 Data ->
-                   maps:put(Name, Data ++ Partitions, Acc)
-               end
-           end, 
-           #{}, 
-           lists:flatten(
-             maps:fold(
-               fun(Broker, TopicsForBroker, Acc) ->
-                   {ok, Result} = gen_server:call(Broker,
-                                                  {call, 
-                                                   fun ?MODULE:request/3, [ReplicaID, TopicsForBroker],
-                                                   fun ?MODULE:response/1}, 
-                                                  infinity),
-                   [Result|Acc]
-               end, [], dispatch(Topics, kafe:topics()))
-            )))}.
+  case lists:flatten(
+         maps:fold(
+           fun
+             (undefined, _, Acc) ->
+               Acc;
+             (Broker, TopicsForBroker, Acc) ->
+               {ok, Result} = gen_server:call(Broker,
+                                              {call, 
+                                               fun ?MODULE:request/3, [ReplicaID, TopicsForBroker],
+                                               fun ?MODULE:response/1}, 
+                                              infinity),
+               [Result|Acc]
+           end, [], dispatch(Topics, kafe:topics()))) of
+    [] -> 
+      {error, no_broker_found};
+    OffsetsData ->
+      {ok, maps:fold(
+             fun(K, V, Acc) ->
+                 [#{name => K, partitions => V}|Acc]
+             end, 
+             [], 
+             lists:foldl(
+               fun(#{name := Name, partitions := Partitions}, Acc) ->
+                   case maps:get(Name, Acc, undefined) of
+                     undefined -> 
+                       maps:put(Name, Partitions, Acc);
+                     Data ->
+                       maps:put(Name, Data ++ Partitions, Acc)
+                   end
+               end, #{}, OffsetsData))}
+  end.
 
 request(ReplicaId, Topics, State) ->
   kafe_protocol:request(

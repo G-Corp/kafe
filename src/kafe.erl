@@ -200,7 +200,7 @@ metadata() ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest">Kafka protocol documentation</a>.
 % @end
--spec metadata([binary()]) -> {ok, metadata()}.
+-spec metadata([binary()]) -> {ok, metadata()} | {error, term()}.
 metadata(Topics) when is_list(Topics) ->
   kafe_protocol_metadata:run(Topics).
 
@@ -218,7 +218,7 @@ offset(Topics) when is_list(Topics)->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetRequest">Kafka protocol documentation</a>.
 % @end
--spec offset(integer(), topics()) -> {ok, [topic_partition_info()]}.
+-spec offset(integer(), topics()) -> {ok, [topic_partition_info()]} | {error, term()}.
 offset(ReplicatID, Topics) when is_integer(ReplicatID), is_list(Topics) ->
   kafe_protocol_offset:run(ReplicatID, Topics).
 
@@ -252,7 +252,7 @@ produce(Topic, Message) ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI">Kafka protocol documentation</a>.
 % @end
--spec produce(binary(), message(), produce_options()) -> {ok, [topic_partition_info()]}.
+-spec produce(binary(), message(), produce_options()) -> {ok, [topic_partition_info()]} | {error,  term()}.
 produce(Topic, Message, Options) ->
   kafe_protocol_produce:run(Topic, Message, Options).
 
@@ -297,7 +297,7 @@ fetch(TopicName, Options) when is_binary(TopicName), is_map(Options) ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI">Kafka protocol documentation</a>.
 % @end
--spec fetch(integer(), binary(), fetch_options()) -> {ok, [message_set()]}.
+-spec fetch(integer(), binary(), fetch_options()) -> {ok, [message_set()]} | {error, term()}.
 fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), is_binary(TopicName), is_map(Options) ->
   kafe_protocol_fetch:run(ReplicatID, TopicName, Options).
 
@@ -306,7 +306,7 @@ fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), is_binary(Top
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest">Kafka protocol documentation</a>.
 % @end
--spec consumer_metadata(binary()) -> {ok, consumer_metadata()}.
+-spec consumer_metadata(binary()) -> {ok, consumer_metadata()} | {error,  term()}.
 consumer_metadata(ConsumerGroup) ->
   kafe_protocol_consumer_metadata:run(ConsumerGroup).
 
@@ -315,7 +315,7 @@ consumer_metadata(ConsumerGroup) ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(binary(), offset_commit_option()) -> {ok, [offset_commit_set()]}.
+-spec offset_commit(binary(), offset_commit_option()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v0(ConsumerGroup, 
                                               Topics).
@@ -325,7 +325,7 @@ offset_commit(ConsumerGroup, Topics) ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(binary(), integer(), binary(), offset_commit_option_v1()) -> {ok, [offset_commit_set()]}.
+-spec offset_commit(binary(), integer(), binary(), offset_commit_option_v1()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v1(ConsumerGroup, 
                                               ConsumerGroupGenerationId, 
@@ -337,7 +337,7 @@ offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(binary(), integer(), binary(), integer(), offset_commit_option()) -> {ok, [offset_commit_set()]}.
+-spec offset_commit(binary(), integer(), binary(), integer(), offset_commit_option()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v2(ConsumerGroup, 
                                               ConsumerGroupGenerationId, 
@@ -355,7 +355,7 @@ offset_fetch(ConsumerGroup) ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetFetchRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_fetch(binary(), offset_fetch_options()) -> {ok, [offset_fetch_set()]}.
+-spec offset_fetch(binary(), offset_fetch_options()) -> {ok, [offset_fetch_set()]} | {error, term()}.
 offset_fetch(ConsumerGroup, Options) ->
   kafe_protocol_consumer_offset_fetch:run(ConsumerGroup, Options).
 

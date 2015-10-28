@@ -20,15 +20,18 @@ run(ReplicaID, TopicName, Options) ->
                             kafe:partition_for_offset(TopicName, Offset1);
                           R -> R
                         end,
-  Options1 = maps:put(partition, Partition, 
-                      maps:put(offset, Offset, Options)),
-  Broker = kafe:broker(TopicName, Partition),
-  lager:debug("Fetch ~p (partition #~p, offset ~p) on ~p", [TopicName, Partition, Offset, Broker]),
-  gen_server:call(Broker,
-                  {call, 
-                   fun ?MODULE:request/4, [ReplicaID, TopicName, Options1],
-                   fun ?MODULE:response/1},
-                  infinity).
+  Options1 = Options#{partition => Partition, 
+                      offset => Offset},
+  case kafe:broker(TopicName, Partition) of
+    undefined -> {error, no_broker_found};
+    Broker -> 
+      lager:debug("Fetch ~p (partition #~p, offset ~p) on ~p", [TopicName, Partition, Offset, Broker]),
+      gen_server:call(Broker,
+                      {call, 
+                       fun ?MODULE:request/4, [ReplicaID, TopicName, Options1],
+                       fun ?MODULE:response/1},
+                      infinity)
+  end.
 
 request(ReplicaID, TopicName, Options, State) ->
   Partition = maps:get(partition, Options, ?DEFAULT_FETCH_PARTITION),
