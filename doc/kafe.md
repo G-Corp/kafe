@@ -176,7 +176,8 @@ Offset commit v2.</td></tr><tr><td valign="top"><a href="#offset_fetch-1">offset
 Offset fetch.</td></tr><tr><td valign="top"><a href="#offsets-2">offsets/2</a></td><td>
 Return the list of all unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#offsets-3">offsets/3</a></td><td>
 Return the list of the next Nth unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
-Send a message.</td></tr></table>
+Send a message.</td></tr><tr><td valign="top"><a href="#start-0">start/0</a></td><td>
+Start kafe application.</td></tr></table>
 
 
 <a name="functions"></a>
@@ -188,7 +189,7 @@ Send a message.</td></tr></table>
 ### consumer_metadata/1 ###
 
 <pre><code>
-consumer_metadata(ConsumerGroup::binary()) -&gt; {ok, <a href="#type-consumer_metadata">consumer_metadata()</a>}
+consumer_metadata(ConsumerGroup::binary()) -&gt; {ok, <a href="#type-consumer_metadata">consumer_metadata()</a>} | {error, term()}
 </code></pre>
 <br />
 
@@ -218,7 +219,7 @@ Equivalent to [`fetch(ReplicatID, TopicName, #{})`](#fetch-3).
 ### fetch/3 ###
 
 <pre><code>
-fetch(ReplicatID::integer(), TopicName::binary(), Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]}
+fetch(ReplicatID::integer(), TopicName::binary(), Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -270,7 +271,7 @@ Equivalent to [`metadata([])`](#metadata-1).
 ### metadata/1 ###
 
 <pre><code>
-metadata(Topics::[binary()]) -&gt; {ok, <a href="#type-metadata">metadata()</a>}
+metadata(Topics::[binary()]) -&gt; {ok, <a href="#type-metadata">metadata()</a>} | {error, term()}
 </code></pre>
 <br />
 
@@ -301,7 +302,7 @@ Equivalent to [`offset(-1, Topics)`](#offset-2).
 ### offset/2 ###
 
 <pre><code>
-offset(ReplicatID::integer(), Topics::<a href="#type-topics">topics()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]}
+offset(ReplicatID::integer(), Topics::<a href="#type-topics">topics()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -322,7 +323,7 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 ### offset_commit/2 ###
 
 <pre><code>
-offset_commit(ConsumerGroup::binary(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
+offset_commit(ConsumerGroup::binary(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -336,7 +337,7 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 ### offset_commit/4 ###
 
 <pre><code>
-offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), ConsumerId::binary(), Topics::<a href="#type-offset_commit_option_v1">offset_commit_option_v1()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
+offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), ConsumerId::binary(), Topics::<a href="#type-offset_commit_option_v1">offset_commit_option_v1()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -350,7 +351,7 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 ### offset_commit/5 ###
 
 <pre><code>
-offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), ConsumerId::binary(), RetentionTime::integer(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]}
+offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), ConsumerId::binary(), RetentionTime::integer(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -375,7 +376,7 @@ Equivalent to [`offset_fetch(ConsumerGroup, [])`](#offset_fetch-2).
 ### offset_fetch/2 ###
 
 <pre><code>
-offset_fetch(ConsumerGroup::binary(), Options::<a href="#type-offset_fetch_options">offset_fetch_options()</a>) -&gt; {ok, [<a href="#type-offset_fetch_set">offset_fetch_set()</a>]}
+offset_fetch(ConsumerGroup::binary(), Options::<a href="#type-offset_fetch_options">offset_fetch_options()</a>) -&gt; {ok, [<a href="#type-offset_fetch_set">offset_fetch_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -419,7 +420,7 @@ Equivalent to [`produce(Topic, Message, #{})`](#produce-3).
 ### produce/3 ###
 
 <pre><code>
-produce(Topic::binary(), Message::<a href="#type-message">message()</a>, Options::<a href="#type-produce_options">produce_options()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]}
+produce(Topic::binary(), Message::<a href="#type-message">message()</a>, Options::<a href="#type-produce_options">produce_options()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -452,4 +453,12 @@ Example:
 ```
 
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI).
+
+<a name="start-0"></a>
+
+### start/0 ###
+
+`start() -> any()`
+
+Start kafe application
 

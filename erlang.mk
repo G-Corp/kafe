@@ -16,7 +16,7 @@
 
 ERLANG_MK_FILENAME := $(realpath $(lastword $(MAKEFILE_LIST)))
 
-ERLANG_MK_VERSION = 2.0.0-pre.1-37-gb7ccb2e
+ERLANG_MK_VERSION = 2.0.0-pre.2
 
 # Core configuration.
 
@@ -76,13 +76,11 @@ endif
 
 # Core targets.
 
-.NOTPARALLEL:
-
 all:: deps app rel
 
 # Noop to avoid a Make warning when there's nothing to do.
 rel::
-	$(verbose) echo -n
+	$(verbose) :
 
 check:: clean app tests
 
@@ -192,8 +190,11 @@ ERLANG_MK_BUILD_DIR ?= .erlang.mk.build
 
 erlang-mk:
 	git clone $(ERLANG_MK_REPO) $(ERLANG_MK_BUILD_DIR)
+ifdef ERLANG_MK_COMMIT
+	cd $(ERLANG_MK_BUILD_DIR) && git checkout $(ERLANG_MK_COMMIT)
+endif
 	if [ -f $(ERLANG_MK_BUILD_CONFIG) ]; then cp $(ERLANG_MK_BUILD_CONFIG) $(ERLANG_MK_BUILD_DIR)/build.config; fi
-	cd $(ERLANG_MK_BUILD_DIR) && $(if $(ERLANG_MK_COMMIT),git checkout $(ERLANG_MK_COMMIT) &&) $(MAKE)
+	$(MAKE) -C $(ERLANG_MK_BUILD_DIR)
 	cp $(ERLANG_MK_BUILD_DIR)/erlang.mk ./erlang.mk
 	rm -rf $(ERLANG_MK_BUILD_DIR)
 
@@ -429,7 +430,7 @@ pkg_bullet_name = bullet
 pkg_bullet_description = Simple, reliable, efficient streaming for Cowboy.
 pkg_bullet_homepage = http://ninenines.eu
 pkg_bullet_fetch = git
-pkg_bullet_repo = https://github.com/extend/bullet
+pkg_bullet_repo = https://github.com/ninenines/bullet
 pkg_bullet_commit = master
 
 PACKAGES += cache
@@ -4075,7 +4076,7 @@ endif
 	$(verbose) mkdir -p $(ERLANG_MK_TMP)
 	$(verbose) for dep in $(ALL_DEPS_DIRS) ; do \
 		if grep -qs ^$$dep$$ $(ERLANG_MK_TMP)/deps.log; then \
-			echo -n; \
+			:; \
 		else \
 			echo $$dep >> $(ERLANG_MK_TMP)/deps.log; \
 			if [ -f $$dep/GNUmakefile ] || [ -f $$dep/makefile ] || [ -f $$dep/Makefile ]; then \
@@ -4140,7 +4141,7 @@ define dep_autopatch_erlang_mk
 endef
 else
 define dep_autopatch_erlang_mk
-	echo -n
+	:
 endef
 endif
 
@@ -4649,6 +4650,59 @@ $(foreach p,$(DEP_PLUGINS),\
 		$(call core_dep_plugin,$p,$(firstword $(subst /, ,$p))),\
 		$(call core_dep_plugin,$p/plugins.mk,$p))))
 
+# Copyright (c) 2013-2015, Loïc Hoguin <essen@ninenines.eu>
+# This file is part of erlang.mk and subject to the terms of the ISC License.
+
+# Configuration.
+
+DTL_FULL_PATH ?=
+DTL_PATH ?= templates/
+DTL_SUFFIX ?= _dtl
+
+# Verbosity.
+
+dtl_verbose_0 = @echo " DTL   " $(filter %.dtl,$(?F));
+dtl_verbose = $(dtl_verbose_$(V))
+
+# Core targets.
+
+define erlydtl_compile.erl
+	[begin
+		Module0 = case "$(strip $(DTL_FULL_PATH))" of
+			"" ->
+				filename:basename(F, ".dtl");
+			_ ->
+				"$(DTL_PATH)" ++ F2 = filename:rootname(F, ".dtl"),
+				re:replace(F2, "/",  "_",  [{return, list}, global])
+		end,
+		Module = list_to_atom(string:to_lower(Module0) ++ "$(DTL_SUFFIX)"),
+		case erlydtl:compile(F, Module, [{out_dir, "ebin/"}, return_errors, {doc_root, "templates"}]) of
+			ok -> ok;
+			{ok, _} -> ok
+		end
+	end || F <- string:tokens("$(1)", " ")],
+	halt().
+endef
+
+ifneq ($(wildcard src/),)
+
+DTL_FILES = $(sort $(call core_find,$(DTL_PATH),*.dtl))
+
+ifdef DTL_FULL_PATH
+BEAM_FILES += $(addprefix ebin/,$(patsubst %.dtl,%_dtl.beam,$(subst /,_,$(DTL_FILES:$(DTL_PATH)%=%))))
+else
+BEAM_FILES += $(addprefix ebin/,$(patsubst %.dtl,%_dtl.beam,$(notdir $(DTL_FILES))))
+endif
+
+# Rebuild templates when the Makefile changes.
+$(DTL_FILES): $(MAKEFILE_LIST)
+	@touch $@
+
+ebin/$(PROJECT).app:: $(DTL_FILES)
+	$(if $(strip $?),\
+		$(dtl_verbose) $(call erlang,$(call erlydtl_compile.erl,$?,-pa ebin/ $(DEPS_DIR)/erlydtl/ebin/)))
+endif
+
 # Copyright (c) 2015, Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
@@ -4728,10 +4782,10 @@ ifneq ($(wildcard src/),)
 # Targets.
 
 ifeq ($(wildcard ebin/test),)
-app:: $(PROJECT).d
+app:: deps $(PROJECT).d
 	$(verbose) $(MAKE) --no-print-directory app-build
 else
-app:: clean $(PROJECT).d
+app:: clean deps $(PROJECT).d
 	$(verbose) $(MAKE) --no-print-directory app-build
 endif
 
@@ -4761,7 +4815,7 @@ endef
 endif
 
 app-build: ebin/$(PROJECT).app
-	$(verbose) echo -n
+	$(verbose) :
 
 # Source files.
 
@@ -5972,59 +6026,6 @@ elvis: $(ELVIS) $(ELVIS_CONFIG)
 distclean-elvis:
 	$(gen_verbose) rm -rf $(ELVIS)
 
-# Copyright (c) 2013-2015, Loïc Hoguin <essen@ninenines.eu>
-# This file is part of erlang.mk and subject to the terms of the ISC License.
-
-# Configuration.
-
-DTL_FULL_PATH ?=
-DTL_PATH ?= templates/
-DTL_SUFFIX ?= _dtl
-
-# Verbosity.
-
-dtl_verbose_0 = @echo " DTL   " $(filter %.dtl,$(?F));
-dtl_verbose = $(dtl_verbose_$(V))
-
-# Core targets.
-
-define erlydtl_compile.erl
-	[begin
-		Module0 = case "$(strip $(DTL_FULL_PATH))" of
-			"" ->
-				filename:basename(F, ".dtl");
-			_ ->
-				"$(DTL_PATH)" ++ F2 = filename:rootname(F, ".dtl"),
-				re:replace(F2, "/",  "_",  [{return, list}, global])
-		end,
-		Module = list_to_atom(string:to_lower(Module0) ++ "$(DTL_SUFFIX)"),
-		case erlydtl:compile(F, Module, [{out_dir, "ebin/"}, return_errors, {doc_root, "templates"}]) of
-			ok -> ok;
-			{ok, _} -> ok
-		end
-	end || F <- string:tokens("$(1)", " ")],
-	halt().
-endef
-
-ifneq ($(wildcard src/),)
-
-DTL_FILES = $(sort $(call core_find,$(DTL_PATH),*.dtl))
-
-ifdef DTL_FULL_PATH
-BEAM_FILES += $(addprefix ebin/,$(patsubst %.dtl,%_dtl.beam,$(subst /,_,$(DTL_FILES:$(DTL_PATH)%=%))))
-else
-BEAM_FILES += $(addprefix ebin/,$(patsubst %.dtl,%_dtl.beam,$(notdir $(DTL_FILES))))
-endif
-
-# Rebuild templates when the Makefile changes.
-$(DTL_FILES): $(MAKEFILE_LIST)
-	@touch $@
-
-ebin/$(PROJECT).app:: $(DTL_FILES)
-	$(if $(strip $?),\
-		$(dtl_verbose) $(call erlang,$(call erlydtl_compile.erl,$?,-pa ebin/ $(DEPS_DIR)/erlydtl/ebin/)))
-endif
-
 # Copyright (c) 2014 Dave Cottlehuber <dch@skunkwerks.at>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
@@ -6165,7 +6166,7 @@ endif
 
 ifeq ($(IS_DEP),)
 ifneq ($(wildcard $(RELX_CONFIG)),)
-rel:: distclean-relx-rel relx-rel
+rel:: relx-rel
 endif
 endif
 
@@ -6177,7 +6178,7 @@ $(RELX):
 	$(gen_verbose) $(call core_http_get,$(RELX),$(RELX_URL))
 	$(verbose) chmod +x $(RELX)
 
-relx-rel: $(RELX) rel-deps
+relx-rel: $(RELX) rel-deps app
 	$(verbose) $(RELX) -c $(RELX_CONFIG) $(RELX_OPTS)
 
 distclean-relx-rel:
