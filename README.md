@@ -2,11 +2,11 @@
 
 # A Kafka client for Erlanf #
 
-Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp
+Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015 Bots Unit
 
-__Version:__ 0.0.1
+__Version:__ 1.0.1
 
-__Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire.lejeune@finexkap.com)), Gregoire Lejeune ([`greg@g-corp.io`](mailto:greg@g-corp.io)).
+__Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire.lejeune@finexkap.com)), Gregoire Lejeune ([`greg@g-corp.io`](mailto:greg@g-corp.io)), Gregoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire.lejeune@botsunit.com)).
 
 
 ### Links ###
@@ -21,7 +21,7 @@ See [documentation](https://github.com/botsunit/kafe/blob/master/doc/kafe.md)
 
 
 ### Contributing ###
-1. Fork it ( https://github.com/nexkap/kafe/fork )
+1. Fork it ( https://github.com/botsunit/kafe/fork )
 1. Create your feature branch (`git checkout -b my-new-feature`)
 1. Commit your changes (`git commit -am 'Add some feature'`)
 1. Push to the branch (`git push origin my-new-feature`)
@@ -33,7 +33,9 @@ See [documentation](https://github.com/botsunit/kafe/blob/master/doc/kafe.md)
 
 kafe is available for use under the following license, commonly known as the 3-clause (or "modified") BSD license:
 
-Copyright (c) 2014, 2015 Finexkap
+Copyright (c) 2014, 2015 Finexkap<br />
+Copyright (c) 2015, G-Corp<br />
+Copyright (c) 2015, Bots Unit<br />
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:* Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.

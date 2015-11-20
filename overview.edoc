@@ -1,7 +1,8 @@
 @author Gregoire Lejeune <gregoire.lejeune@finexkap.com>
 @author Gregoire Lejeune <greg@g-corp.io>
-@copyright 2014, 2015 Finexkap, 2015 G-Corp
-@version 0.0.1
+@author Gregoire Lejeune <gregoire.lejeune@botsunit.com>
+@copyright 2014, 2015 Finexkap, 2015 G-Corp, 2015 Bots Unit
+@version 1.0.1
 @title A Kafka client for Erlanf
 @doc
 
@@ -19,7 +20,7 @@ See <a href="doc/kafe.md">documentation</a>
 <h3>Contributing</h3>
 
 <ol>
-  <li>Fork it ( https://github.com/nexkap/kafe/fork )</li>
+  <li>Fork it ( https://github.com/botsunit/kafe/fork )</li>
   <li>Create your feature branch (<tt>git checkout -b my-new-feature</tt>)</li>
   <li>Commit your changes (<tt>git commit -am 'Add some feature'</tt>)</li>
   <li>Push to the branch (<tt>git push origin my-new-feature</tt>)</li>
@@ -33,7 +34,9 @@ kafe is available for use under the following license, commonly known as the 3-c
 </p>
 
 <p>
-Copyright (c) 2014, 2015 Finexkap
+Copyright (c) 2014, 2015 Finexkap<br />
+Copyright (c) 2015, G-Corp<br />
+Copyright (c) 2015, Bots Unit<br />
 </p>
 
 <p>
