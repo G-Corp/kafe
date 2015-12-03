@@ -1,9 +1,10 @@
 -module(kafe_protocol_tests).
 
 -include_lib("eunit/include/eunit.hrl").
+-include("kafe_tests.hrl").
 
 kafe_protocol_test_() ->
-  {setup, fun setup/0, fun teardown/1, 
+  {setup, fun setup/0, fun teardown/1,
    [
     ?_test(t_protocol_request()),
     ?_test(t_protocol_encode_string()),
@@ -19,9 +20,9 @@ teardown(_) ->
   ok.
 
 t_protocol_request() ->
-  ?assertEqual(kafe_protocol:request(1, <<>>, #{api_version => 0, correlation_id => 0, client_id => <<"test">>}),
-               #{packet => <<0,0,0,14,0,1,0,0,0,0,0,0,0,4,116,101,115,116>>,
-                 state => #{api_version => 0,client_id => <<"test">>,correlation_id => 1}}).
+  ?assertEqual(kafe_protocol:request(1, <<>>, ?REQ_STATE(0)),
+               #{packet => <<0,0,0,14,0,1,0,1,0,0,0,0,0,4,116,101,115,116>>,
+                 state => ?REQ_STATE(1)}).
 
 t_protocol_encode_string() ->
   ?assertEqual(kafe_protocol:encode_string(undefined),

@@ -51,55 +51,55 @@
          terminate/2, code_change/3]).
 
 -type error_code() :: no_error
-                      | unknown
-                      | offset_out_of_range
-                      | invalid_message
-                      | unknown_topic_or_partition
-                      | invalid_message_size
-                      | leader_not_available
-                      | not_leader_for_partition
-                      | request_timed_out
-                      | broker_not_available
-                      | replica_not_available
-                      | message_size_too_large
-                      | stale_controller_epoch
-                      | offset_metadata_too_large
-                      | offsets_load_in_progress
-                      | consumer_coordinator_not_available
-                      | not_coordinator_for_consumer.
--type metadata() :: #{brokers => [#{host => binary(), 
-                                    id => integer(), 
-                                    port => port()}], 
-                      topics => [#{error_code => error_code(), 
-                                   name => binary(), 
-                                   partitions => [#{error_code => error_code(), 
-                                                    id => integer(), 
-                                                    isr => [integer()], 
-                                                    leader => integer(), 
+| unknown
+| offset_out_of_range
+| invalid_message
+| unknown_topic_or_partition
+| invalid_message_size
+| leader_not_available
+| not_leader_for_partition
+| request_timed_out
+| broker_not_available
+| replica_not_available
+| message_size_too_large
+| stale_controller_epoch
+| offset_metadata_too_large
+| offsets_load_in_progress
+| consumer_coordinator_not_available
+| not_coordinator_for_consumer.
+-type metadata() :: #{brokers => [#{host => binary(),
+                                    id => integer(),
+                                    port => port()}],
+                      topics => [#{error_code => error_code(),
+                                   name => binary(),
+                                   partitions => [#{error_code => error_code(),
+                                                    id => integer(),
+                                                    isr => [integer()],
+                                                    leader => integer(),
                                                     replicas => [integer()]}]}]}.
 -type topics() :: [binary()] | [{binary(), [{integer(), integer(), integer()}]}].
 -type topic_partition_info() :: #{name => binary(), partitions => [#{error_code => error_code(), id => integer(), offsets => [integer()]}]}.
 -type message() :: binary() | {binary(), binary()}.
 -type produce_options() :: #{timeout => integer(), required_acks => integer(), partition => integer()}.
 -type fetch_options() :: #{partition => integer(), offset => integer(), max_bytes => integer(), min_bytes => integer(), max_wait_time => integer()}.
--type message_set() :: #{name => binary(), 
-                         partitions => [#{partition => integer(), 
-                                          error_code => error_code(), 
-                                          high_watermaker_offset => integer(), 
-                                          message => [#{offset => integer(), 
-                                                        crc => integer(), 
-                                                        attributes => integer(), 
-                                                        key => binary(), 
+-type message_set() :: #{name => binary(),
+                         partitions => [#{partition => integer(),
+                                          error_code => error_code(),
+                                          high_watermaker_offset => integer(),
+                                          message => [#{offset => integer(),
+                                                        crc => integer(),
+                                                        attributes => integer(),
+                                                        key => binary(),
                                                         value => binary()}]}]}.
 -type consumer_metadata() :: #{error_code => error_code(), coordinator_id => integer(), coordinator_host => binary(),  coordinator_port => port()}.
 -type offset_fetch_options() :: [binary()] | [{binary(), [integer()]}].
--type offset_fetch_set() :: #{name => binary(), 
-                              partitions_offset => [#{partition => integer(), 
-                                                      offset => integer(), 
-                                                      metadata_info => binary(), 
+-type offset_fetch_set() :: #{name => binary(),
+                              partitions_offset => [#{partition => integer(),
+                                                      offset => integer(),
+                                                      metadata_info => binary(),
                                                       error_code => error_code()}]}.
--type offset_commit_set() :: [#{name => binary(), 
-                                partitions => [#{partition => integer(), 
+-type offset_commit_set() :: [#{name => binary(),
+                                partitions => [#{partition => integer(),
                                                  error_code => error_code()}]}].
 -type offset_commit_option() :: [{binary(), [{integer(), integer(), binary()}]}].
 -type offset_commit_option_v1() :: [{binary(), [{integer(), integer(), integer(), binary()}]}].
@@ -147,8 +147,8 @@ max_offset(TopicName) ->
 % @hidden
 max_offset(TopicName, Partition) ->
   case offset([{TopicName, [{Partition, ?DEFAULT_OFFSET_TIME, ?DEFAULT_OFFSET_MAX_SIZE}]}]) of
-    {ok, 
-     [#{partitions := [#{id := Partition, 
+    {ok,
+     [#{partitions := [#{id := Partition,
                          offsets := [Offset|_]}]}]
     } ->
       {Partition, Offset};
@@ -317,7 +317,7 @@ consumer_metadata(ConsumerGroup) ->
 % @end
 -spec offset_commit(binary(), offset_commit_option()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, Topics) ->
-  kafe_protocol_consumer_offset_commit:run_v0(ConsumerGroup, 
+  kafe_protocol_consumer_offset_commit:run_v0(ConsumerGroup,
                                               Topics).
 
 % @doc
@@ -327,9 +327,9 @@ offset_commit(ConsumerGroup, Topics) ->
 % @end
 -spec offset_commit(binary(), integer(), binary(), offset_commit_option_v1()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
-  kafe_protocol_consumer_offset_commit:run_v1(ConsumerGroup, 
-                                              ConsumerGroupGenerationId, 
-                                              ConsumerId, 
+  kafe_protocol_consumer_offset_commit:run_v1(ConsumerGroup,
+                                              ConsumerGroupGenerationId,
+                                              ConsumerId,
                                               Topics).
 
 % @doc
@@ -339,10 +339,10 @@ offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
 % @end
 -spec offset_commit(binary(), integer(), binary(), integer(), offset_commit_option()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics) ->
-  kafe_protocol_consumer_offset_commit:run_v2(ConsumerGroup, 
-                                              ConsumerGroupGenerationId, 
-                                              ConsumerId, 
-                                              RetentionTime, 
+  kafe_protocol_consumer_offset_commit:run_v2(ConsumerGroup,
+                                              ConsumerGroupGenerationId,
+                                              ConsumerId,
+                                              RetentionTime,
                                               Topics).
 
 % @equiv offset_fetch(ConsumerGroup, [])
@@ -363,11 +363,11 @@ offset_fetch(ConsumerGroup, Options) ->
 
 % @hidden
 init(_) ->
-  ApiVersion = kafe_config:conf([kafe, api_version], ?DEFAULT_API_VERSION),
-  CorrelationID = kafe_config:conf([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
-  ClientID = kafe_config:conf([kafe, client_id], ?DEFAULT_CLIENT_ID),
-  Offset = kafe_config:conf([kafe, offset], ?DEFAULT_OFFSET),
-  BrokersUpdateFreq = kafe_config:conf([kafe, brokers_update_frequency], ?DEFAULT_BROKER_UPDATE),
+  ApiVersion = doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION),
+  CorrelationID = doteki:get_env([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
+  ClientID = doteki:get_env([kafe, client_id], ?DEFAULT_CLIENT_ID),
+  Offset = doteki:get_env([kafe, offset], ?DEFAULT_OFFSET),
+  BrokersUpdateFreq = doteki:get_env([kafe, brokers_update_frequency], ?DEFAULT_BROKER_UPDATE),
   State = #{brokers => #{},
             brokers_list => [],
             topics => #{},
@@ -395,8 +395,8 @@ handle_call({broker, Topic, Partition}, _From, #{topics := Topics, brokers := Br
           {reply, maps:get(Broker, BrokersAddr, undefined), State}
       end
   end;
-handle_call({broker_by_name, BrokerName}, _From, #{brokers := BrokersAddr} = State) -> 
-  {reply, maps:get(eutils:to_string(BrokerName), BrokersAddr, undefined), State};
+handle_call({broker_by_name, BrokerName}, _From, #{brokers := BrokersAddr} = State) ->
+  {reply, maps:get(bucs:to_string(BrokerName), BrokersAddr, undefined), State};
 handle_call(topics, _From, #{topics := Topics} = State) ->
   {reply, Topics, State};
 handle_call(api_version, _From, #{api_version := Version} = State) ->
@@ -430,23 +430,23 @@ code_change(_OldVsn, State, _Extra) ->
 
 % @hidden
 init_connexions(State) ->
-  KafkaBrokers = kafe_config:conf(
-                   [kafe, brokers], 
-                   [{kafe_config:conf([kafe, host], ?DEFAULT_IP),
-                     kafe_config:conf([kafe, port], ?DEFAULT_PORT)}]),
+  KafkaBrokers = doteki:get_env(
+                   [kafe, brokers],
+                   [{doteki:get_env([kafe, host], ?DEFAULT_IP),
+                     doteki:get_env([kafe, port], ?DEFAULT_PORT)}]),
   get_connection(KafkaBrokers, State).
 
 % @hidden
-get_connection([], State) -> 
+get_connection([], State) ->
   State;
-get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList, 
+get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                                       brokers := Brokers} = State) ->
   lager:debug("Get connection for ~s:~p", [Host, Port]),
   try
     case inet:gethostbyname(Host) of
-      {ok, #hostent{h_name = Hostname, 
+      {ok, #hostent{h_name = Hostname,
                     h_addrtype = AddrType,
-                    h_addr_list = AddrsList}} -> 
+                    h_addr_list = AddrsList}} ->
         case get_host(AddrsList, Hostname, AddrType) of
           undefined ->
             lager:debug("Can't retrieve host for ~p:~p", [Host, Port]),
@@ -454,13 +454,13 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
           {BrokerAddr, BrokerHostList} ->
             case lists:foldl(fun(E, Acc) ->
                                  BrokerFullName = kafe_utils:broker_name(E, Port),
-                                 case elists:include(BrokersList, BrokerFullName) of
+                                 case lists:member(BrokerFullName, BrokersList) of
                                    true -> Acc;
                                    _ -> [BrokerFullName|Acc]
                                  end
                              end, [], BrokerHostList) of
               [] ->
-                lager:debug("All host already registered for ~p:~p", [enet:ip_to_str(BrokerAddr), Port]),
+                lager:debug("All host already registered for ~p:~p", [bucinet:ip_to_string(BrokerAddr), Port]),
                 get_connection(Rest, State);
               BrokerHostList1 ->
                 case kafe_client_sup:start_child(BrokerAddr, Port) of
@@ -472,7 +472,7 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                     get_connection(Rest, State#{brokers => Brokers1,
                                                 brokers_list => BrokerHostList1 ++ BrokersList});
                   {error, Reason} ->
-                    lager:debug("Connection faild to ~p:~p : ~p", [enet:ip_to_str(BrokerAddr), Port, Reason]),
+                    lager:debug("Connection faild to ~p:~p : ~p", [bucinet:ip_to_string(BrokerAddr), Port, Reason]),
                     get_connection(Rest, State)
                 end
             end
@@ -490,7 +490,7 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
 % @hidden
 update_state_with_metadata(State) ->
   {State2, FirstBroker} = case get_first_broker(State) of
-                            undefined -> 
+                            undefined ->
                               State1 = init_connexions(State),
                               {State1, get_first_broker(State1)};
                             Broker -> {State, Broker}
@@ -499,22 +499,22 @@ update_state_with_metadata(State) ->
     undefined ->
       State;
     _ ->
-      {ok, #{brokers := Brokers, 
+      {ok, #{brokers := Brokers,
              topics := Topics}} =  gen_server:call(FirstBroker,
-                                                   {call, 
+                                                   {call,
                                                     fun kafe_protocol_metadata:request/2, [[]],
                                                     fun kafe_protocol_metadata:response/1},
                                                    infinity),
       {Brokers1, State3} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, StateAcc}) ->
                                            {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
-                                            get_connection([{eutils:to_string(Host), Port}], StateAcc)}
+                                            get_connection([{bucs:to_string(Host), Port}], StateAcc)}
                                        end, {#{}, State2}, Brokers),
       State4 = remove_unlisted_brokers(maps:values(Brokers1), State3),
       Topics1 = lists:foldl(fun(#{name := Topic, partitions := Partitions}, Acc) ->
-                                maps:put(Topic, 
+                                maps:put(Topic,
                                          lists:foldl(fun(#{id := ID, leader := Leader}, Acc1) ->
                                                          maps:put(ID, maps:get(Leader, Brokers1), Acc1)
-                                                     end, #{}, Partitions), 
+                                                     end, #{}, Partitions),
                                          Acc)
                             end, #{}, Topics),
       maps:put(topics, Topics1, State4)
@@ -526,15 +526,15 @@ remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->
                              case maps:get(Broker, Brokers, undefined) of
                                undefined -> Acc;
                                ID -> [ID|Acc]
-                             end 
+                             end
                          end, [], BrokersList),
   Brokers1 = maps:fold(fun(BrokerName, BrokerID, Acc) ->
                            case lists:member(BrokerName, BrokersList) of
-                             true -> 
+                             true ->
                                maps:put(BrokerName, BrokerID, Acc);
                              false ->
                                case lists:member(BrokerID, UnkillID) of
-                                 true -> 
+                                 true ->
                                    ok;
                                  false ->
                                    _ = kafe_client_sup:stop_child(BrokerID)
@@ -549,19 +549,19 @@ remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->
 remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
   lists:foldl(fun(Broker, #{brokers := Brokers1, brokers_list := BrokersList1} = State1) ->
                   case maps:get(Broker, Brokers1, undefined) of
-                    undefined -> 
-                      maps:put(brokers_list, 
-                               lists:delete(Broker, BrokersList1), 
+                    undefined ->
+                      maps:put(brokers_list,
+                               lists:delete(Broker, BrokersList1),
                                State1);
                     BrokerID ->
                       case gen_server:call(BrokerID, alive, infinity) of
-                        ok -> 
+                        ok ->
                           State1;
                         {error, Reason} ->
                           _ = kafe_client_sup:stop_child(BrokerID),
                           lager:debug("Broker ~p not alive : ~p", [Broker, Reason]),
-                          maps:put(brokers_list, 
-                                   lists:delete(Broker, BrokersList1), 
+                          maps:put(brokers_list,
+                                   lists:delete(Broker, BrokersList1),
                                    maps:put(brokers, maps:remove(Broker, Brokers1), State1))
                       end
                   end
@@ -571,7 +571,7 @@ remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
 get_host([], _, _) -> undefined;
 get_host([Addr|Rest], Hostname, AddrType) ->
   case inet:getaddr(Hostname, AddrType) of
-    {ok, Addr} -> 
+    {ok, Addr} ->
       case inet:gethostbyaddr(Addr) of
         {ok, #hostent{h_name = Hostname1, h_aliases = HostAlias}} ->
           {Addr, lists:usort([Hostname|[Hostname1|HostAlias]])};
@@ -602,9 +602,9 @@ offsets(TopicName, ConsumerGroup, Nth) ->
   case offset([TopicName]) of
     {ok, [#{name := TopicName, partitions := Partitions}]} ->
       {Offsets, PartitionsID} = lists:foldl(fun
-                                              (#{id := PartitionID, 
-                                                 offsets := [Offset|_], 
-                                                 error_code := NoError1}, 
+                                              (#{id := PartitionID,
+                                                 offsets := [Offset|_],
+                                                 error_code := NoError1},
                                                {AccOffs, AccParts}) when NoError1 =:= NoError ->
                                                 {[{PartitionID, Offset - 1}|AccOffs], [PartitionID|AccParts]};
                                               (_, Acc) ->
@@ -613,12 +613,12 @@ offsets(TopicName, ConsumerGroup, Nth) ->
       case offset_fetch(ConsumerGroup, [{TopicName, PartitionsID}]) of
         {ok,[#{name := TopicName, partitions_offset := PartitionsOffset}]} ->
           CurrentOffsets = lists:foldl(fun
-                                         (#{offset := Offset1, 
-                                            partition := PartitionID1}, 
+                                         (#{offset := Offset1,
+                                            partition := PartitionID1},
                                           Acc1) ->
                                            [{PartitionID1, Offset1 + 1}|Acc1];
-                                          (_, Acc1) ->
-                                            Acc1
+                                         (_, Acc1) ->
+                                           Acc1
                                        end, [], PartitionsOffset),
           CombinedOffsets = lists:foldl(fun({P, O}, Acc) ->
                                             case  lists:keyfind(P, 1, CurrentOffsets) of
@@ -629,21 +629,21 @@ offsets(TopicName, ConsumerGroup, Nth) ->
           lager:debug("Offsets = ~p / CurrentOffsets = ~p / CombinedOffsets = ~p", [Offsets, CurrentOffsets, CombinedOffsets]),
           {NewOffsets, Result} = get_offsets_list(CombinedOffsets, [], [], Nth),
           lists:foldl(fun({PartitionID, NewOffset}, Acc) ->
-                          case offset_commit(ConsumerGroup, 
+                          case offset_commit(ConsumerGroup,
                                              [{TopicName, [{PartitionID, NewOffset, <<>>}]}]) of
-                            {ok, [#{name := TopicName, 
-                                    partitions := [#{partition := PartitionID, 
+                            {ok, [#{name := TopicName,
+                                    partitions := [#{partition := PartitionID,
                                                      error_code := ErrorCode}]}]} when ErrorCode =:= NoError ->
                               Acc;
                             _ ->
-                              delete_offset_for_partition(PartitionID, Acc) 
+                              delete_offset_for_partition(PartitionID, Acc)
                           end
                       end, Result, NewOffsets);
         _ ->
           lager:debug("Can't retriece offsets for consumer group ~p on topic ~p", [ConsumerGroup, TopicName]),
           error
       end;
-    _ ->  
+    _ ->
       lager:debug("Can't retriece offsets for topic ~p", [TopicName]),
       error
   end.

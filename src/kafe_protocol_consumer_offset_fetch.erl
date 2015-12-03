@@ -11,13 +11,13 @@
 
 run(ConsumerGroup, Options) ->
   case kafe:consumer_metadata(ConsumerGroup) of
-    {ok, #{coordinator_host := BrokerName}} -> 
+    {ok, #{coordinator_host := BrokerName}} ->
       Options1 = if
                    Options =:= [] -> maps:keys(kafe:topics());
                    true -> Options
                  end,
       gen_server:call(kafe:broker_by_name(BrokerName),
-                      {call, 
+                      {call,
                        fun ?MODULE:request/3, [ConsumerGroup, Options1],
                        fun ?MODULE:response/1},
                       infinity);
@@ -26,7 +26,7 @@ run(ConsumerGroup, Options) ->
 
 request(ConsumerGroup, Options, State) ->
   kafe_protocol:request(
-    ?OFFSET_FETCH_REQUEST, 
+    ?OFFSET_FETCH_REQUEST,
     <<(kafe_protocol:encode_string(ConsumerGroup))/binary, (topics(Options))/binary>>,
     State).
 
@@ -53,7 +53,7 @@ topics([TopicName|Rest], Result) ->
 
 response(0, <<>>) ->
   [];
-response(N, 
+response(N,
          <<
            TopicNameLength:16/signed,
            TopicName:TopicNameLength/bytes,
@@ -77,8 +77,8 @@ partitions_offset(N,
                   Acc) ->
   partitions_offset(N - 1,
                     Remainder,
-                    [#{partition => Partition, 
-                       offset => Offset, 
-                       metadata => Metadata, 
+                    [#{partition => Partition,
+                       offset => Offset,
+                       metadata => Metadata,
                        error_code => kafe_error:code(ErrorCode)} | Acc]).
 

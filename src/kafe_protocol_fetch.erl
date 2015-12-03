@@ -20,14 +20,14 @@ run(ReplicaID, TopicName, Options) ->
                             kafe:partition_for_offset(TopicName, Offset1);
                           R -> R
                         end,
-  Options1 = Options#{partition => Partition, 
+  Options1 = Options#{partition => Partition,
                       offset => Offset},
   case kafe:broker(TopicName, Partition) of
     undefined -> {error, no_broker_found};
-    Broker -> 
+    Broker ->
       lager:debug("Fetch ~p (partition #~p, offset ~p) on ~p", [TopicName, Partition, Offset, Broker]),
       gen_server:call(Broker,
-                      {call, 
+                      {call,
                        fun ?MODULE:request/4, [ReplicaID, TopicName, Options1],
                        fun ?MODULE:response/1},
                       infinity)
@@ -66,19 +66,19 @@ clean_offset({Partition, Offset}) ->
 response(0, _) ->
     [];
 response(
-  N, 
-  <<TopicNameLength:16/signed, 
-    TopicName:TopicNameLength/bytes, 
+  N,
+  <<TopicNameLength:16/signed,
+    TopicName:TopicNameLength/bytes,
     NumberOfPartitions:32/signed,
     PartitionRemainder/binary>>) ->
   {Partitions, Remainder} = partitions(NumberOfPartitions, PartitionRemainder, []),
-  [#{name => TopicName, 
+  [#{name => TopicName,
      partitions => Partitions} | response(N - 1, Remainder)].
 
 partitions(0, Remainder, Acc) ->
   {Acc, Remainder};
 partitions(
-  N, 
+  N,
   <<Partition:32/signed,
     ErrorCode:16/signed,
     HighwaterMarkOffset:64/signed,
@@ -86,7 +86,7 @@ partitions(
     MessageSet:MessageSetSize/binary,
     Remainder/binary>>,
   Acc) ->
-  partitions(N - 1, Remainder, 
+  partitions(N - 1, Remainder,
              [#{partition => Partition,
                 error_code => kafe_error:code(ErrorCode),
                 high_watermaker_offset => HighwaterMarkOffset,

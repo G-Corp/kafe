@@ -15,9 +15,9 @@
 
 run_v0(ConsumerGroup, Topics) ->
   case kafe:consumer_metadata(ConsumerGroup) of
-    {ok, #{coordinator_host := BrokerName}} -> 
+    {ok, #{coordinator_host := BrokerName}} ->
       gen_server:call(kafe:broker_by_name(BrokerName),
-                      {call, 
+                      {call,
                        fun ?MODULE:request_v0/3, [ConsumerGroup, Topics],
                        fun ?MODULE:response/1},
                       infinity);
@@ -28,8 +28,8 @@ run_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
   case kafe:consumer_metadata(ConsumerGroup) of
     {ok, #{coordinator_host := BrokerName}} ->
       gen_server:call(kafe:broker_by_name(BrokerName),
-                      {call, 
-                       fun ?MODULE:request_v1/5, [ConsumerGroup, 
+                      {call,
+                       fun ?MODULE:request_v1/5, [ConsumerGroup,
                                                   ConsumerGroupGenerationId,
                                                   ConsumerId,
                                                   Topics],
@@ -42,8 +42,8 @@ run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topi
   case kafe:consumer_metadata(ConsumerGroup) of
     {ok, #{coordinator_host := BrokerName}} ->
       gen_server:call(kafe:broker_by_name(BrokerName),
-                      {call, 
-                       fun ?MODULE:request_v2/6, [ConsumerGroup, 
+                      {call,
+                       fun ?MODULE:request_v2/6, [ConsumerGroup,
                                                   ConsumerGroupGenerationId,
                                                   ConsumerId,
                                                   RetentionTime,
@@ -55,7 +55,7 @@ run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topi
 
 request_v0(ConsumerGroup, Topics, State) ->
   kafe_protocol:request(
-    ?OFFSET_COMMIT_REQUEST, 
+    ?OFFSET_COMMIT_REQUEST,
     <<
       (kafe_protocol:encode_string(ConsumerGroup))/binary,
       (topics_v0_v2(Topics))/binary
@@ -64,22 +64,22 @@ request_v0(ConsumerGroup, Topics, State) ->
 
 request_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics, State) ->
   kafe_protocol:request(
-    ?OFFSET_COMMIT_REQUEST, 
+    ?OFFSET_COMMIT_REQUEST,
     <<
       (kafe_protocol:encode_string(ConsumerGroup))/binary,
       ConsumerGroupGenerationId:32/signed,
-      (kafe_protocol:encode_string(ConsumerId))/binary, 
+      (kafe_protocol:encode_string(ConsumerId))/binary,
       (topics_v1(Topics))/binary
     >>,
     State).
 
 request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics, State) ->
   kafe_protocol:request(
-    ?OFFSET_COMMIT_REQUEST, 
+    ?OFFSET_COMMIT_REQUEST,
     <<
       (kafe_protocol:encode_string(ConsumerGroup))/binary,
       ConsumerGroupGenerationId:32/signed,
-      (kafe_protocol:encode_string(ConsumerId))/binary, 
+      (kafe_protocol:encode_string(ConsumerId))/binary,
       RetentionTime:64/signed,
       (topics_v0_v2(Topics))/binary
     >>,
@@ -115,8 +115,8 @@ topics_v1([{TopicName, Partitions}|Rest], Acc) ->
                  Acc/binary,
                  (kafe_protocol:encode_string(TopicName))/binary,
                  (kafe_protocol:encode_array(
-                    [<<Partition:32/signed, 
-                       Offset:64/signed, 
+                    [<<Partition:32/signed,
+                       Offset:64/signed,
                        Timestamp:64/signed,
                        (kafe_protocol:encode_string(Metadata))/binary>> ||
                      {Partition, Offset, Timestamp, Metadata} <- Partitions]
@@ -127,9 +127,9 @@ response(0, <<>>) ->
   [];
 response(N,
          <<
-           TopicNameLength:16/signed, 
-           TopicName:TopicNameLength/bytes, 
-           NumberOfPartitions:32/signed, 
+           TopicNameLength:16/signed,
+           TopicName:TopicNameLength/bytes,
+           NumberOfPartitions:32/signed,
            PartitionsRemainder/binary
          >>) ->
   {Partitions, Remainder} = partitions(NumberOfPartitions, PartitionsRemainder, []),
@@ -139,8 +139,8 @@ partitions(0, Remainder, Acc) ->
   {Acc, Remainder};
 partitions(N,
            <<
-             Partition:32/signed, 
-             ErrorCode:16/signed, 
+             Partition:32/signed,
+             ErrorCode:16/signed,
              Remainder/binary
            >>,
            Acc) ->

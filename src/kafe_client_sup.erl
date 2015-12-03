@@ -12,10 +12,10 @@ start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 start_child(Addr, Port) ->
-  IP = enet:ip_to_str(Addr),
+  IP = bucinet:ip_to_string(Addr),
   ClientID = kafe_utils:broker_id(IP, Port),
-  case supervisor:start_child(?MODULE, 
-                         {ClientID, 
+  case supervisor:start_child(?MODULE,
+                         {ClientID,
                           {kafe_client, start_link, [ClientID, Addr, Port]},
                           permanent,
                           infinity,

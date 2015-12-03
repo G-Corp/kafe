@@ -30,19 +30,19 @@ start_link(ClientID, Addr, Port) ->
 %% ------------------------------------------------------------------
 
 init({Addr, Port}) ->
-  SndBuf = kafe_config:conf([kafe, socket, sndbuf], ?DEFAULT_SOCKET_SNDBUF),
-  RecBuf = kafe_config:conf([kafe, socker, recbuf], ?DEFAULT_SOCKET_RECBUF),
-  Buffer = lists:max([SndBuf, RecBuf, kafe_config:conf([kafe, socket, buffer], max(SndBuf, RecBuf))]),
-  case gen_tcp:connect(Addr, Port, [{mode, binary}, 
-                                    {active, once}, 
-                                    {sndbuf, SndBuf}, 
+  SndBuf = doteki:get_env([kafe, socket, sndbuf], ?DEFAULT_SOCKET_SNDBUF),
+  RecBuf = doteki:get_env([kafe, socker, recbuf], ?DEFAULT_SOCKET_RECBUF),
+  Buffer = lists:max([SndBuf, RecBuf, doteki:get_env([kafe, socket, buffer], max(SndBuf, RecBuf))]),
+  case gen_tcp:connect(Addr, Port, [{mode, binary},
+                                    {active, once},
+                                    {sndbuf, SndBuf},
                                     {recbuf, RecBuf},
                                     {buffer, Buffer}]) of
     {ok, Socket} ->
-      lager:info("Connect to broker @ ~s:~p", [enet:ip_to_str(Addr), Port]),
-      ApiVersion = kafe_config:conf([kafe, api_version], ?DEFAULT_API_VERSION),
-      CorrelationID = kafe_config:conf([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
-      ClientID = kafe_config:conf([kafe, client_id], ?DEFAULT_CLIENT_ID),
+      lager:info("Connect to broker @ ~s:~p", [bucinet:ip_to_string(Addr), Port]),
+      ApiVersion = doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION),
+      CorrelationID = doteki:get_env([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
+      ClientID = doteki:get_env([kafe, client_id], ?DEFAULT_CLIENT_ID),
       {ok, #{
          ip => Addr,
          port => Port,
@@ -57,7 +57,7 @@ init({Addr, Port}) ->
          buffer => Buffer
         }};
     {error, Reason} ->
-      lager:info("Connection faild to ~p:~p : ~p", [enet:ip_to_str(Addr), Port, Reason]),
+      lager:info("Connection faild to ~p:~p : ~p", [bucinet:ip_to_string(Addr), Port, Reason]),
       {stop, Reason}
   end.
 
@@ -86,13 +86,13 @@ handle_info(
   <<Size:32/signed, Packet1:Size/bytes, _Remainder1/binary>> = Packet,
   process_response(<<Size:32, Packet1/binary>>, maps:update(parts, <<>>, State));
 handle_info(
-  {tcp, _, Part}, 
+  {tcp, _, Part},
   #{parts := <<Size:32/signed, CParts/binary>> = Parts} = State
- ) when byte_size(<<CParts/binary, Part/binary>>) >= Size -> 
+ ) when byte_size(<<CParts/binary, Part/binary>>) >= Size ->
   <<Size:32/signed, Packet:Size/bytes, _Remainder/binary>> = <<Parts/binary, Part/binary>>,
   process_response(<<Size:32, Packet/binary>>, maps:update(parts, <<>>, State));
 handle_info(
-  {tcp, Socket, Part}, 
+  {tcp, Socket, Part},
   #{parts := Parts, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
  ) ->
   case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
@@ -121,11 +121,11 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-send_request(#{packet := Packet, state := State2}, 
-             From, 
-             Handler, 
-             #{correlation_id := CorrelationId, 
-               requests := Requests, 
+send_request(#{packet := Packet, state := State2},
+             From,
+             Handler,
+             #{correlation_id := CorrelationId,
+               requests := Requests,
                socket := Socket,
                sndbuf := SndBuf,
                recbuf := RecBuf,
@@ -134,12 +134,12 @@ send_request(#{packet := Packet, state := State2},
     ok ->
       case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
         ok ->
-          {noreply, 
+          {noreply,
            maps:update(
-             requests, 
-             orddict:store(CorrelationId, 
-                           #{from => From, handler => Handler, socket => Socket}, 
-                           Requests), 
+             requests,
+             orddict:store(CorrelationId,
+                           #{from => From, handler => Handler, socket => Socket},
+                           Requests),
              State2)};
         {error, _} = Error ->
           {stop, abnormal, Error, State1}

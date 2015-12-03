@@ -7,8 +7,8 @@
         ]).
 
 broker_id(Host, Port) ->
-  eutils:to_atom(eutils:to_string(Host) ++ ":" ++ eutils:to_string(Port)).
+  bucs:to_atom(bucs:to_string(Host) ++ ":" ++ bucs:to_string(Port)).
 
 broker_name(Host, Port) ->
-  eutils:to_string(Host) ++ ":" ++ eutils:to_string(Port).
+  bucs:to_string(Host) ++ ":" ++ bucs:to_string(Port).
 

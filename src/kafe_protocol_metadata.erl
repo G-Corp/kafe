@@ -14,7 +14,7 @@ run(Topics) ->
     undefined -> {error, no_broker_found};
     Broker ->
       gen_server:call(Broker,
-                      {call, 
+                      {call,
                        fun ?MODULE:request/2, [Topics],
                        fun ?MODULE:response/1},
                       infinity)
@@ -22,15 +22,15 @@ run(Topics) ->
 
 request(TopicNames, State) ->
   kafe_protocol:request(
-    ?METADATA_REQUEST, 
+    ?METADATA_REQUEST,
     <<(kafe_protocol:encode_array(
-         [kafe_protocol:encode_string(Name) || 
+         [kafe_protocol:encode_string(Name) ||
           Name <- TopicNames]))/binary>>,
     State).
 
 response(<<NumberOfBrokers:32/signed, BrokerRemainder/binary>>) ->
   {
-   Brokers, 
+   Brokers,
    <<NumberOfTopics:32/signed, TopicMetadataRemainder/binary>>
   } = brokers(NumberOfBrokers, BrokerRemainder, []),
   {Topics, _} = topics(NumberOfTopics, TopicMetadataRemainder, []),
@@ -41,12 +41,12 @@ response(<<NumberOfBrokers:32/signed, BrokerRemainder/binary>>) ->
 brokers(0, Remainder, Acc) ->
   {Acc, Remainder};
 brokers(
-  N, 
+  N,
   <<
-    NodeId:32/signed, 
-    HostLength:16/signed, 
-    Host:HostLength/bytes, 
-    Port:32/signed, 
+    NodeId:32/signed,
+    HostLength:16/signed,
+    Host:HostLength/bytes,
+    Port:32/signed,
     Remainder/binary
   >>, Acc) ->
   brokers(N-1, Remainder, [#{id => NodeId, host => Host, port => Port} | Acc]).
@@ -55,46 +55,46 @@ brokers(
 topics(0, <<Remainder/binary>>, Acc) ->
   {Acc, Remainder};
 topics(
-  N, 
+  N,
   <<
-    ErrorCode:16/signed, 
-    TopicNameLen:16/signed, 
-    TopicName:TopicNameLen/bytes, 
-    PartitionLength:32/signed, 
+    ErrorCode:16/signed,
+    TopicNameLen:16/signed,
+    TopicName:TopicNameLen/bytes,
+    PartitionLength:32/signed,
     PartitionsRemainder/binary
   >>,
   Acc) ->
 
   {Partitions, Remainder} = partitions(PartitionLength, PartitionsRemainder, []),
-  topics(N-1, 
-         Remainder, 
-         [#{error_code => kafe_error:code(ErrorCode), 
-            name => TopicName, 
+  topics(N-1,
+         Remainder,
+         [#{error_code => kafe_error:code(ErrorCode),
+            name => TopicName,
             partitions => Partitions} | Acc]).
 
 partitions(0, <<Remainder/binary>>, Acc) ->
   {Acc, Remainder};
 partitions(
-  N, 
+  N,
   <<
-    ErrorCode:16/signed, 
-    Id:32/signed, 
-    Leader:32/signed, 
-    NumberOfReplicas:32/signed, 
+    ErrorCode:16/signed,
+    Id:32/signed,
+    Leader:32/signed,
+    NumberOfReplicas:32/signed,
     ReplicasRemainder/binary
-  >>, 
+  >>,
   Acc) ->
   {
-   Replicas, 
+   Replicas,
    <<NumberOfISR:32/signed, ISRRemainder/binary>>
   } = replicas(NumberOfReplicas, ReplicasRemainder, []),
   {ISR, Remainder} = isrs(NumberOfISR, ISRRemainder, []),
-  partitions(N-1, 
-             Remainder, 
-             [#{error_code => kafe_error:code(ErrorCode), 
-                id => Id, 
-                leader => Leader, 
-                replicas => Replicas, 
+  partitions(N-1,
+             Remainder,
+             [#{error_code => kafe_error:code(ErrorCode),
+                id => Id,
+                leader => Leader,
+                replicas => Replicas,
                 isr => ISR} | Acc]).
 
 isrs(0, Remainder, Acc) ->
