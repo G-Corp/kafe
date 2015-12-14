@@ -622,7 +622,7 @@ offsets(TopicName, ConsumerGroup, Nth) ->
                                        end, [], PartitionsOffset),
           CombinedOffsets = lists:foldl(fun({P, O}, Acc) ->
                                             case  lists:keyfind(P, 1, CurrentOffsets) of
-                                              {P, C} when C < O -> [{P, O, C}|Acc];
+                                              {P, C} when C =< O -> [{P, O, C}|Acc];
                                               _ -> Acc
                                             end
                                         end, [], Offsets),
