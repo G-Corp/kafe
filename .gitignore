@@ -12,3 +12,4 @@ ext
 .rebar
 .erlang.mk
 kafe.d
+test/TEST-*.xml
