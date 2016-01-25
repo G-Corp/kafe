@@ -401,7 +401,7 @@ Return the list of all unread offsets for a given topic and consumer group
 ### offsets/3 ###
 
 <pre><code>
-offsets(TopicName::binary(), ConsumerGroup::binary(), Nth::integer()) -&gt; [{integer(), integer()}] | error
+offsets(TopicName::binary() | {binary(), [integer()]}, ConsumerGroup::binary(), Nth::integer()) -&gt; [{integer(), integer()}] | error
 </code></pre>
 <br />
 

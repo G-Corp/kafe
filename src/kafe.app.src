@@ -12,6 +12,6 @@
                   goldrush,
                   lager
                  ]},
-  {mod, { kafe_app, []}},
+  {mod, {kafe_app, []}},
   {env, []}
  ]}.

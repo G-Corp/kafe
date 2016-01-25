@@ -40,6 +40,7 @@
          broker/2,
          broker_by_name/1,
          topics/0,
+         partitions/1,
          max_offset/1,
          max_offset/2,
          partition_for_offset/2,
@@ -129,6 +130,10 @@ broker_by_name(BrokerName) ->
 % @hidden
 topics() ->
   gen_server:call(?SERVER, topics, infinity).
+
+% @hidden
+partitions(Topic) ->
+  gen_server:call(?SERVER, {partitions, Topic}, infinity).
 
 % @hidden
 max_offset(TopicName) ->
@@ -399,6 +404,8 @@ handle_call({broker_by_name, BrokerName}, _From, #{brokers := BrokersAddr} = Sta
   {reply, maps:get(bucs:to_string(BrokerName), BrokersAddr, undefined), State};
 handle_call(topics, _From, #{topics := Topics} = State) ->
   {reply, Topics, State};
+handle_call({partitions, Topic}, _From, #{topics := Topics} = State) ->
+  {reply, maps:keys(maps:get(Topic, Topics, #{})), State};
 handle_call(api_version, _From, #{api_version := Version} = State) ->
   {reply, Version, State};
 handle_call(state, _From, State) ->
@@ -596,8 +603,10 @@ get_first_broker([Broker|Rest]) ->
 % @doc
 % Return the list of the next Nth unread offsets for a given topic and consumer group
 % @end
--spec offsets(binary(), binary(), integer()) -> [{integer(), integer()}] | error.
-offsets(TopicName, ConsumerGroup, Nth) ->
+-spec offsets(binary() | {binary(), [integer()]}, binary(), integer()) -> [{integer(), integer()}] | error.
+offsets(TopicName, ConsumerGroup, Nth) when is_binary(TopicName) ->
+  offsets({TopicName, partitions(TopicName)}, ConsumerGroup, Nth);
+offsets({TopicName, PartitionsList}, ConsumerGroup, Nth) ->
   NoError = kafe_error:code(0),
   case offset([TopicName]) of
     {ok, [#{name := TopicName, partitions := Partitions}]} ->
@@ -605,8 +614,13 @@ offsets(TopicName, ConsumerGroup, Nth) ->
                                               (#{id := PartitionID,
                                                  offsets := [Offset|_],
                                                  error_code := NoError1},
-                                               {AccOffs, AccParts}) when NoError1 =:= NoError ->
-                                                {[{PartitionID, Offset - 1}|AccOffs], [PartitionID|AccParts]};
+                                               {AccOffs, AccParts} = Acc) when NoError1 =:= NoError ->
+                                                case lists:member(PartitionID, PartitionsList) of
+                                                  true ->
+                                                    {[{PartitionID, Offset - 1}|AccOffs], [PartitionID|AccParts]};
+                                                  false ->
+                                                    Acc
+                                                end;
                                               (_, Acc) ->
                                                 Acc
                                             end, {[], []}, Partitions),
