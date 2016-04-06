@@ -1,5 +1,6 @@
 % @hidden
 -module(kafe_protocol_fetch).
+-compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
 

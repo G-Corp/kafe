@@ -1,10 +1,10 @@
 
 
-# A Kafka client for Erlanf #
+# A Kafka client for Erlang #
 
-Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015 Bots Unit
+Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 Bots Unit
 
-__Version:__ 1.0.1
+__Version:__ 1.1.0
 
 __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire.lejeune@finexkap.com)), Gregoire Lejeune ([`greg@g-corp.io`](mailto:greg@g-corp.io)), Gregoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire.lejeune@botsunit.com)).
 
@@ -17,7 +17,7 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 
 ### Documentation ###
 
-See [documentation](https://github.com/botsunit/kafe/blob/master/doc/kafe.md)
+See [documentation](https://github.com/botsunit/kafe/blob/kafka-0.9/doc/kafe.md)
 
 
 ### Contributing ###
@@ -35,7 +35,7 @@ kafe is available for use under the following license, commonly known as the 3-c
 
 Copyright (c) 2014, 2015 Finexkap<br />
 Copyright (c) 2015, G-Corp<br />
-Copyright (c) 2015, Bots Unit<br />
+Copyright (c) 2015, 2016 Bots Unit<br />
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:* Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
@@ -50,5 +50,5 @@ THIS SOFTWARE IS PROVIDED BY THE AUTHOR `AS IS` AND ANY EXPRESS OR IMPLIED WARRA
 
 
 <table width="100%" border="0" summary="list of modules">
-<tr><td><a href="https://github.com/botsunit/kafe/blob/master/doc/kafe.md" class="module">kafe</a></td></tr></table>
+<tr><td><a href="https://github.com/botsunit/kafe/blob/kafka-0.9/doc/kafe.md" class="module">kafe</a></td></tr></table>
 

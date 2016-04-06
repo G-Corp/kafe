@@ -5,6 +5,7 @@
 % A Kafka client for Erlang
 % @end
 -module(kafe).
+-compile([{parse_transform, lager_transform}]).
 -behaviour(gen_server).
 
 -include("../include/kafe.hrl").

@@ -1,5 +1,6 @@
 % @hidden
 -module(kafe_client).
+-compile([{parse_transform, lager_transform}]).
 -behaviour(gen_server).
 
 -include("../include/kafe.hrl").

@@ -1,5 +1,12 @@
 PROJECT = kafe
 
+DEP_PLUGINS = mix.mk
+BUILD_DEPS = mix.mk
+ELIXIR_VERSION = ~> 1.2
+ELIXIR_BINDINGS = kafe
+
+dep_mix.mk = git https://github.com/botsunit/mix.mk.git master
+
 DEPS = lager bucs doteki
 dep_lager = git https://github.com/basho/lager.git master
 dep_bucs = git https://github.com/botsunit/bucs.git master
@@ -9,8 +16,6 @@ DOC_DEPS = edown
 dep_edown = git https://github.com/botsunit/edown.git master
 
 include erlang.mk
-
-ERLC_OPTS = +debug_info +'{parse_transform, lager_transform}'
 
 EDOC_OPTS = {doclet, edown_doclet} \
 						, {app_default, "http://www.erlang.org/doc/man"} \
@@ -24,4 +29,6 @@ EUNIT_OPTS = verbose, {report, {eunit_surefire, [{dir, "test"}]}}
 
 dev: deps app
 	@erl -pa ebin include deps/*/ebin deps/*/include -config config/kafe.config
+
+release: app mix.all
 
