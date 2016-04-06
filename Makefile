@@ -15,6 +15,10 @@ dep_doteki = git https://github.com/botsunit/doteki.git master
 DOC_DEPS = edown
 dep_edown = git https://github.com/botsunit/edown.git master
 
+tests::
+	@mkdir -p test/ct
+	@mkdir -p test/eunit
+
 include erlang.mk
 
 EDOC_OPTS = {doclet, edown_doclet} \
@@ -25,10 +29,16 @@ EDOC_OPTS = {doclet, edown_doclet} \
 						, {image, ""} \
 						, {top_level_readme, {"./README.md", "https://github.com/botsunit/kafe"}}
 
-EUNIT_OPTS = verbose, {report, {eunit_surefire, [{dir, "test"}]}}
+EUNIT_OPTS = verbose, {report, {eunit_surefire, [{dir, "test/eunit"}]}}
+CT_OPTS = -ct_hooks cth_surefire -logdir test/ct
 
 dev: deps app
 	@erl -pa ebin include deps/*/ebin deps/*/include -config config/kafe.config
 
 release: app mix.all
+
+distclean::
+	@rm -rf test/eunit
+	@rm -rf test/ct
+	@rm -f test/*.beam
 
