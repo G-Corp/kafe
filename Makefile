@@ -9,8 +9,7 @@ dep_mix.mk = git https://github.com/botsunit/mix.mk.git master
 
 DEPS = lager bucs doteki
 dep_lager = git https://github.com/basho/lager.git master
-# dep_bucs = git https://github.com/botsunit/bucs.git master
-dep_bucs = cp /home/glejeune/Dropbox/BotsUnit/Dev/github/bucs
+dep_bucs = git https://github.com/botsunit/bucs.git master
 dep_doteki = git https://github.com/botsunit/doteki.git master
 
 DOC_DEPS = edown
