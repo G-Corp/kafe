@@ -44,5 +44,5 @@ t_response() ->
   ?assertEqual(kafe_protocol_consumer_offset_commit:response(
                  <<0,0,0,1,0,5,116,111,112,105,99,0,0,0,1,0,0,0,0,0,0>>),
                {ok,[#{name => <<"topic">>,
-                      partitions => [#{error_code => no_error,partition => 0}]}]}).
+                      partitions => [#{error_code => none, partition => 0}]}]}).
 

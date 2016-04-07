@@ -9,6 +9,8 @@
          response/1
         ]).
 
+run(ReplicaID, []) ->
+  run(ReplicaID, maps:keys(kafe:topics()));
 run(ReplicaID, Topics) ->
   case lists:flatten(
          maps:fold(
@@ -42,12 +44,26 @@ run(ReplicaID, Topics) ->
                end, #{}, OffsetsData))}
   end.
 
+% Offsets Request (Version: 0) => replica_id [topics]
+%   replica_id => INT32
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition timestamp max_num_offsets
+%       partition => INT32
+%       timestamp => INT64
+%       max_num_offsets => INT32
 request(ReplicaId, Topics, State) ->
   kafe_protocol:request(
     ?OFFSET_REQUEST,
     <<ReplicaId:32/signed, (topics(Topics))/binary>>,
     State).
 
+% Offsets Response (Version: 0) => [responses]
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code [offsets]
+%       partition => INT32
+%       error_code => INT16
 response(<<NumberOfTopics:32/signed, Remainder/binary>>) ->
   {ok, response(NumberOfTopics, Remainder)}.
 
@@ -56,7 +72,8 @@ response(<<NumberOfTopics:32/signed, Remainder/binary>>) ->
 dispatch(Topics, TopicsInfos) ->
   dispatch(Topics, TopicsInfos, #{}).
 
-dispatch([], _, Result) -> Result;
+dispatch([], _, Result) ->
+  Result;
 dispatch([{Topic, Partitions}|Rest], TopicsInfos, Result) ->
   dispatch(Rest,
            TopicsInfos,
@@ -65,9 +82,12 @@ dispatch([{Topic, Partitions}|Rest], TopicsInfos, Result) ->
                            Topics = maps:get(Broker, Acc, []),
                            maps:put(Broker, [{Topic, [Partition]}|Topics], Acc)
                        end, Result, Partitions));
+dispatch([Topic|Rest], TopicsInfos, Result) when is_list(Topic);
+                                                 is_atom(Topic) ->
+  dispatch([bucs:to_binary(Topic)|Rest], TopicsInfos, Result);
 dispatch([Topic|Rest], TopicsInfos, Result) when is_binary(Topic) ->
   Partitions = lists:foldl(fun(Partition, Acc) ->
-                               [{Partition, ?DEFAULT_OFFSET_TIME, ?DEFAULT_OFFSET_MAX_SIZE}|Acc]
+                               [{Partition, ?DEFAULT_OFFSET_TIMESTAMP, ?DEFAULT_OFFSET_MAX_NUM_OFFSETS}|Acc]
                            end, [], maps:keys(maps:get(Topic, TopicsInfos, #{}))),
   dispatch([{Topic, Partitions}|Rest], TopicsInfos, Result).
 
@@ -79,15 +99,15 @@ topics([{TopicName, Partitions} | T], Acc) ->
   topics(T,
          <<
            Acc/binary,
-           (kafe_protocol:encode_string(TopicName))/binary,
+           (kafe_protocol:encode_string(bucs:to_binary(TopicName)))/binary,
            (kafe_protocol:encode_array(
-              [<<Partition:32/signed, FetchOffset:64/signed, MaxBytes:32/signed>> ||
-               {Partition, FetchOffset, MaxBytes} <- Partitions]))/binary
+              [<<Partition:32/signed, Timestamp:64/signed, MaxNumOffsets:32/signed>> ||
+               {Partition, Timestamp, MaxNumOffsets} <- Partitions]))/binary
          >>);
 topics([TopicName | T], Acc) ->
   topics([{TopicName, [{?DEFAULT_OFFSET_PARTITION,
-                        ?DEFAULT_OFFSET_TIME,
-                        ?DEFAULT_OFFSET_MAX_SIZE}]} | T], Acc).
+                        ?DEFAULT_OFFSET_TIMESTAMP,
+                        ?DEFAULT_OFFSET_MAX_NUM_OFFSETS}]} | T], Acc).
 
 response(0, <<>>) ->
     [];

@@ -38,7 +38,7 @@ t_response() ->
                    25,115,172,247,124,0,0,255,255,255,255,0,0,0,11,104,101,108,
                    108,111,32,119,111,114,108,100>>),
                {ok,[#{name => <<"topic">>,
-                      partitions => [#{error_code => no_error,
+                      partitions => [#{error_code => none,
                                        high_watermaker_offset => 5,
                                        message => #{attributes => 0,
                                                     crc => 1940715388,

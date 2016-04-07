@@ -15,11 +15,13 @@ dep_doteki = git https://github.com/botsunit/doteki.git master
 DOC_DEPS = edown
 dep_edown = git https://github.com/botsunit/edown.git master
 
-include erlang.mk
+app::
 
 tests::
 	@mkdir -p test/ct
 	@mkdir -p test/eunit
+
+include erlang.mk
 
 EDOC_OPTS = {doclet, edown_doclet} \
 						, {app_default, "http://www.erlang.org/doc/man"} \

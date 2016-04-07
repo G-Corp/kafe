@@ -19,6 +19,7 @@
          start/0,
          metadata/0,
          metadata/1,
+         offset/0,
          offset/1,
          offset/2,
          produce/2,
@@ -81,7 +82,7 @@
                                                     isr => [integer()],
                                                     leader => integer(),
                                                     replicas => [integer()]}]}]}.
--type topics() :: [binary()] | [{binary(), [{integer(), integer(), integer()}]}].
+-type topics() :: [binary() | string() | atom()] | [{binary() | string() | atom(), [{integer(), integer(), integer()}]}].
 -type topic_partition_info() :: #{name => binary(), partitions => [#{error_code => error_code(), id => integer(), offsets => [integer()]}]}.
 -type message() :: binary() | {binary(), binary()}.
 -type produce_options() :: #{timeout => integer(), required_acks => integer(), partition => integer()}.
@@ -154,7 +155,7 @@ max_offset(TopicName) ->
 
 % @hidden
 max_offset(TopicName, Partition) ->
-  case offset([{TopicName, [{Partition, ?DEFAULT_OFFSET_TIME, ?DEFAULT_OFFSET_MAX_SIZE}]}]) of
+  case offset([{TopicName, [{Partition, ?DEFAULT_OFFSET_TIMESTAMP, ?DEFAULT_OFFSET_MAX_NUM_OFFSETS}]}]) of
     {ok,
      [#{partitions := [#{id := Partition,
                          offsets := [Offset|_]}]}]
@@ -212,8 +213,12 @@ metadata() ->
 metadata(Topics) when is_list(Topics) ->
   kafe_protocol_metadata:run(Topics).
 
+% @equiv offset(-1, [])
+offset() ->
+  offset(-1, []).
+
 % @equiv offset(-1, Topics)
-offset(Topics) when is_list(Topics)->
+offset(Topics) when is_list(Topics) ->
   offset(-1, Topics).
 
 % @doc

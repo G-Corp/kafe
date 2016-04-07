@@ -30,5 +30,5 @@ t_response() ->
                  <<0,0,0,1,0,5,116,111,112,105,99,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,
                    0,0,5>>),
                {ok,[#{name => <<"topic">>,
-                      partitions => [#{error_code => no_error,offset => 5,partition => 0}]}]}).
+                      partitions => [#{error_code => none, offset => 5, partition => 0}]}]}).
 

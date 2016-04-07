@@ -25,7 +25,7 @@ t_request() ->
 t_response() ->
   ?assertEqual(kafe_protocol_consumer_metadata:response(
                  <<0,0,0,0,0,1,0,9,108,111,99,97,108,104,111,115,116,0,0,31,144>>),
-               {ok, #{error_code => no_error,
+               {ok, #{error_code => none,
                       coordinator_id => 1,
                       coordinator_host => <<"localhost">>,
                       coordinator_port => 8080}}).
