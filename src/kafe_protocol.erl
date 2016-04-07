@@ -2,6 +2,7 @@
 -module(kafe_protocol).
 -export([
          request/3,
+         response/2,
          encode_string/1,
          encode_bytes/1,
          encode_array/1
@@ -34,4 +35,22 @@ encode_array(List) ->
   Len = length(List),
   Payload = << <<B/binary>> || B <- List>>,
   <<Len:32/signed, Payload/binary>>.
+
+response(
+  <<Size:32/signed, Packet:Size/bytes>>,
+  #{requests := Requests, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
+ ) ->
+  <<CorrelationId:32/signed, Remainder/bytes>> = Packet,
+  case orddict:find(CorrelationId, Requests) of
+    {ok, #{from := From, handler := ResponseHandler, socket := Socket}} ->
+      _ = gen_server:reply(From, ResponseHandler(Remainder)),
+      case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
+        ok ->
+          {noreply, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};
+        {error, _} = Reason ->
+          {stop, Reason, State}
+      end;
+    error ->
+      {noreply, State} %;
+  end.
 

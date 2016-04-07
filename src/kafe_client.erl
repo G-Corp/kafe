@@ -85,13 +85,13 @@ handle_info(
   #{parts := <<>>} = State
  ) when Size =< byte_size(Remainder) ->
   <<Size:32/signed, Packet1:Size/bytes, _Remainder1/binary>> = Packet,
-  process_response(<<Size:32, Packet1/binary>>, maps:update(parts, <<>>, State));
+  kafe_protocol:response(<<Size:32, Packet1/binary>>, maps:update(parts, <<>>, State));
 handle_info(
   {tcp, _, Part},
   #{parts := <<Size:32/signed, CParts/binary>> = Parts} = State
  ) when byte_size(<<CParts/binary, Part/binary>>) >= Size ->
   <<Size:32/signed, Packet:Size/bytes, _Remainder/binary>> = <<Parts/binary, Part/binary>>,
-  process_response(<<Size:32, Packet/binary>>, maps:update(parts, <<>>, State));
+  kafe_protocol:response(<<Size:32, Packet/binary>>, maps:update(parts, <<>>, State));
 handle_info(
   {tcp, Socket, Part},
   #{parts := Parts, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
@@ -149,22 +149,23 @@ send_request(#{packet := Packet, state := State2},
       {stop, abnormal, Error, State1}
   end.
 
-process_response(
-  <<Size:32/signed, Packet:Size/bytes>>,
-  #{requests := Requests, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
- ) ->
-  lager:debug("Process response size : ~p", [Size]),
-  <<CorrelationId:32/signed, Remainder/bytes>> = Packet,
-  case orddict:find(CorrelationId, Requests) of
-    {ok, #{from := From, handler := ResponseHandler, socket := Socket}} ->
-      _ = gen_server:reply(From, ResponseHandler(Remainder)),
-      case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
-        ok ->
-          {noreply, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};
-        {error, _} = Reason ->
-          {stop, Reason, State}
-      end;
-    error ->
-      {noreply, State} %;
-  end.
+% TODO: DELETE
+% process_response(
+%   <<Size:32/signed, Packet:Size/bytes>>,
+%   #{requests := Requests, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
+%  ) ->
+%   lager:debug("Process response size : ~p", [Size]),
+%   <<CorrelationId:32/signed, Remainder/bytes>> = Packet,
+%   case orddict:find(CorrelationId, Requests) of
+%     {ok, #{from := From, handler := ResponseHandler, socket := Socket}} ->
+%       _ = gen_server:reply(From, ResponseHandler(Remainder)),
+%       case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
+%         ok ->
+%           {noreply, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};
+%         {error, _} = Reason ->
+%           {stop, Reason, State}
+%       end;
+%     error ->
+%       {noreply, State} %;
+%   end.
 

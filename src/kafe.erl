@@ -1,5 +1,7 @@
 % @author Grégoire Lejeune <gl@finexkap.com>
-% @copyright 2014-2015 Finexkap
+% @author Grégoire Lejeune <greg@g-corp.io>
+% @author Grégoire Lejeune <gregoire.lejeune@botsunit.com>
+% @copyright 2014-2015 Finexkap, 2015 G-Corp, 2015-2016 BotsUnit
 % @since 2014
 % @doc
 % A Kafka client for Erlang
@@ -206,7 +208,7 @@ metadata() ->
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest">Kafka protocol documentation</a>.
 % @end
--spec metadata([binary()]) -> {ok, metadata()} | {error, term()}.
+-spec metadata([binary()|string()|atom()]) -> {ok, metadata()} | {error, term()}.
 metadata(Topics) when is_list(Topics) ->
   kafe_protocol_metadata:run(Topics).
 
@@ -374,6 +376,7 @@ init(_) ->
   ClientID = doteki:get_env([kafe, client_id], ?DEFAULT_CLIENT_ID),
   Offset = doteki:get_env([kafe, offset], ?DEFAULT_OFFSET),
   BrokersUpdateFreq = doteki:get_env([kafe, brokers_update_frequency], ?DEFAULT_BROKER_UPDATE),
+  MaxRetryOnError = doteki:get_env([kafe, max_retry_on_error], ?DEFAULT_MAX_RETRY_ON_ERROR),
   State = #{brokers => #{},
             brokers_list => [],
             topics => #{},
@@ -381,7 +384,8 @@ init(_) ->
             api_version => ApiVersion,
             correlation_id => CorrelationID,
             client_id => ClientID,
-            offset => Offset},
+            offset => Offset,
+            max_retry_on_error => MaxRetryOnError},
   State1 = update_state_with_metadata(init_connexions(State)),
   erlang:send_after(BrokersUpdateFreq, self(), update_brokers),
   {ok, State1}.

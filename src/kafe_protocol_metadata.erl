@@ -20,14 +20,26 @@ run(Topics) ->
                       infinity)
   end.
 
+% Metadata Request (Version: 0) => [topics]
 request(TopicNames, State) ->
   kafe_protocol:request(
     ?METADATA_REQUEST,
     <<(kafe_protocol:encode_array(
-         [kafe_protocol:encode_string(Name) ||
-          Name <- TopicNames]))/binary>>,
+         [kafe_protocol:encode_string(bucs:to_binary(Name)) || Name <- TopicNames]))/binary>>,
     State).
 
+% Metadata Response (Version: 0) => [brokers] [topic_metadata]
+%   brokers => node_id host port
+%     node_id => INT32
+%     host => STRING
+%     port => INT32
+%   topic_metadata => topic_error_code topic [partition_metadata]
+%     topic_error_code => INT16
+%     topic => STRING
+%     partition_metadata => partition_error_code partition_id leader [replicas] [isr]
+%       partition_error_code => INT16
+%       partition_id => INT32
+%       leader => INT32
 response(<<NumberOfBrokers:32/signed, BrokerRemainder/binary>>) ->
   {
    Brokers,
