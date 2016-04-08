@@ -45,6 +45,9 @@ defmodule Kafe do
 	def unquote(:"metadata")(arg1) do
 		:erlang.apply(:"kafe", :"metadata", [arg1])
 	end
+	def unquote(:"offset")() do
+		:erlang.apply(:"kafe", :"offset", [])
+	end
 	def unquote(:"offset")(arg1) do
 		:erlang.apply(:"kafe", :"offset", [arg1])
 	end
@@ -65,6 +68,9 @@ defmodule Kafe do
 	end
 	def unquote(:"fetch")(arg1, arg2, arg3) do
 		:erlang.apply(:"kafe", :"fetch", [arg1, arg2, arg3])
+	end
+	def unquote(:"group_coordinator")(arg1) do
+		:erlang.apply(:"kafe", :"group_coordinator", [arg1])
 	end
 	def unquote(:"consumer_metadata")(arg1) do
 		:erlang.apply(:"kafe", :"consumer_metadata", [arg1])

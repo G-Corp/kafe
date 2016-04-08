@@ -1,5 +1,5 @@
 % @hidden
--module(kafe_protocol_consumer_metadata).
+-module(kafe_protocol_group_coordinator).
 
 -include("../include/kafe.hrl").
 
@@ -14,7 +14,7 @@ run(ConsumerGroup) ->
     undefined -> {error, no_broker_found};
     Broker ->
       gen_server:call(Broker,
-                      {call, 
+                      {call,
                        fun ?MODULE:request/2, [ConsumerGroup],
                        fun ?MODULE:response/1},
                       infinity)
@@ -22,11 +22,11 @@ run(ConsumerGroup) ->
 
 request(ConsumerGroup, State) ->
   kafe_protocol:request(
-    ?CONSUMER_METADATA_REQUEST, 
+    ?CONSUMER_METADATA_REQUEST,
     <<(kafe_protocol:encode_string(ConsumerGroup))/binary>>,
     State).
 
-response(<<ErrorCode:16/signed, 
+response(<<ErrorCode:16/signed,
            CoordinatorID:32/signed,
            CoordinatorHostLength:16/signed,
            CoordinatorHost:CoordinatorHostLength/bytes,

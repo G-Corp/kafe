@@ -7,7 +7,8 @@
 % A Kafka client for Erlang
 % @end
 -module(kafe).
--compile([{parse_transform, lager_transform}]).
+-compile([{parse_transform, bristow_transform},
+          {parse_transform, lager_transform}]).
 -behaviour(gen_server).
 
 -include("../include/kafe.hrl").
@@ -27,7 +28,7 @@
          fetch/1,
          fetch/2,
          fetch/3,
-         consumer_metadata/1,
+         group_coordinator/1,
          offset_fetch/1,
          offset_fetch/2,
          offset_commit/2,
@@ -96,7 +97,7 @@
                                                         attributes => integer(),
                                                         key => binary(),
                                                         value => binary()}]}]}.
--type consumer_metadata() :: #{error_code => error_code(), coordinator_id => integer(), coordinator_host => binary(),  coordinator_port => port()}.
+-type group_coordinator() :: #{error_code => error_code(), coordinator_id => integer(), coordinator_host => binary(),  coordinator_port => port()}.
 -type offset_fetch_options() :: [binary()] | [{binary(), [integer()]}].
 -type offset_fetch_set() :: #{name => binary(),
                               partitions_offset => [#{partition => integer(),
@@ -319,9 +320,11 @@ fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), (is_binary(To
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest">Kafka protocol documentation</a>.
 % @end
--spec consumer_metadata(binary()) -> {ok, consumer_metadata()} | {error,  term()}.
-consumer_metadata(ConsumerGroup) ->
-  kafe_protocol_consumer_metadata:run(ConsumerGroup).
+-spec group_coordinator(binary()) -> {ok, group_coordinator()} | {error,  term()}.
+group_coordinator(ConsumerGroup) ->
+  kafe_protocol_group_coordinator:run(ConsumerGroup).
+
+-alias consumer_metadata.
 
 % @doc
 % Offset commit v0

@@ -233,7 +233,7 @@ Options:
 * `offset :: integer()` : The offset to begin this fetch from (default : last offset for the partition)
 
 * `max_bytes :: integer()` : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
-1024*1024)/
+1024*1024)
 
 * `min_bytes :: integer()` : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0
 the server will always respond immediately, however if there is no new data since their last request they will just get back empty message sets. If this is
