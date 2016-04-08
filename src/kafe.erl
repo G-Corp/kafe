@@ -119,7 +119,7 @@ first_broker() ->
 
 % @hidden
 broker(Topic, Partition) ->
-  case gen_server:call(?SERVER, {broker, Topic, Partition}, infinity) of
+  case gen_server:call(?SERVER, {broker, bucs:to_binary(Topic), Partition}, infinity) of
     undefined -> first_broker();
     Broker -> Broker
   end.
@@ -520,7 +520,7 @@ update_state_with_metadata(State) ->
              topics := Topics}} =  gen_server:call(FirstBroker,
                                                    {call,
                                                     fun kafe_protocol_metadata:request/2, [[]],
-                                                    fun kafe_protocol_metadata:response/1},
+                                                    fun kafe_protocol_metadata:response/2},
                                                    infinity),
       {Brokers1, State3} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, StateAcc}) ->
                                            {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),

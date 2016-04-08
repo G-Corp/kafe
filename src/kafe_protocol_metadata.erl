@@ -6,7 +6,7 @@
 -export([
          run/1,
          request/2,
-         response/1
+         response/2
         ]).
 
 run(Topics) ->
@@ -16,7 +16,7 @@ run(Topics) ->
       gen_server:call(Broker,
                       {call,
                        fun ?MODULE:request/2, [Topics],
-                       fun ?MODULE:response/1},
+                       fun ?MODULE:response/2},
                       infinity)
   end.
 
@@ -40,7 +40,7 @@ request(TopicNames, State) ->
 %       partition_error_code => INT16
 %       partition_id => INT32
 %       leader => INT32
-response(<<NumberOfBrokers:32/signed, BrokerRemainder/binary>>) ->
+response(<<NumberOfBrokers:32/signed, BrokerRemainder/binary>>, _ApiVersion) ->
   {
    Brokers,
    <<NumberOfTopics:32/signed, TopicMetadataRemainder/binary>>

@@ -38,12 +38,12 @@ encode_array(List) ->
 
 response(
   <<Size:32/signed, Packet:Size/bytes>>,
-  #{requests := Requests, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
+  #{requests := Requests, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer, api_version := ApiVersion} = State
  ) ->
   <<CorrelationId:32/signed, Remainder/bytes>> = Packet,
   case orddict:find(CorrelationId, Requests) of
     {ok, #{from := From, handler := ResponseHandler, socket := Socket}} ->
-      _ = gen_server:reply(From, ResponseHandler(Remainder)),
+      _ = gen_server:reply(From, ResponseHandler(Remainder, ApiVersion)),
       case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
         ok ->
           {noreply, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};

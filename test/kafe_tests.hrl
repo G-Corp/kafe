@@ -2,3 +2,7 @@
                           correlation_id => CID,
                           client_id => <<"test">>}).
 
+-define(REQ_STATE2(CID, V), #{api_version => V,
+                              correlation_id => CID,
+                              client_id => <<"test">>}).
+

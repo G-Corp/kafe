@@ -6,7 +6,7 @@
 -export([
          run/2,
          request/3,
-         response/1
+         response/2
         ]).
 
 run(ReplicaID, []) ->
@@ -21,7 +21,7 @@ run(ReplicaID, Topics) ->
                {ok, Result} = gen_server:call(Broker,
                                               {call,
                                                fun ?MODULE:request/3, [ReplicaID, TopicsForBroker],
-                                               fun ?MODULE:response/1},
+                                               fun ?MODULE:response/2},
                                               infinity),
                [Result|Acc]
            end, [], dispatch(Topics, kafe:topics()))) of
@@ -64,8 +64,8 @@ request(ReplicaId, Topics, State) ->
 %     partition_responses => partition error_code [offsets]
 %       partition => INT32
 %       error_code => INT16
-response(<<NumberOfTopics:32/signed, Remainder/binary>>) ->
-  {ok, response(NumberOfTopics, Remainder)}.
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) ->
+  {ok, response(NumberOfTopics, Remainder, ApiVersion)}.
 
 % Private
 
@@ -109,7 +109,7 @@ topics([TopicName | T], Acc) ->
                         ?DEFAULT_OFFSET_TIMESTAMP,
                         ?DEFAULT_OFFSET_MAX_NUM_OFFSETS}]} | T], Acc).
 
-response(0, <<>>) ->
+response(0, <<>>, _ApiVersion) ->
     [];
 response(
   N,
@@ -118,9 +118,10 @@ response(
     TopicName:TopicNameLength/bytes,
     NumberOfPartitions:32/signed,
     PartitionsRemainder/binary
-  >>) ->
+  >>,
+  ApiVersion) ->
   {Partitions, Remainder} = partitions(NumberOfPartitions, PartitionsRemainder, []),
-  [#{name => TopicName, partitions => Partitions} | response(N - 1, Remainder)].
+  [#{name => TopicName, partitions => Partitions} | response(N - 1, Remainder, ApiVersion)].
 
 partitions(0, Remainder, Acc) ->
     {Acc, Remainder};
