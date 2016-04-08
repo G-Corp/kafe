@@ -149,23 +149,3 @@ send_request(#{packet := Packet, state := State2},
       {stop, abnormal, Error, State1}
   end.
 
-% TODO: DELETE
-% process_response(
-%   <<Size:32/signed, Packet:Size/bytes>>,
-%   #{requests := Requests, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
-%  ) ->
-%   lager:debug("Process response size : ~p", [Size]),
-%   <<CorrelationId:32/signed, Remainder/bytes>> = Packet,
-%   case orddict:find(CorrelationId, Requests) of
-%     {ok, #{from := From, handler := ResponseHandler, socket := Socket}} ->
-%       _ = gen_server:reply(From, ResponseHandler(Remainder)),
-%       case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
-%         ok ->
-%           {noreply, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};
-%         {error, _} = Reason ->
-%           {stop, Reason, State}
-%       end;
-%     error ->
-%       {noreply, State} %;
-%   end.
-

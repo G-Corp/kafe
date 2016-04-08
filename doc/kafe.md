@@ -8,13 +8,13 @@
 
 A Kafka client for Erlang.
 
-Copyright (c) 2014-2015 Finexkap
+Copyright (c) 2014-2015 Finexkap, 2015 G-Corp, 2015-2016 BotsUnit
 
 __Introduced in:__ 2014
 
 __Behaviours:__ [`gen_server`](gen_server.md).
 
-__Authors:__ Grégoire Lejeune ([`gl@finexkap.com`](mailto:gl@finexkap.com)).
+__Authors:__ Grégoire Lejeune ([`gl@finexkap.com`](mailto:gl@finexkap.com)), Grégoire Lejeune ([`greg@g-corp.io`](mailto:greg@g-corp.io)), Grégoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire.lejeune@botsunit.com)).
 
 <a name="types"></a>
 
@@ -157,7 +157,7 @@ topic_partition_info() = #{name =&gt; binary(), partitions =&gt; [#{error_code =
 
 
 <pre><code>
-topics() = [binary()] | [{binary(), [{integer(), integer(), integer()}]}]
+topics() = [binary() | string() | atom()] | [{binary() | string() | atom(), [{integer(), integer(), integer()}]}]
 </code></pre>
 
 <a name="index"></a>
@@ -168,7 +168,7 @@ topics() = [binary()] | [{binary(), [{integer(), integer(), integer()}]}]
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#consumer_metadata-1">consumer_metadata/1</a></td><td> 
 Consumer Metadata Request.</td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
 Fetch messages.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td>Equivalent to <a href="#metadata-1"><tt>metadata([])</tt></a>.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td> 
-Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#offset-1">offset/1</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, Topics)</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td> 
+Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#offset-0">offset/0</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-1">offset/1</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, Topics)</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td> 
 Get offet for the given topics and replicat.</td></tr><tr><td valign="top"><a href="#offset_commit-2">offset_commit/2</a></td><td> 
 Offset commit v0.</td></tr><tr><td valign="top"><a href="#offset_commit-4">offset_commit/4</a></td><td> 
 Offset commit v1.</td></tr><tr><td valign="top"><a href="#offset_commit-5">offset_commit/5</a></td><td> 
@@ -271,7 +271,7 @@ Equivalent to [`metadata([])`](#metadata-1).
 ### metadata/1 ###
 
 <pre><code>
-metadata(Topics::[binary()]) -&gt; {ok, <a href="#type-metadata">metadata()</a>} | {error, term()}
+metadata(Topics::[binary() | string() | atom()]) -&gt; {ok, <a href="#type-metadata">metadata()</a>} | {error, term()}
 </code></pre>
 <br />
 
@@ -288,6 +288,14 @@ Example:
 This example return all metadata for `topic1` and `topic2`
 
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest).
+
+<a name="offset-0"></a>
+
+### offset/0 ###
+
+`offset() -> any()`
+
+Equivalent to [`offset(-1, [])`](#offset-2).
 
 <a name="offset-1"></a>
 
