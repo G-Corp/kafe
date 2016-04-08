@@ -270,14 +270,14 @@ produce(Topic, Message, Options) ->
   kafe_protocol_produce:run(Topic, Message, Options).
 
 % @equiv fetch(-1, TopicName, #{})
-fetch(TopicName) when is_binary(TopicName) ->
+fetch(TopicName) when is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName) ->
   fetch(-1, TopicName, #{}).
 
 % @equiv fetch(ReplicatID, TopicName, #{})
-fetch(ReplicatID, TopicName) when is_integer(ReplicatID), is_binary(TopicName) ->
+fetch(ReplicatID, TopicName) when is_integer(ReplicatID), (is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName)) ->
   fetch(ReplicatID, TopicName, #{});
 % @equiv fetch(-1, TopicName, Options)
-fetch(TopicName, Options) when is_binary(TopicName), is_map(Options) ->
+fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName)) ->
   fetch(-1, TopicName, Options).
 
 
@@ -289,7 +289,7 @@ fetch(TopicName, Options) when is_binary(TopicName), is_map(Options) ->
 % <li><tt>partition :: integer()</tt> : The id of the partition the fetch is for (default : partition with the highiest offset).</li>
 % <li><tt>offset :: integer()</tt> : The offset to begin this fetch from (default : last offset for the partition)</li>
 % <li><tt>max_bytes :: integer()</tt> : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
-% 1024*1024)/</li>
+% 1024*1024)</li>
 % <li><tt>min_bytes :: integer()</tt> : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0
 % the server will always respond immediately, however if there is no new data since their last request they will just get back empty message sets. If this is
 % set to 1, the server will respond as soon as at least one partition has at least 1 byte of data or the specified timeout occurs. By setting higher values in
@@ -311,7 +311,7 @@ fetch(TopicName, Options) when is_binary(TopicName), is_map(Options) ->
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI">Kafka protocol documentation</a>.
 % @end
 -spec fetch(integer(), binary(), fetch_options()) -> {ok, [message_set()]} | {error, term()}.
-fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), is_binary(TopicName), is_map(Options) ->
+fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), (is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName)), is_map(Options) ->
   kafe_protocol_fetch:run(ReplicatID, TopicName, Options).
 
 % @doc

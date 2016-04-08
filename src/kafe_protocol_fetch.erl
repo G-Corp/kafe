@@ -7,7 +7,7 @@
 -export([
          run/3,
          request/4,
-         response/1
+         response/2
         ]).
 
 run(ReplicaID, TopicName, Options) ->
@@ -29,11 +29,19 @@ run(ReplicaID, TopicName, Options) ->
       lager:debug("Fetch ~p (partition #~p, offset ~p) on ~p", [TopicName, Partition, Offset, Broker]),
       gen_server:call(Broker,
                       {call,
-                       fun ?MODULE:request/4, [ReplicaID, TopicName, Options1],
-                       fun ?MODULE:response/1},
+                       fun ?MODULE:request/4, [ReplicaID, bucs:to_binary(TopicName), Options1],
+                       fun ?MODULE:response/2},
                       infinity)
   end.
 
+% FetchRequest => ReplicaId MaxWaitTime MinBytes [TopicName [Partition FetchOffset MaxBytes]]
+%   ReplicaId => int32
+%   MaxWaitTime => int32
+%   MinBytes => int32
+%   TopicName => string
+%   Partition => int32
+%   FetchOffset => int64
+%   MaxBytes => int32
 request(ReplicaID, TopicName, Options, State) ->
   Partition = maps:get(partition, Options, ?DEFAULT_FETCH_PARTITION),
   Offset = maps:get(offset, Options),
@@ -53,8 +61,31 @@ request(ReplicaID, TopicName, Options, State) ->
       MaxBytes:32/signed>>,
     State).
 
-response(<<NumberOfTopics:32/signed, Remainder/binary>>) ->
-  {ok, response(NumberOfTopics, Remainder)}.
+% v0
+% FetchResponse => [TopicName [Partition ErrorCode HighwaterMarkOffset MessageSetSize MessageSet]]
+%   TopicName => string
+%   Partition => int32
+%   ErrorCode => int16
+%   HighwaterMarkOffset => int64
+%   MessageSetSize => int32
+%
+% v1 (supported in 0.9.0 or later) and v2 (supported in 0.10.0 or later)
+% FetchResponse => [TopicName [Partition ErrorCode HighwaterMarkOffset MessageSetSize MessageSet]] ThrottleTime
+%   TopicName => string
+%   Partition => int32
+%   ErrorCode => int16
+%   HighwaterMarkOffset => int64
+%   MessageSetSize => int32
+%   ThrottleTime => int32
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion)
+  when ApiVersion == 0->
+  {ok, response(NumberOfTopics, Remainder, [])};
+response(<<ThrottleTime:32/signed, NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion)
+  when ApiVersion == 1;
+       ApiVersion == 2 ->
+  {ok, #{topics => response(NumberOfTopics, Remainder, []),
+         throttle_time => ThrottleTime}}.
+
 
 % Private
 
@@ -64,17 +95,18 @@ clean_offset({Partition, Offset}) ->
                 true -> Offset
               end}.
 
-response(0, _) ->
-    [];
+response(0, _, Result) ->
+  Result;
 response(
   N,
   <<TopicNameLength:16/signed,
     TopicName:TopicNameLength/bytes,
     NumberOfPartitions:32/signed,
-    PartitionRemainder/binary>>) ->
+    PartitionRemainder/binary>>,
+  Acc) ->
   {Partitions, Remainder} = partitions(NumberOfPartitions, PartitionRemainder, []),
-  [#{name => TopicName,
-     partitions => Partitions} | response(N - 1, Remainder)].
+  response(N - 1, Remainder, [#{name => TopicName,
+                                partitions => Partitions}|Acc]).
 
 partitions(0, Remainder, Acc) ->
   {Acc, Remainder};
