@@ -18,6 +18,7 @@
 % Public API
 -export([
          start/0,
+         brokers/0,
          metadata/0,
          metadata/1,
          offset/0,
@@ -28,7 +29,12 @@
          fetch/1,
          fetch/2,
          fetch/3,
+         groups/0,
+         groups/1,
          group_coordinator/1,
+         join_group/1,
+         join_group/2,
+         default_protocol/4,
          offset_fetch/1,
          offset_fetch/2,
          offset_commit/2,
@@ -194,6 +200,12 @@ state() ->
 start() ->
   application:ensure_all_started(?MODULE).
 
+% @doc
+% Return the list of availables brokers
+% @end
+brokers() ->
+  gen_server:call(?SERVER, brokers, infinity).
+
 % @equiv metadata([])
 metadata() ->
   metadata([]).
@@ -316,15 +328,72 @@ fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), (is_binary(To
   kafe_protocol_fetch:run(ReplicatID, TopicName, Options).
 
 % @doc
-% Consumer Metadata Request
+% @end
+-spec groups() -> {ok, any()} | {error, term()}. % TODO
+groups() ->
+  {ok, lists:map(fun(Broker) ->
+                     case groups(Broker) of
+                       {ok, Groups} ->
+                         #{broker => Broker,
+                           groups => Groups};
+                       _ ->
+                         #{broker => Broker,
+                           groups => #{error_code => kafe_error:code(8),
+                                       groups => []}}
+                     end
+                 end, brokers())}.
+
+% @doc
+% Find the current groups managed by a broker.
+% TODO spec
+% @end
+groups(Broker) ->
+  kafe_protocol_list_groups:run(Broker).
+
+% @doc
+% Group coordinator Request
 %
 % For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest">Kafka protocol documentation</a>.
+%
+% For compatibility, this function as an alias : <tt>consumer_metadata</tt>.
 % @end
 -spec group_coordinator(binary()) -> {ok, group_coordinator()} | {error,  term()}.
 group_coordinator(ConsumerGroup) ->
   kafe_protocol_group_coordinator:run(ConsumerGroup).
 
 -alias consumer_metadata.
+
+% @equiv join_group(GroupId, #{})
+join_group(GroupId) ->
+  join_group(GroupId, #{}).
+
+% @doc
+% Join Group
+%
+% Options:
+% <ul>
+% <li><tt>session_timeout :: integer()</tt> : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)</li>
+% <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberId must be
+% empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberId from the previous generation.</li>
+% <li><tt>protocol_type :: binary()</tt> : Unique name for class of protocols implemented by group (default &lt;&lt;"consumer"&gt;&gt;).</li>
+% <li><tt>protocols :: [protocol()]</tt> : List of protocols.</li>
+% </ul>
+% TODO: spec
+% @end
+join_group(GroupId, Options) ->
+  kafe_protocol_join_group:run(GroupId, Options).
+
+default_protocol(Name, Version, Topics, UserData) when is_binary(Name),
+                                                       is_integer(Version),
+                                                       is_list(Topics),
+                                                       is_binary(UserData) ->
+  EncodedTopics = lists:map(fun(E) ->
+                                kafe_protocol:encode_string(bucs:to_binary(E))
+                            end, Topics),
+  <<(kafe_protocol:encode_string(Name))/binary,
+    Version:16/signed,
+    (kafe_protocol:encode_array(EncodedTopics))/binary,
+    (kafe_protocol:encode_bytes(UserData))/binary>>.
 
 % @doc
 % Offset commit v0
@@ -399,6 +468,8 @@ init(_) ->
   {ok, State1}.
 
 % @hidden
+handle_call(brokers, _From, #{brokers := Brokers} = State) ->
+  {reply, maps:values(Brokers), State};
 handle_call(first_broker, _From, State) ->
   {reply, get_first_broker(State), State};
 handle_call({broker, Topic, Partition}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
@@ -520,11 +591,11 @@ update_state_with_metadata(State) ->
       State;
     _ ->
       {ok, #{brokers := Brokers,
-             topics := Topics}} =  gen_server:call(FirstBroker,
-                                                   {call,
-                                                    fun kafe_protocol_metadata:request/2, [[]],
-                                                    fun kafe_protocol_metadata:response/2},
-                                                   infinity),
+             topics := Topics}} = gen_server:call(FirstBroker,
+                                                  {call,
+                                                   fun kafe_protocol_metadata:request/2, [[]],
+                                                   fun kafe_protocol_metadata:response/2},
+                                                  infinity),
       {Brokers1, State3} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, StateAcc}) ->
                                            {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
                                             get_connection([{bucs:to_string(Host), Port}], StateAcc)}

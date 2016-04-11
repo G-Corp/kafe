@@ -9,6 +9,10 @@
 -define(DEFAULT_SOCKET_RECBUF, 4194304).
 -define(DEFAULT_MAX_RETRY_ON_ERROR, 3).
 
+-define(V0, 0).
+-define(V1, 1).
+-define(V2, 2).
+
 -define(PRODUCE_REQUEST, 0).
 -define(FETCH_REQUEST, 1).
 -define(OFFSET_REQUEST, 2).
@@ -40,4 +44,9 @@
 -define(DEFAULT_FETCH_MAX_BYTES, 1024*1024).
 -define(DEFAULT_FETCH_MIN_BYTES, 1).
 -define(DEFAULT_FETCH_MAX_WAIT_TIME, 1).
+
+-define(DEFAULT_JOIN_GROUP_SESSION_TIMEOUT, 10000).
+-define(DEFAULT_JOIN_GROUP_MEMBER_ID, <<>>).
+-define(DEFAULT_JOIN_GROUP_PROTOCOL_TYPE, <<"consumer">>).
+-define(DEFAULT_JOIN_GROUP_PROTOCOLS, [kafe:default_protocol(<<"default_protocol">>, 0, [], <<>>)]).
 

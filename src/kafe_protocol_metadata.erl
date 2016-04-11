@@ -26,7 +26,8 @@ request(TopicNames, State) ->
     ?METADATA_REQUEST,
     <<(kafe_protocol:encode_array(
          [kafe_protocol:encode_string(bucs:to_binary(Name)) || Name <- TopicNames]))/binary>>,
-    State).
+    State,
+    ?V0).
 
 % Metadata Response (Version: 0) => [brokers] [topic_metadata]
 %   brokers => node_id host port

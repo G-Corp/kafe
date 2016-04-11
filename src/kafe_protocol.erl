@@ -2,6 +2,7 @@
 -module(kafe_protocol).
 -export([
          request/3,
+         request/4,
          response/2,
          encode_string/1,
          encode_bytes/1,
@@ -9,9 +10,12 @@
         ]).
 
 request(ApiKey, RequestMessage,
-        #{api_version := ApiVersion,
-          correlation_id := CorrelationId,
-          client_id := ClientId} = State) ->
+        #{api_version := ApiVersion} = State) ->
+  request(ApiKey, RequestMessage, State, ApiVersion).
+request(ApiKey, RequestMessage,
+        #{correlation_id := CorrelationId,
+          client_id := ClientId} = State,
+       ApiVersion) ->
   #{packet => encode_bytes(<<
                              ApiKey:16/signed,
                              ApiVersion:16/signed,
@@ -19,7 +23,8 @@ request(ApiKey, RequestMessage,
                              (encode_string(ClientId))/binary,
                              RequestMessage/binary
                            >>),
-    state => maps:update(correlation_id, CorrelationId + 1, State)}.
+    state => maps:update(correlation_id, CorrelationId + 1, State),
+    api_version => ApiVersion}.
 
 encode_string(undefined) ->
   <<-1:16/signed>>;
@@ -38,11 +43,11 @@ encode_array(List) ->
 
 response(
   <<Size:32/signed, Packet:Size/bytes>>,
-  #{requests := Requests, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer, api_version := ApiVersion} = State
+  #{requests := Requests, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
  ) ->
   <<CorrelationId:32/signed, Remainder/bytes>> = Packet,
   case orddict:find(CorrelationId, Requests) of
-    {ok, #{from := From, handler := ResponseHandler, socket := Socket}} ->
+    {ok, #{from := From, handler := ResponseHandler, socket := Socket, api_version := ApiVersion}} ->
       _ = gen_server:reply(From, ResponseHandler(Remainder, ApiVersion)),
       case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
         ok ->

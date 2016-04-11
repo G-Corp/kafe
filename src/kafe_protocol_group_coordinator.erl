@@ -24,7 +24,8 @@ request(ConsumerGroup, State) ->
   kafe_protocol:request(
     ?CONSUMER_METADATA_REQUEST,
     <<(kafe_protocol:encode_string(ConsumerGroup))/binary>>,
-    State).
+    State,
+    ?V0).
 
 response(<<ErrorCode:16/signed,
            CoordinatorID:32/signed,

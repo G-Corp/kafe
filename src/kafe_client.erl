@@ -122,7 +122,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-send_request(#{packet := Packet, state := State2},
+send_request(#{packet := Packet, state := State2, api_version := ApiVersion},
              From,
              Handler,
              #{correlation_id := CorrelationId,
@@ -139,7 +139,7 @@ send_request(#{packet := Packet, state := State2},
            maps:update(
              requests,
              orddict:store(CorrelationId,
-                           #{from => From, handler => Handler, socket => Socket},
+                           #{from => From, handler => Handler, socket => Socket, api_version => ApiVersion},
                            Requests),
              State2)};
         {error, _} = Error ->
