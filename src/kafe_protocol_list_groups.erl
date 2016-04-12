@@ -1,3 +1,4 @@
+% @hidden
 -module(kafe_protocol_list_groups).
 
 -include("../include/kafe.hrl").
@@ -24,7 +25,7 @@ request(State) ->
 %     group_id => STRING
 %     protocol_type => STRING
 response(<<ErrorCode:16/signed, GroupsLength:16/signed, Remainder/binary>>, _ApiVersion) ->
-  {ok, #{error => kafe_error:code(ErrorCode),
+  {ok, #{error_code => kafe_error:code(ErrorCode),
          groups => response(GroupsLength, Remainder, [])}}.
 
 response(0, _, Groups) ->

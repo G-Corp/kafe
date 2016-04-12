@@ -34,7 +34,7 @@ run(Topic, Message, Options) ->
 %%   * required_acks :: integer() (default: -1)
 %%   * partition :: integer()     (default: 0)
 %%   * timestamp :: integer()     (default: now)
-request(Topic, Message, Options, #{api_version := Magic} = State) ->
+request(Topic, Message, Options, #{api_version := ApiVersion} = State) ->
   Timeout = maps:get(timeout, Options, ?DEFAULT_PRODUCE_SYNC_TIMEOUT),
   RequiredAcks = maps:get(required_acks,
                           Options,
@@ -45,10 +45,10 @@ request(Topic, Message, Options, #{api_version := Magic} = State) ->
   end,
   Partition = maps:get(partition, Options, ?DEFAULT_PRODUCE_PARTITION),
   Msg = if
-          Magic == 2 ->
+          ApiVersion == ?V2 ->
             Timestamp = maps:get(timestamp, Options, get_timestamp()),
             <<
-              Magic:8/signed,
+              ApiVersion:8/signed,
               0:8/signed,
               Timestamp:64/signed,
               (kafe_protocol:encode_bytes(bucs:to_binary(Key)))/binary,
@@ -56,7 +56,7 @@ request(Topic, Message, Options, #{api_version := Magic} = State) ->
             >>;
           true ->
             <<
-              Magic:8/signed,
+              ApiVersion:8/signed,
               0:8/signed,
               (kafe_protocol:encode_bytes(bucs:to_binary(Key)))/binary,
               (kafe_protocol:encode_bytes(bucs:to_binary(Value)))/binary
@@ -74,7 +74,8 @@ request(Topic, Message, Options, #{api_version := Magic} = State) ->
   kafe_protocol:request(
     ?PRODUCE_REQUEST,
     <<RequiredAcks:16, Timeout:32, Encoded/binary>>,
-    State).
+    State,
+    ApiVersion).
 
 % Produce Request (Version: 1) => acks timeout [topic_data]
 %   acks => INT16
@@ -90,7 +91,7 @@ response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) ->
 % Private
 
 % v0
-response(0, _, ApiVersion) when ApiVersion == 0 ->
+response(0, _, ApiVersion) when ApiVersion == ?V0 ->
   [];
 response(
   N,
@@ -100,19 +101,19 @@ response(
     NumberOfPartitions:32/signed,
     PartitionRemainder/binary
   >>,
-  ApiVersion) when ApiVersion == 0 ->
+  ApiVersion) when ApiVersion == ?V0 ->
   {Partitions, Remainder} = partitions(NumberOfPartitions, PartitionRemainder, [], ApiVersion),
   [#{name => TopicName,
      partitions => Partitions} | response(N - 1, Remainder, 0)];
 % v1 & v2
-response(N, Remainder, ApiVersion) when ApiVersion == 1;
-                                        ApiVersion == 2 ->
+response(N, Remainder, ApiVersion) when ApiVersion == ?V1;
+                                        ApiVersion == ?V2 ->
   {Topics, <<ThrottleTime:32/signed, _/binary>>} = response(N, Remainder, ApiVersion, []),
   #{topics => Topics,
     throttle_time => ThrottleTime}.
 
-response(0, Remainder, ApiVersion, Acc) when ApiVersion == 1;
-                                             ApiVersion == 2 ->
+response(0, Remainder, ApiVersion, Acc) when ApiVersion == ?V1;
+                                             ApiVersion == ?V2 ->
   {Acc, Remainder};
 response(
   N,
@@ -123,15 +124,15 @@ response(
     PartitionRemainder/binary
   >>,
   ApiVersion,
-  Acc) when ApiVersion == 1;
-            ApiVersion == 2 ->
+  Acc) when ApiVersion == ?V1;
+            ApiVersion == ?V2 ->
   {Partitions, Remainder} = partitions(NumberOfPartitions, PartitionRemainder, [], ApiVersion),
   response(N - 1, Remainder, ApiVersion, [#{name => TopicName,
                                             partitions => Partitions} | Acc]).
 
 % v0 & v1
-partitions(0, Remainder, Acc, ApiVersion) when ApiVersion == 0;
-                                               ApiVersion == 1 ->
+partitions(0, Remainder, Acc, ApiVersion) when ApiVersion == ?V0;
+                                               ApiVersion == ?V1 ->
   {Acc, Remainder};
 partitions(
   N,
@@ -142,14 +143,14 @@ partitions(
     Remainder/binary
   >>,
   Acc,
-  ApiVersion) when ApiVersion == 0;
-                   ApiVersion == 1 ->
+  ApiVersion) when ApiVersion == ?V0;
+                   ApiVersion == ?V1 ->
   partitions(N - 1,
              Remainder,
              [#{partition => Partition,
                 error_code => kafe_error:code(ErrorCode),
                 offset => Offset} | Acc], ApiVersion);
-partitions(0, Remainder, Acc, ApiVersion) when ApiVersion == 2 ->
+partitions(0, Remainder, Acc, ApiVersion) when ApiVersion == ?V2 ->
   {Acc, Remainder};
 % v2
 partitions(
@@ -162,7 +163,7 @@ partitions(
     Remainder/binary
   >>,
   Acc,
-  ApiVersion) when ApiVersion == 2 ->
+  ApiVersion) when ApiVersion == ?V2 ->
   partitions(N - 1,
              Remainder,
              [#{partition => Partition,

@@ -42,7 +42,7 @@ run(ReplicaID, TopicName, Options) ->
 %   Partition => int32
 %   FetchOffset => int64
 %   MaxBytes => int32
-request(ReplicaID, TopicName, Options, State) ->
+request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) ->
   Partition = maps:get(partition, Options, ?DEFAULT_FETCH_PARTITION),
   Offset = maps:get(offset, Options),
   MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
@@ -59,7 +59,8 @@ request(ReplicaID, TopicName, Options, State) ->
       Partition:32/signed,
       Offset:64/signed,
       MaxBytes:32/signed>>,
-    State).
+    State,
+    ApiVersion).
 
 % v0
 % FetchResponse => [TopicName [Partition ErrorCode HighwaterMarkOffset MessageSetSize MessageSet]]
@@ -78,11 +79,11 @@ request(ReplicaID, TopicName, Options, State) ->
 %   MessageSetSize => int32
 %   ThrottleTime => int32
 response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion)
-  when ApiVersion == 0->
+  when ApiVersion == ?V0 ->
   {ok, response(NumberOfTopics, Remainder, [])};
 response(<<ThrottleTime:32/signed, NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion)
-  when ApiVersion == 1;
-       ApiVersion == 2 ->
+  when ApiVersion == ?V1;
+       ApiVersion == ?V2 ->
   {ok, #{topics => response(NumberOfTopics, Remainder, []),
          throttle_time => ThrottleTime}}.
 

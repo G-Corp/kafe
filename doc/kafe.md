@@ -23,11 +23,11 @@ __Authors:__ Grégoire Lejeune ([`gl@finexkap.com`](mailto:gl@finexkap.com)), Gr
 
 
 
-### <a name="type-consumer_metadata">consumer_metadata()</a> ###
+### <a name="type-broker_id">broker_id()</a> ###
 
 
 <pre><code>
-consumer_metadata() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, coordinator_id =&gt; integer(), coordinator_host =&gt; binary(), coordinator_port =&gt; port()}
+broker_id() = atom()
 </code></pre>
 
 
@@ -48,6 +48,76 @@ error_code() = no_error | unknown | offset_out_of_range | invalid_message | unkn
 
 <pre><code>
 fetch_options() = #{partition =&gt; integer(), offset =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer()}
+</code></pre>
+
+
+
+
+### <a name="type-group">group()</a> ###
+
+
+<pre><code>
+group() = #{group_id =&gt; binary(), protocol_type =&gt; binary()}
+</code></pre>
+
+
+
+
+### <a name="type-group_coordinator">group_coordinator()</a> ###
+
+
+<pre><code>
+group_coordinator() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, coordinator_id =&gt; integer(), coordinator_host =&gt; binary(), coordinator_port =&gt; port()}
+</code></pre>
+
+
+
+
+### <a name="type-group_join">group_join()</a> ###
+
+
+<pre><code>
+group_join() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, generation_id =&gt; integer(), protocol_group =&gt; binary(), leader_id =&gt; binary(), member_id =&gt; binary(), members =&gt; [<a href="#type-group_member">group_member()</a>]}
+</code></pre>
+
+
+
+
+### <a name="type-group_member">group_member()</a> ###
+
+
+<pre><code>
+group_member() = #{member_id =&gt; binary(), member_metadata =&gt; binary()}
+</code></pre>
+
+
+
+
+### <a name="type-groups">groups()</a> ###
+
+
+<pre><code>
+groups() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, groups =&gt; [<a href="#type-group">group()</a>]}
+</code></pre>
+
+
+
+
+### <a name="type-groups_list">groups_list()</a> ###
+
+
+<pre><code>
+groups_list() = [#{broker =&gt; <a href="#type-broker_id">broker_id()</a>, groups =&gt; <a href="#type-groups">groups()</a>}]
+</code></pre>
+
+
+
+
+### <a name="type-join_group_options">join_group_options()</a> ###
+
+
+<pre><code>
+join_group_options() = #{session_timeout =&gt; integer(), member_id =&gt; binary(), protocol_type =&gt; binary(), protocols =&gt; [<a href="#type-protocol">protocol()</a>]}
 </code></pre>
 
 
@@ -143,6 +213,16 @@ produce_options() = #{timeout =&gt; integer(), required_acks =&gt; integer(), pa
 
 
 
+### <a name="type-protocol">protocol()</a> ###
+
+
+<pre><code>
+protocol() = binary()
+</code></pre>
+
+
+
+
 ### <a name="type-topic_partition_info">topic_partition_info()</a> ###
 
 
@@ -165,9 +245,12 @@ topics() = [binary() | string() | atom()] | [{binary() | string() | atom(), [{in
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#consumer_metadata-1">consumer_metadata/1</a></td><td> 
-Consumer Metadata Request.</td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
-Fetch messages.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td>Equivalent to <a href="#metadata-1"><tt>metadata([])</tt></a>.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td> 
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#brokers-0">brokers/0</a></td><td>
+Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#default_protocol-4">default_protocol/4</a></td><td></td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
+Fetch messages.</td></tr><tr><td valign="top"><a href="#group_coordinator-1">group_coordinator/1</a></td><td> 
+Group coordinator Request.</td></tr><tr><td valign="top"><a href="#join_group-1">join_group/1</a></td><td>Equivalent to <a href="#join_group-2"><tt>join_group(GroupId, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#join_group-2">join_group/2</a></td><td> 
+Join Group.</td></tr><tr><td valign="top"><a href="#list_groups-0">list_groups/0</a></td><td></td></tr><tr><td valign="top"><a href="#list_groups-1">list_groups/1</a></td><td>
+Find groups managed by a broker.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td>Equivalent to <a href="#metadata-1"><tt>metadata([])</tt></a>.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td> 
 Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#offset-0">offset/0</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-1">offset/1</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, Topics)</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td> 
 Get offet for the given topics and replicat.</td></tr><tr><td valign="top"><a href="#offset_commit-2">offset_commit/2</a></td><td> 
 Offset commit v0.</td></tr><tr><td valign="top"><a href="#offset_commit-4">offset_commit/4</a></td><td> 
@@ -184,19 +267,19 @@ Start kafe application.</td></tr></table>
 
 ## Function Details ##
 
-<a name="consumer_metadata-1"></a>
+<a name="brokers-0"></a>
 
-### consumer_metadata/1 ###
+### brokers/0 ###
 
-<pre><code>
-consumer_metadata(ConsumerGroup::binary()) -&gt; {ok, <a href="#type-consumer_metadata">consumer_metadata()</a>} | {error, term()}
-</code></pre>
-<br />
+`brokers() -> any()`
 
+Return the list of availables brokers
 
-Consumer Metadata Request
+<a name="default_protocol-4"></a>
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest).
+### default_protocol/4 ###
+
+`default_protocol(Name, Version, Topics, UserData) -> any()`
 
 <a name="fetch-1"></a>
 
@@ -257,6 +340,74 @@ Example:
 ```
 
 For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI).
+
+<a name="group_coordinator-1"></a>
+
+### group_coordinator/1 ###
+
+<pre><code>
+group_coordinator(ConsumerGroup::binary()) -&gt; {ok, <a href="#type-group_coordinator">group_coordinator()</a>} | {error, term()}
+</code></pre>
+<br />
+
+
+Group coordinator Request
+
+For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest).
+
+For compatibility, this function as an alias : `consumer_metadata`.
+
+<a name="join_group-1"></a>
+
+### join_group/1 ###
+
+`join_group(GroupId) -> any()`
+
+Equivalent to [`join_group(GroupId, #{})`](#join_group-2).
+
+<a name="join_group-2"></a>
+
+### join_group/2 ###
+
+<pre><code>
+join_group(GroupId::binary(), Options::<a href="#type-join_group_options">join_group_options()</a>) -&gt; {error, term()} | {ok, <a href="#type-group_join">group_join()</a>}
+</code></pre>
+<br />
+
+
+Join Group
+
+Options:
+
+* `session_timeout :: integer()` : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)
+
+* `member_id :: binary()` : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberId must be
+empty (i.e. <<>>, default), but a rejoining member should use the same memberId from the previous generation.
+
+* `protocol_type :: binary()` : Unique name for class of protocols implemented by group (default <<"consumer">>).
+
+* `protocols :: [protocol()]` : List of protocols.
+
+
+<a name="list_groups-0"></a>
+
+### list_groups/0 ###
+
+<pre><code>
+list_groups() -&gt; {ok, <a href="#type-groups_list">groups_list()</a>} | {error, term()}
+</code></pre>
+<br />
+
+<a name="list_groups-1"></a>
+
+### list_groups/1 ###
+
+<pre><code>
+list_groups(Broker::<a href="#type-broker_id">broker_id()</a>) -&gt; {ok, <a href="#type-groups">groups()</a>} | {error, term()}
+</code></pre>
+<br />
+
+Find groups managed by a broker.
 
 <a name="metadata-0"></a>
 

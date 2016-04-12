@@ -56,7 +56,8 @@ request(ReplicaId, Topics, State) ->
   kafe_protocol:request(
     ?OFFSET_REQUEST,
     <<ReplicaId:32/signed, (topics(Topics))/binary>>,
-    State).
+    State,
+    ?V0).
 
 % Offsets Response (Version: 0) => [responses]
 %   responses => topic [partition_responses]

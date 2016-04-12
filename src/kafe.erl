@@ -29,8 +29,8 @@
          fetch/1,
          fetch/2,
          fetch/3,
-         groups/0,
-         groups/1,
+         list_groups/0,
+         list_groups/1,
          group_coordinator/1,
          join_group/1,
          join_group/2,
@@ -116,6 +116,25 @@
                                                  error_code => error_code()}]}].
 -type offset_commit_option() :: [{binary(), [{integer(), integer(), binary()}]}].
 -type offset_commit_option_v1() :: [{binary(), [{integer(), integer(), integer(), binary()}]}].
+-type broker_id() :: atom().
+-type group() :: #{group_id => binary(), protocol_type => binary()}.
+-type groups() :: #{error_code => error_code(),
+                    groups => [group()]}.
+-type groups_list() :: [#{broker => broker_id(),
+                          groups => groups()}].
+-type group_member() :: #{member_id => binary(),
+                          member_metadata => binary()}.
+-type group_join() :: #{error_code => error_code(),
+                        generation_id => integer(),
+                        protocol_group => binary(),
+                        leader_id => binary(),
+                        member_id => binary(),
+                        members => [group_member()]}.
+-type protocol() :: binary().
+-type join_group_options() :: #{session_timeout => integer(),
+                                member_id => binary(),
+                                protocol_type => binary(),
+                                protocols => [protocol()]}.
 
 % @hidden
 start_link() ->
@@ -334,10 +353,10 @@ fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), (is_binary(To
 
 % @doc
 % @end
--spec groups() -> {ok, any()} | {error, term()}. % TODO
-groups() ->
+-spec list_groups() -> {ok, groups_list()} | {error, term()}.
+list_groups() ->
   {ok, lists:map(fun(Broker) ->
-                     case groups(Broker) of
+                     case list_groups(Broker) of
                        {ok, Groups} ->
                          #{broker => Broker,
                            groups => Groups};
@@ -349,10 +368,10 @@ groups() ->
                  end, brokers())}.
 
 % @doc
-% Find the current groups managed by a broker.
-% TODO spec
+% Find groups managed by a broker.
 % @end
-groups(Broker) ->
+-spec list_groups(Broker :: broker_id()) -> {ok, groups()} | {error, term()}.
+list_groups(Broker) when is_atom(Broker) ->
   kafe_protocol_list_groups:run(Broker).
 
 % @doc
@@ -383,8 +402,8 @@ join_group(GroupId) ->
 % <li><tt>protocol_type :: binary()</tt> : Unique name for class of protocols implemented by group (default &lt;&lt;"consumer"&gt;&gt;).</li>
 % <li><tt>protocols :: [protocol()]</tt> : List of protocols.</li>
 % </ul>
-% TODO: spec
 % @end
+-spec join_group(binary(), join_group_options()) -> {error, term()} | {ok, group_join()}.
 join_group(GroupId, Options) ->
   kafe_protocol_join_group:run(GroupId, Options).
 
@@ -492,14 +511,7 @@ handle_call({broker, Topic, Partition}, _From, #{topics := Topics, brokers := Br
 handle_call({broker_by_name, BrokerName}, _From, #{brokers := BrokersAddr} = State) ->
   {reply, maps:get(bucs:to_string(BrokerName), BrokersAddr, undefined), State};
 handle_call({broker_by_host_and_port, Host, Port}, _From, #{brokers := BrokersAddr} = State) ->
-  Host1 = if
-            is_tuple(Host) ->
-              bucinet:ip_to_string(Host);
-            true ->
-              bucs:to_string(Host)
-          end,
-  BrokerName = string:join([bucs:to_string(Host1), bucs:to_string(Port)], ":"),
-  {reply, maps:get(BrokerName, BrokersAddr, undefined), State};
+  {reply, maps:get(kafe_utils:broker_name(Host, Port), BrokersAddr, undefined), State};
 handle_call(topics, _From, #{topics := Topics} = State) ->
   {reply, Topics, State};
 handle_call({partitions, Topic}, _From, #{topics := Topics} = State) ->

@@ -1,3 +1,4 @@
+% @hidden
 -module(kafe_protocol_join_group).
 
 -include("../include/kafe.hrl").
