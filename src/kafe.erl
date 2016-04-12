@@ -50,6 +50,7 @@
          first_broker/0,
          broker/2,
          broker_by_name/1,
+         broker_by_host_and_port/2,
          topics/0,
          partitions/1,
          max_offset/1,
@@ -137,6 +138,10 @@ broker_by_name(BrokerName) ->
     undefined -> first_broker();
     Broker -> Broker
   end.
+
+% @hidden
+broker_by_host_and_port(Host, Port) ->
+  gen_server:call(?SERVER, {broker_by_host_and_port, Host, Port}, infinity).
 
 % @hidden
 topics() ->
@@ -486,6 +491,15 @@ handle_call({broker, Topic, Partition}, _From, #{topics := Topics, brokers := Br
   end;
 handle_call({broker_by_name, BrokerName}, _From, #{brokers := BrokersAddr} = State) ->
   {reply, maps:get(bucs:to_string(BrokerName), BrokersAddr, undefined), State};
+handle_call({broker_by_host_and_port, Host, Port}, _From, #{brokers := BrokersAddr} = State) ->
+  Host1 = if
+            is_tuple(Host) ->
+              bucinet:ip_to_string(Host);
+            true ->
+              bucs:to_string(Host)
+          end,
+  BrokerName = string:join([bucs:to_string(Host1), bucs:to_string(Port)], ":"),
+  {reply, maps:get(BrokerName, BrokersAddr, undefined), State};
 handle_call(topics, _From, #{topics := Topics} = State) ->
   {reply, Topics, State};
 handle_call({partitions, Topic}, _From, #{topics := Topics} = State) ->

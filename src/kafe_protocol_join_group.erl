@@ -9,7 +9,15 @@
         ]).
 
 run(GroupId, Options) ->
-  case kafe:first_broker() of
+  CoordinatorBrocker = case kafe:group_coordinator(bucs:to_binary(GroupId)) of
+                         {ok, #{coordinator_host := CoordinatorHost,
+                                coordinator_port := CoordinatorPort,
+                                error_code := none}} ->
+                           kafe:broker_by_host_and_port(CoordinatorHost, CoordinatorPort);
+                         _ ->
+                           undefined
+                       end,
+  case CoordinatorBrocker of
     undefined -> {error, no_broker_found};
     Broker ->
       gen_server:call(Broker,
