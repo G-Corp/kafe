@@ -352,6 +352,7 @@ fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), (is_binary(To
   kafe_protocol_fetch:run(ReplicatID, TopicName, Options).
 
 % @doc
+% Find groups managed by all brokers.
 % @end
 -spec list_groups() -> {ok, groups_list()} | {error, term()}.
 list_groups() ->
@@ -407,6 +408,11 @@ join_group(GroupId) ->
 join_group(GroupId, Options) ->
   kafe_protocol_join_group:run(GroupId, Options).
 
+% @doc
+% Create a default protocol as defined in the <a
+% href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest">Kafka Protocol Guide</a>.
+% @end
+-spec default_protocol(Name :: binary(), Version :: integer(), Topics :: topics(), UserData :: binary()) -> protocol().
 default_protocol(Name, Version, Topics, UserData) when is_binary(Name),
                                                        is_integer(Version),
                                                        is_list(Topics),

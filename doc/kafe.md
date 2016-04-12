@@ -246,10 +246,12 @@ topics() = [binary() | string() | atom()] | [{binary() | string() | atom(), [{in
 
 
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#brokers-0">brokers/0</a></td><td>
-Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#default_protocol-4">default_protocol/4</a></td><td></td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
+Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#default_protocol-4">default_protocol/4</a></td><td>
+Create a default protocol as defined in the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest">Kafka Protocol Guide</a>.</td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
 Fetch messages.</td></tr><tr><td valign="top"><a href="#group_coordinator-1">group_coordinator/1</a></td><td> 
 Group coordinator Request.</td></tr><tr><td valign="top"><a href="#join_group-1">join_group/1</a></td><td>Equivalent to <a href="#join_group-2"><tt>join_group(GroupId, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#join_group-2">join_group/2</a></td><td> 
-Join Group.</td></tr><tr><td valign="top"><a href="#list_groups-0">list_groups/0</a></td><td></td></tr><tr><td valign="top"><a href="#list_groups-1">list_groups/1</a></td><td>
+Join Group.</td></tr><tr><td valign="top"><a href="#list_groups-0">list_groups/0</a></td><td>
+Find groups managed by all brokers.</td></tr><tr><td valign="top"><a href="#list_groups-1">list_groups/1</a></td><td>
 Find groups managed by a broker.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td>Equivalent to <a href="#metadata-1"><tt>metadata([])</tt></a>.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td> 
 Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#offset-0">offset/0</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-1">offset/1</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, Topics)</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td> 
 Get offet for the given topics and replicat.</td></tr><tr><td valign="top"><a href="#offset_commit-2">offset_commit/2</a></td><td> 
@@ -279,7 +281,12 @@ Return the list of availables brokers
 
 ### default_protocol/4 ###
 
-`default_protocol(Name, Version, Topics, UserData) -> any()`
+<pre><code>
+default_protocol(Name::binary(), Version::integer(), Topics::<a href="#type-topics">topics()</a>, UserData::binary()) -&gt; <a href="#type-protocol">protocol()</a>
+</code></pre>
+<br />
+
+Create a default protocol as defined in the [Kafka Protocol Guide](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest).
 
 <a name="fetch-1"></a>
 
@@ -397,6 +404,8 @@ empty (i.e. <<>>, default), but a rejoining member should use the same memberId 
 list_groups() -&gt; {ok, <a href="#type-groups_list">groups_list()</a>} | {error, term()}
 </code></pre>
 <br />
+
+Find groups managed by all brokers.
 
 <a name="list_groups-1"></a>
 
