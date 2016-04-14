@@ -270,24 +270,7 @@ Offset fetch.</td></tr><tr><td valign="top"><a href="#offsets-2">offsets/2</a></
 Return the list of all unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#offsets-3">offsets/3</a></td><td>
 Return the list of the next Nth unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
 Send a message.</td></tr><tr><td valign="top"><a href="#start-0">start/0</a></td><td>
-Start kafe application.</td></tr><tr><td valign="top"><a href="#sync_group-4">sync_group/4</a></td><td>
-<code>
-kafe:sync_group(<<"my_group">>, 1, <<"kafka-6dbb08f4-a0dc-4f4c-a0b9-dccb4d03ff2c">>,
-[#{member_id => <<"kafka-6dbb08f4-a0dc-4f4c-a0b9-dccb4d03ff2c">>,
-member_assignment => #{version => 0,
-user_data => <<"my user data">>,
-partition_assignment => [#{topic => <<"topic0">>,
-partitions => [0, 1, 2]},
-#{topic => <<"topic1">>,
-partitions => [0, 1, 2]}]}},
-#{member_id => <<"kafka-0b7e179d-3ff9-46d2-b652-e0d041e4264a">>,
-member_assignment => #{version => 0,
-user_data => <<"my user data">>,
-partition_assignment => [#{topic => <<"topic0">>,
-partitions => [0, 1, 2]},
-#{topic => <<"topic1">>,
-partitions => [0, 1, 2]}]}}]).
-</code> 
+Start kafe application.</td></tr><tr><td valign="top"><a href="#sync_group-4">sync_group/4</a></td><td> 
 The sync group request is used by the group leader to assign state (e.g.</td></tr></table>
 
 
@@ -694,25 +677,30 @@ Start kafe application
 
 `sync_group(GroupId, GenerationId, MemberId, Assignments) -> any()`
 
-`
-kafe:sync_group(<<"my_group">>, 1, <<"kafka-6dbb08f4-a0dc-4f4c-a0b9-dccb4d03ff2c">>,
-[#{member_id => <<"kafka-6dbb08f4-a0dc-4f4c-a0b9-dccb4d03ff2c">>,
-member_assignment => #{version => 0,
-user_data => <<"my user data">>,
-partition_assignment => [#{topic => <<"topic0">>,
-partitions => [0, 1, 2]},
-#{topic => <<"topic1">>,
-partitions => [0, 1, 2]}]}},
-#{member_id => <<"kafka-0b7e179d-3ff9-46d2-b652-e0d041e4264a">>,
-member_assignment => #{version => 0,
-user_data => <<"my user data">>,
-partition_assignment => [#{topic => <<"topic0">>,
-partitions => [0, 1, 2]},
-#{topic => <<"topic1">>,
-partitions => [0, 1, 2]}]}}]).
-` 
+
 The sync group request is used by the group leader to assign state (e.g. partition assignments) to all members of the current generation. All members send 
 SyncGroup immediately after joining the group, but only the leader provides the group's assignment.
+
+Example:
+
+```
+
+ kafe:sync_group(<<"my_group">>, 1, <<"kafka-6dbb08f4-a0dc-4f4c-a0b9-dccb4d03ff2c">>,
+                 [#{member_id => <<"kafka-6dbb08f4-a0dc-4f4c-a0b9-dccb4d03ff2c">>,
+                    member_assignment => #{version => 0,
+                                           user_data => <<"my user data">>,
+                                           partition_assignment => [#{topic => <<"topic0">>,
+                                                                      partitions => [0, 1, 2]},
+                                                                    #{topic => <<"topic1">>,
+                                                                      partitions => [0, 1, 2]}]}},
+                  #{member_id => <<"kafka-0b7e179d-3ff9-46d2-b652-e0d041e4264a">>,
+                    member_assignment => #{version => 0,
+                                           user_data => <<"my user data">>,
+                                           partition_assignment => [#{topic => <<"topic0">>,
+                                                                      partitions => [0, 1, 2]},
+                                                                    #{topic => <<"topic1">>,
+                                                                      partitions => [0, 1, 2]}]}}]).
+```
 
 TODO : SPEC
 

@@ -432,7 +432,12 @@ default_protocol(Name, Version, Topics, UserData) when is_binary(Name),
     (kafe_protocol:encode_bytes(UserData))/binary>>.
 
 % @doc
-% <code>
+% The sync group request is used by the group leader to assign state (e.g. partition assignments) to all members of the current generation. All members send
+% SyncGroup immediately after joining the group, but only the leader provides the group's assignment.
+%
+% Example:
+%
+% <pre>
 % kafe:sync_group(&lt;&lt;"my_group"&gt;&gt;, 1, &lt;&lt;"kafka-6dbb08f4-a0dc-4f4c-a0b9-dccb4d03ff2c"&gt;&gt;,
 %                 [#{member_id =&gt; &lt;&lt;"kafka-6dbb08f4-a0dc-4f4c-a0b9-dccb4d03ff2c"&gt;&gt;,
 %                    member_assignment =&gt; #{version =&gt; 0,
@@ -448,10 +453,7 @@ default_protocol(Name, Version, Topics, UserData) when is_binary(Name),
 %                                                                      partitions =&gt; [0, 1, 2]},
 %                                                                    #{topic =&gt; &lt;&lt;"topic1"&gt;&gt;,
 %                                                                      partitions =&gt; [0, 1, 2]}]}}]).
-% </code>
-% The sync group request is used by the group leader to assign state (e.g. partition assignments) to all members of the current generation. All members send
-% SyncGroup immediately after joining the group, but only the leader provides the group's assignment.
-%
+% </pre>
 % TODO : SPEC
 % @end
 sync_group(GroupId, GenerationId, MemberId, Assignments) ->
