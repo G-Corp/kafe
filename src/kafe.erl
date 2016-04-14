@@ -5,6 +5,8 @@
 % @since 2014
 % @doc
 % A Kafka client for Erlang
+%
+% This module only implement the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol">Kafak Protocol</a>.
 % @end
 -module(kafe).
 -compile([{parse_transform, bristow_transform},
@@ -34,6 +36,10 @@
          group_coordinator/1,
          join_group/1,
          join_group/2,
+         sync_group/4,
+         heartbeat/3,
+         leave_group/2,
+         describe_group/1,
          default_protocol/4,
          offset_fetch/1,
          offset_fetch/2,
@@ -424,6 +430,56 @@ default_protocol(Name, Version, Topics, UserData) when is_binary(Name),
     Version:16/signed,
     (kafe_protocol:encode_array(EncodedTopics))/binary,
     (kafe_protocol:encode_bytes(UserData))/binary>>.
+
+% @doc
+% <code>
+% kafe:sync_group(&lt;&lt;"my_group"&gt;&gt;, 1, &lt;&lt;"kafka-6dbb08f4-a0dc-4f4c-a0b9-dccb4d03ff2c"&gt;&gt;,
+%                 [#{member_id =&gt; &lt;&lt;"kafka-6dbb08f4-a0dc-4f4c-a0b9-dccb4d03ff2c"&gt;&gt;,
+%                    member_assignment =&gt; #{version =&gt; 0,
+%                                           user_data =&gt; &lt;&lt;"my user data"&gt;&gt;,
+%                                           partition_assignment =&gt; [#{topic =&gt; &lt;&lt;"topic0"&gt;&gt;,
+%                                                                      partitions =&gt; [0, 1, 2]},
+%                                                                    #{topic =&gt; &lt;&lt;"topic1"&gt;&gt;,
+%                                                                      partitions =&gt; [0, 1, 2]}]}},
+%                  #{member_id =&gt; &lt;&lt;"kafka-0b7e179d-3ff9-46d2-b652-e0d041e4264a"&gt;&gt;,
+%                    member_assignment =&gt; #{version =&gt; 0,
+%                                           user_data =&gt; &lt;&lt;"my user data"&gt;&gt;,
+%                                           partition_assignment =&gt; [#{topic =&gt; &lt;&lt;"topic0"&gt;&gt;,
+%                                                                      partitions =&gt; [0, 1, 2]},
+%                                                                    #{topic =&gt; &lt;&lt;"topic1"&gt;&gt;,
+%                                                                      partitions =&gt; [0, 1, 2]}]}}]).
+% </code>
+% The sync group request is used by the group leader to assign state (e.g. partition assignments) to all members of the current generation. All members send
+% SyncGroup immediately after joining the group, but only the leader provides the group's assignment.
+%
+% TODO : SPEC
+% @end
+sync_group(GroupId, GenerationId, MemberId, Assignments) ->
+  kafe_protocol_sync_group:run(GroupId, GenerationId, MemberId, Assignments).
+
+% @doc
+% Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group. If not heartbeat has been received by the
+% coordinator with the configured session timeout, the member will be kicked out of the group.
+%
+% TODO SPEC
+% @end
+heartbeat(GroupId, GenerationId, MemberId) ->
+  kafe_protocol_heartbeat:run(GroupId, GenerationId, MemberId).
+
+% @doc
+% To explicitly leave a group, the client can send a leave group request. This is preferred over letting the session timeout expire since it allows the group to
+% rebalance faster, which for the consumer means that less time will elapse before partitions can be reassigned to an active member.
+%
+% TODO SPEC
+% @end
+leave_group(GroupId, MemberId) ->
+  kafe_protocol_leave_group:run(GroupId, MemberId).
+
+% @doc
+% TODO : SPEC
+% @end
+describe_group(GroupId) when is_binary(GroupId) ->
+  kafe_protocol_describe_group:run(GroupId).
 
 % @doc
 % Offset commit v0

@@ -22,7 +22,7 @@ run(ConsumerGroup) ->
 
 request(ConsumerGroup, State) ->
   kafe_protocol:request(
-    ?CONSUMER_METADATA_REQUEST,
+    ?GROUP_COORDINATOR_REQUEST,
     <<(kafe_protocol:encode_string(ConsumerGroup))/binary>>,
     State,
     ?V0).

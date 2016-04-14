@@ -15,7 +15,7 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 
 
 
-### Documentation ###
+### API Documentation ###
 
 See [documentation](https://github.com/botsunit/kafe/blob/kafka-0.9/doc/kafe.md)
 

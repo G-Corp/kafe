@@ -15,7 +15,7 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 
 
 
-### Documentation ###
+### API Documentation ###
 
 See [documentation](doc/kafe.md)
 

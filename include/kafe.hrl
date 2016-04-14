@@ -23,7 +23,6 @@
 -define(CONTROLLED_SHUTDOWN_REQUEST, 7).
 -define(OFFSET_COMMIT_REQUEST, 8).
 -define(OFFSET_FETCH_REQUEST, 9).
--define(CONSUMER_METADATA_REQUEST, 10). % TODO: DELETEME
 -define(GROUP_COORDINATOR_REQUEST, 10).
 -define(JOIN_GROUP_REQUEST, 11).
 -define(HEARTBEAT_REQUEST, 12).
@@ -45,8 +44,25 @@
 -define(DEFAULT_FETCH_MIN_BYTES, 1).
 -define(DEFAULT_FETCH_MAX_WAIT_TIME, 1).
 
+-define(DEFAULT_GROUP_PROTOCOL_VERSION, 0).
+-define(DEFAULT_GROUP_PROTOCOL_NAME, <<"default_protocol">>).
+-define(DEFAULT_GROUP_USER_DATA, <<>>).
+
+-define(DEFAULT_GROUP_PROTOCOL_TOPICS, lists:delete(<<"__consumer_offsets">>, maps:keys(kafe:topics()))).
+-define(DEFAULT_GROUP_PARTITION_ASSIGNMENT, maps:fold(fun
+                                                        (<<"__consumer_offsets">>, _, Acc@DGPA) ->
+                                                          Acc@DGPA;
+                                                        (Topic, Partitions, Acc@DGPA) ->
+                                                          [#{topic => Topic,
+                                                             partitions => maps:keys(Partitions)}|Acc@DGPA]
+                                                      end, [], kafe:topics())).
+
 -define(DEFAULT_JOIN_GROUP_SESSION_TIMEOUT, 10000).
 -define(DEFAULT_JOIN_GROUP_MEMBER_ID, <<>>).
 -define(DEFAULT_JOIN_GROUP_PROTOCOL_TYPE, <<"consumer">>).
--define(DEFAULT_JOIN_GROUP_PROTOCOLS, [kafe:default_protocol(<<"default_protocol">>, 0, [], <<>>)]).
+-define(DEFAULT_JOIN_GROUP_PROTOCOLS, [kafe:default_protocol(
+                                         ?DEFAULT_GROUP_PROTOCOL_NAME,
+                                         ?DEFAULT_GROUP_PROTOCOL_VERSION,
+                                         ?DEFAULT_GROUP_PROTOCOL_TOPICS,
+                                         ?DEFAULT_GROUP_USER_DATA)]).
 
