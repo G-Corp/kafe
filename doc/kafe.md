@@ -270,7 +270,9 @@ Offset fetch.</td></tr><tr><td valign="top"><a href="#offsets-2">offsets/2</a></
 Return the list of all unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#offsets-3">offsets/3</a></td><td>
 Return the list of the next Nth unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
 Send a message.</td></tr><tr><td valign="top"><a href="#start-0">start/0</a></td><td>
-Start kafe application.</td></tr><tr><td valign="top"><a href="#sync_group-4">sync_group/4</a></td><td> 
+Start kafe application.</td></tr><tr><td valign="top"><a href="#start_consumer-3">start_consumer/3</a></td><td>
+TODO DOC + SPEC.</td></tr><tr><td valign="top"><a href="#stop_consumer-1">stop_consumer/1</a></td><td>
+TODO DOC + SPEC.</td></tr><tr><td valign="top"><a href="#sync_group-4">sync_group/4</a></td><td> 
 The sync group request is used by the group leader to assign state (e.g.</td></tr></table>
 
 
@@ -670,6 +672,22 @@ For more informations, see the [Kafka protocol documentation](https://cwiki.apac
 `start() -> any()`
 
 Start kafe application
+
+<a name="start_consumer-3"></a>
+
+### start_consumer/3 ###
+
+`start_consumer(GroupId, CallbackModule, Options) -> any()`
+
+TODO DOC + SPEC
+
+<a name="stop_consumer-1"></a>
+
+### stop_consumer/1 ###
+
+`stop_consumer(GroupId) -> any()`
+
+TODO DOC + SPEC
 
 <a name="sync_group-4"></a>
 
