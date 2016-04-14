@@ -146,6 +146,18 @@
                                 member_id => binary(),
                                 protocol_type => binary(),
                                 protocols => [protocol()]}.
+-type partition_assignment() :: #{topic => binary(),
+                                  partitions => [integer()]}.
+-type member_assignment() :: #{version => integer(),
+                               partition_assignment => [partition_assignment()],
+                               user_data => binary()}.
+-type group_assignment() :: #{member_id => binary(),
+                              member_assignment => member_assignment()}.
+-type sync_group() :: #{error_code => error_code(),
+                        version => integer(),
+                        partition_assignment => [partition_assignment()],
+                        user_data => binary()}.
+-type response_code() :: #{error_code => error_code()}.
 
 % @hidden
 start_link() ->
@@ -459,32 +471,31 @@ default_protocol(Name, Version, Topics, UserData) when is_binary(Name),
 %                                                                    #{topic =&gt; &lt;&lt;"topic1"&gt;&gt;,
 %                                                                      partitions =&gt; [0, 1, 2]}]}}]).
 % </pre>
-% TODO : SPEC
 % @end
+-spec sync_group(binary(), integer(), binary(), [group_assignment()]) -> {error,term()} | {ok, sync_group()}.
 sync_group(GroupId, GenerationId, MemberId, Assignments) ->
   kafe_protocol_sync_group:run(GroupId, GenerationId, MemberId, Assignments).
 
 % @doc
 % Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group. If not heartbeat has been received by the
 % coordinator with the configured session timeout, the member will be kicked out of the group.
-%
-% TODO SPEC
 % @end
+-spec heartbeat(binary(), integer(), binary()) -> {error, term()} | {ok, response_code()}.
 heartbeat(GroupId, GenerationId, MemberId) ->
   kafe_protocol_heartbeat:run(GroupId, GenerationId, MemberId).
 
 % @doc
 % To explicitly leave a group, the client can send a leave group request. This is preferred over letting the session timeout expire since it allows the group to
 % rebalance faster, which for the consumer means that less time will elapse before partitions can be reassigned to an active member.
-%
-% TODO SPEC
 % @end
+-spec leave_group(binary(), binary()) -> {error, term()} | {ok, response_code()}.
 leave_group(GroupId, MemberId) ->
   kafe_protocol_leave_group:run(GroupId, MemberId).
 
 % @doc
 % TODO : SPEC
 % @end
+-spec describe_group(binary()) -> {error, term()} | {ok, any()}.
 describe_group(GroupId) when is_binary(GroupId) ->
   kafe_protocol_describe_group:run(GroupId).
 

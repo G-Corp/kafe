@@ -58,12 +58,12 @@ group_assignment([#{member_id := MemberId,
                     member_assignment := MemberAssignment}|Rest], Acc) ->
   Version = maps:get(version, MemberAssignment, ?DEFAULT_GROUP_PROTOCOL_VERSION),
   Partitions = maps:get(partition_assignment, MemberAssignment, ?DEFAULT_GROUP_PARTITION_ASSIGNMENT),
-  UserData = maps:get(user_data, MemberAssignment, ?DEFAULT_GROUP_USER_DATA), % TODO: VERIFY
+  UserData = maps:get(user_data, MemberAssignment, ?DEFAULT_GROUP_USER_DATA),
   group_assignment(Rest, [<<(kafe_protocol:encode_string(MemberId))/binary,
                             (kafe_protocol:encode_bytes(
                                <<Version:16/signed,
                                  (partition_assignment(Partitions, []))/binary,
-                                 (kafe_protocol:encode_bytes(UserData))/binary>>))/binary>>|Acc]). % TODO: VERIFY
+                                 (kafe_protocol:encode_bytes(UserData))/binary>>))/binary>>|Acc]).
 
 partition_assignment([], Acc) ->
   kafe_protocol:encode_array(lists:reverse(Acc));
@@ -89,12 +89,12 @@ response(<<ErrorCode:16/signed,
       {ok, #{error_code => kafe_error:code(ErrorCode),
              version => Version,
              partition_assignment => PartitionAssignment,
-             user_data => UserData}}; % TODO : VERIFY
+             user_data => UserData}};
     _ ->
       {ok, #{error_code => kafe_error:code(ErrorCode),
              version => -1,
              partition_assignment => [],
-             user_data => <<>>}} % TODO : VERIFY
+             user_data => <<>>}}
   end.
 
 partition_assignment(0, Remainder, Acc) ->

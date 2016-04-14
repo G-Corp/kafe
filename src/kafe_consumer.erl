@@ -12,8 +12,8 @@
 %
 % -export([init/1, consume/3]).
 %
-% init(_Args) ->
-%   ok.
+% init(Args) ->
+%   {ok, Args}.
 %
 % consume(Offset, Key, Value) ->
 %   % Do something with Offset/Key/Value
@@ -42,7 +42,7 @@
 -compile([{parse_transform, lager_transform}]).
 -behaviour(gen_server).
 
--callback init(Args :: list()) -> ok | ignore.
+-callback init(Args :: list()) -> {ok, any()} | ignore.
 -callback consume(Offset :: integer(),
                   Key :: binary(),
                   Value :: binary()) -> ok.
