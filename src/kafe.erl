@@ -45,7 +45,12 @@
          offset_fetch/2,
          offset_commit/2,
          offset_commit/4,
-         offset_commit/5,
+         offset_commit/5
+        ]).
+
+-export([
+         start_consumer/3,
+         stop_consumer/1,
          offsets/2,
          offsets/3
         ]).
@@ -858,4 +863,16 @@ delete_offset_for_partition(PartitionID, Offsets) ->
     false -> Offsets;
     _ -> delete_offset_for_partition(PartitionID, lists:keydelete(PartitionID, 1, Offsets))
   end.
+
+% @doc
+% TODO DOC + SPEC
+% @end
+start_consumer(GroupId, CallbackModule, Options) ->
+  kafe_consumer_sup:start_child(GroupId, Options#{callback_module => CallbackModule}).
+
+% @doc
+% TODO DOC + SPEC
+% @end
+stop_consumer(GroupId) ->
+  kafe_consumer_sup:terminate_child(GroupId).
 
