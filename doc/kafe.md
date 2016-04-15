@@ -38,6 +38,16 @@ broker_id() = atom()
 
 
 
+### <a name="type-describe_group">describe_group()</a> ###
+
+
+<pre><code>
+describe_group() = [#{error_code =&gt; <a href="#type-error_code">error_code()</a>, group_id =&gt; binary(), members =&gt; [<a href="#type-group_member_ex">group_member_ex()</a>], protocol =&gt; binary(), protocol_type =&gt; binary(), state =&gt; binary()}]
+</code></pre>
+
+
+
+
 ### <a name="type-error_code">error_code()</a> ###
 
 
@@ -103,6 +113,16 @@ group_join() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, g
 
 <pre><code>
 group_member() = #{member_id =&gt; binary(), member_metadata =&gt; binary()}
+</code></pre>
+
+
+
+
+### <a name="type-group_member_ex">group_member_ex()</a> ###
+
+
+<pre><code>
+group_member_ex() = #{client_host =&gt; binary(), client_id =&gt; binary(), member_id =&gt; binary(), member_metadata =&gt; binary(), member_assignment =&gt; <a href="#type-member_assignment">member_assignment()</a>}
 </code></pre>
 
 
@@ -354,7 +374,7 @@ Create a default protocol as defined in the [Kafka Protocol Guide](https://cwiki
 ### describe_group/1 ###
 
 <pre><code>
-describe_group(GroupId::binary()) -&gt; {error, term()} | {ok, any()}
+describe_group(GroupId::binary()) -&gt; {error, <a href="#type-describe_group">describe_group()</a>} | {ok, any()}
 </code></pre>
 <br />
 

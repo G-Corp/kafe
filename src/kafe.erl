@@ -74,6 +74,8 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
+-export_type([group_member_ex/0]).
+
 -type error_code() :: no_error
 | unknown
 | offset_out_of_range
@@ -158,6 +160,17 @@
                         partition_assignment => [partition_assignment()],
                         user_data => binary()}.
 -type response_code() :: #{error_code => error_code()}.
+-type group_member_ex() :: #{client_host => binary(),
+                             client_id => binary(),
+                             member_id => binary(),
+                             member_metadata => binary(),
+                             member_assignment => member_assignment()}.
+-type describe_group() :: [#{error_code => error_code(),
+                             group_id => binary(),
+                             members => [group_member_ex()],
+                             protocol => binary(),
+                             protocol_type => binary(),
+                             state => binary()}].
 
 % @hidden
 start_link() ->
@@ -495,7 +508,7 @@ leave_group(GroupId, MemberId) ->
 % @doc
 % TODO : SPEC
 % @end
--spec describe_group(binary()) -> {error, term()} | {ok, any()}.
+-spec describe_group(binary()) -> {error, describe_group()} | {ok, any()}.
 describe_group(GroupId) when is_binary(GroupId) ->
   kafe_protocol_describe_group:run(GroupId).
 

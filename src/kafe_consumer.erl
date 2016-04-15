@@ -96,6 +96,7 @@
 % @doc
 % Return the list of members for a consumer
 % @end
+-spec members(atom() | pid()) -> [kafe:group_member_ex()].
 members(Consumer) ->
   kafe_consumer_sup:sync_call(Consumer, members).
 

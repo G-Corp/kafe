@@ -2,6 +2,8 @@
 
 # Module kafe_consumer #
 * [Description](#description)
+* [Function Index](#index)
+* [Function Details](#functions)
 
 
 A Kafka client for Erlang.
@@ -54,3 +56,27 @@ When you are done with your consumer, stop it :
  kafe:stop_consumer(my_group),
  ...
 ```
+<a name="index"></a>
+
+## Function Index ##
+
+
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#members-1">members/1</a></td><td>
+Return the list of members for a consumer.</td></tr></table>
+
+
+<a name="functions"></a>
+
+## Function Details ##
+
+<a name="members-1"></a>
+
+### members/1 ###
+
+<pre><code>
+members(Consumer::atom() | pid()) -&gt; [<a href="kafe.md#type-group_member_ex">kafe:group_member_ex()</a>]
+</code></pre>
+<br />
+
+Return the list of members for a consumer
+
