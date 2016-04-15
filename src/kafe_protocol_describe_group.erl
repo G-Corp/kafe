@@ -103,12 +103,18 @@ members(N, <<MemberIdSize:16/signed,
 member_assignment(<<Version:16/signed,
                     PartitionAssignmentSize:32/signed,
                     Remainder/binary>>) ->
-  {PartitionAssignment, _Remainder1} = partition_assignment(PartitionAssignmentSize, Remainder, []),
+  {PartitionAssignment, UserData} = partition_assignment(PartitionAssignmentSize, Remainder, []),
   #{version => Version,
-    partition_assignment => PartitionAssignment}.
+    partition_assignment => PartitionAssignment,
+    user_data => UserData};
+member_assignment(<<>>) ->
+  #{version => -1,
+    partition_assignment => [],
+    user_data => <<>>}.
 
-partition_assignment(0, Remainder, Acc) ->
-  {Acc, Remainder};
+partition_assignment(0, <<UserDataSize:32/signed,
+                          UserData:UserDataSize/binary>>, Acc) ->
+  {Acc, UserData};
 partition_assignment(N, <<TopicSize:16/signed,
                           Topic:TopicSize/binary,
                           NbPartitions:32/signed,

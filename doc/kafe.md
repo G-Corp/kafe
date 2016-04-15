@@ -68,6 +68,16 @@ group() = #{group_id =&gt; binary(), protocol_type =&gt; binary()}
 
 
 
+### <a name="type-group_assignment">group_assignment()</a> ###
+
+
+<pre><code>
+group_assignment() = #{member_id =&gt; binary(), member_assignment =&gt; <a href="#type-member_assignment">member_assignment()</a>}
+</code></pre>
+
+
+
+
 ### <a name="type-group_coordinator">group_coordinator()</a> ###
 
 
@@ -123,6 +133,16 @@ groups_list() = [#{broker =&gt; <a href="#type-broker_id">broker_id()</a>, group
 
 <pre><code>
 join_group_options() = #{session_timeout =&gt; integer(), member_id =&gt; binary(), protocol_type =&gt; binary(), protocols =&gt; [<a href="#type-protocol">protocol()</a>]}
+</code></pre>
+
+
+
+
+### <a name="type-member_assignment">member_assignment()</a> ###
+
+
+<pre><code>
+member_assignment() = #{version =&gt; integer(), partition_assignment =&gt; [<a href="#type-partition_assignment">partition_assignment()</a>], user_data =&gt; binary()}
 </code></pre>
 
 
@@ -208,6 +228,16 @@ offset_fetch_set() = #{name =&gt; binary(), partitions_offset =&gt; [#{partition
 
 
 
+### <a name="type-partition_assignment">partition_assignment()</a> ###
+
+
+<pre><code>
+partition_assignment() = #{topic =&gt; binary(), partitions =&gt; [integer()]}
+</code></pre>
+
+
+
+
 ### <a name="type-produce_options">produce_options()</a> ###
 
 
@@ -223,6 +253,26 @@ produce_options() = #{timeout =&gt; integer(), required_acks =&gt; integer(), pa
 
 <pre><code>
 protocol() = binary()
+</code></pre>
+
+
+
+
+### <a name="type-response_code">response_code()</a> ###
+
+
+<pre><code>
+response_code() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>}
+</code></pre>
+
+
+
+
+### <a name="type-sync_group">sync_group()</a> ###
+
+
+<pre><code>
+sync_group() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, version =&gt; integer(), partition_assignment =&gt; [<a href="#type-partition_assignment">partition_assignment()</a>], user_data =&gt; binary()}
 </code></pre>
 
 
@@ -255,9 +305,9 @@ Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#d
 Create a default protocol as defined in the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest">Kafka Protocol Guide</a>.</td></tr><tr><td valign="top"><a href="#describe_group-1">describe_group/1</a></td><td>
 TODO : SPEC.</td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
 Fetch messages.</td></tr><tr><td valign="top"><a href="#group_coordinator-1">group_coordinator/1</a></td><td> 
-Group coordinator Request.</td></tr><tr><td valign="top"><a href="#heartbeat-3">heartbeat/3</a></td><td> 
+Group coordinator Request.</td></tr><tr><td valign="top"><a href="#heartbeat-3">heartbeat/3</a></td><td>
 Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group.</td></tr><tr><td valign="top"><a href="#join_group-1">join_group/1</a></td><td>Equivalent to <a href="#join_group-2"><tt>join_group(GroupId, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#join_group-2">join_group/2</a></td><td> 
-Join Group.</td></tr><tr><td valign="top"><a href="#leave_group-2">leave_group/2</a></td><td> 
+Join Group.</td></tr><tr><td valign="top"><a href="#leave_group-2">leave_group/2</a></td><td>
 To explicitly leave a group, the client can send a leave group request.</td></tr><tr><td valign="top"><a href="#list_groups-0">list_groups/0</a></td><td>
 Find groups managed by all brokers.</td></tr><tr><td valign="top"><a href="#list_groups-1">list_groups/1</a></td><td>
 Find groups managed by a broker.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td>Equivalent to <a href="#metadata-1"><tt>metadata([])</tt></a>.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td> 
@@ -270,8 +320,8 @@ Offset fetch.</td></tr><tr><td valign="top"><a href="#offsets-2">offsets/2</a></
 Return the list of all unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#offsets-3">offsets/3</a></td><td>
 Return the list of the next Nth unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
 Send a message.</td></tr><tr><td valign="top"><a href="#start-0">start/0</a></td><td>
-Start kafe application.</td></tr><tr><td valign="top"><a href="#start_consumer-3">start_consumer/3</a></td><td>
-TODO DOC + SPEC.</td></tr><tr><td valign="top"><a href="#stop_consumer-1">stop_consumer/1</a></td><td>
+Start kafe application.</td></tr><tr><td valign="top"><a href="#start_consumer-3">start_consumer/3</a></td><td> 
+Start a new consumer.</td></tr><tr><td valign="top"><a href="#stop_consumer-1">stop_consumer/1</a></td><td>
 TODO DOC + SPEC.</td></tr><tr><td valign="top"><a href="#sync_group-4">sync_group/4</a></td><td> 
 The sync group request is used by the group leader to assign state (e.g.</td></tr></table>
 
@@ -303,7 +353,10 @@ Create a default protocol as defined in the [Kafka Protocol Guide](https://cwiki
 
 ### describe_group/1 ###
 
-`describe_group(GroupId) -> any()`
+<pre><code>
+describe_group(GroupId::binary()) -&gt; {error, term()} | {ok, any()}
+</code></pre>
+<br />
 
 TODO : SPEC
 
@@ -387,13 +440,13 @@ For compatibility, this function as an alias : `consumer_metadata`.
 
 ### heartbeat/3 ###
 
-`heartbeat(GroupId, GenerationId, MemberId) -> any()`
+<pre><code>
+heartbeat(GroupId::binary(), GenerationId::integer(), MemberId::binary()) -&gt; {error, term()} | {ok, <a href="#type-response_code">response_code()</a>}
+</code></pre>
+<br />
 
-
-Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group. If not heartbeat has been received by the 
+Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group. If not heartbeat has been received by the
 coordinator with the configured session timeout, the member will be kicked out of the group.
-
-TODO SPEC
 
 <a name="join_group-1"></a>
 
@@ -431,13 +484,13 @@ empty (i.e. <<>>, default), but a rejoining member should use the same memberId 
 
 ### leave_group/2 ###
 
-`leave_group(GroupId, MemberId) -> any()`
+<pre><code>
+leave_group(GroupId::binary(), MemberId::binary()) -&gt; {error, term()} | {ok, <a href="#type-response_code">response_code()</a>}
+</code></pre>
+<br />
 
-
-To explicitly leave a group, the client can send a leave group request. This is preferred over letting the session timeout expire since it allows the group to 
+To explicitly leave a group, the client can send a leave group request. This is preferred over letting the session timeout expire since it allows the group to
 rebalance faster, which for the consumer means that less time will elapse before partitions can be reassigned to an active member.
-
-TODO SPEC
 
 <a name="list_groups-0"></a>
 
@@ -679,6 +732,19 @@ Start kafe application
 
 `start_consumer(GroupId, CallbackModule, Options) -> any()`
 
+
+Start a new consumer.
+
+Options:
+
+* `session_timeout :: integer()` : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)
+
+* `member_id :: binary()` : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberId must be
+empty (i.e. <<>>, default), but a rejoining member should use the same memberId from the previous generation.
+
+* `topics :: [binary() | {binary(), [integer()]}]` : List or topics (and partitions).
+
+
 TODO DOC + SPEC
 
 <a name="stop_consumer-1"></a>
@@ -693,7 +759,10 @@ TODO DOC + SPEC
 
 ### sync_group/4 ###
 
-`sync_group(GroupId, GenerationId, MemberId, Assignments) -> any()`
+<pre><code>
+sync_group(GroupId::binary(), GenerationId::integer(), MemberId::binary(), Assignments::[<a href="#type-group_assignment">group_assignment()</a>]) -&gt; {error, term()} | {ok, <a href="#type-sync_group">sync_group()</a>}
+</code></pre>
+<br />
 
 
 The sync group request is used by the group leader to assign state (e.g. partition assignments) to all members of the current generation. All members send 
@@ -719,6 +788,4 @@ Example:
                                                                     #{topic => <<"topic1">>,
                                                                       partitions => [0, 1, 2]}]}}]).
 ```
-
-TODO : SPEC
 

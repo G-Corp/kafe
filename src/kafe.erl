@@ -876,6 +876,16 @@ delete_offset_for_partition(PartitionID, Offsets) ->
   end.
 
 % @doc
+% Start a new consumer.
+%
+% Options:
+% <ul>
+% <li><tt>session_timeout :: integer()</tt> : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)</li>
+% <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberId must be
+% empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberId from the previous generation.</li>
+% <li><tt>topics :: [binary() | {binary(), [integer()]}]</tt> : List or topics (and partitions).</li>
+% </ul>
+%
 % TODO DOC + SPEC
 % @end
 start_consumer(GroupId, CallbackModule, Options) ->
@@ -885,5 +895,5 @@ start_consumer(GroupId, CallbackModule, Options) ->
 % TODO DOC + SPEC
 % @end
 stop_consumer(GroupId) ->
-  kafe_consumer_sup:terminate_child(GroupId).
+  kafe_consumer_sup:stop_child(GroupId).
 

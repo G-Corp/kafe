@@ -10,7 +10,7 @@ Copyright (c) 2014-2015 Finexkap, 2015 G-Corp, 2015-2016 BotsUnit
 
 __Introduced in:__ 2014
 
-__Behaviours:__ [`gen_server`](gen_server.md).
+__Behaviours:__ [`gen_fsm`](gen_fsm.md).
 
 __Authors:__ Grégoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire.lejeune@botsunit.com)).
 
@@ -27,8 +27,8 @@ To create a consumer, use this behaviour :
 
  -export([init/1, consume/3]).
 
- init(_Args) ->
-   ok.
+ init(Args) ->
+   {ok, Args}.
 
  consume(Offset, Key, Value) ->
    % Do something with Offset/Key/Value

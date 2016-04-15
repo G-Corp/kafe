@@ -97,8 +97,9 @@ response(<<ErrorCode:16/signed,
              user_data => <<>>}}
   end.
 
-partition_assignment(0, Remainder, Acc) ->
-  {Acc, Remainder};
+partition_assignment(0, <<UserDataSize:32/signed,
+                          UserData:UserDataSize/binary>>, Acc) ->
+  {Acc, UserData};
 partition_assignment(N, <<TopicSize:16/signed,
                           Topic:TopicSize/binary,
                           NbPartitions:32/signed,
