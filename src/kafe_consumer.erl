@@ -51,6 +51,9 @@
 
 %% API.
 -export([start_link/2]).
+-export([
+         members/1
+        ]).
 
 %% gen_fsm.
 -export([init/1]).
@@ -79,8 +82,9 @@
           protocol_group
          }).
 
--define(DEAD_TIMEOUT(_), 10).
--define(AWAITING_SYNC_TIMEOUT(_), 10).
+-define(MIN_TIMEOUT, 10).
+-define(DEAD_TIMEOUT(_), ?MIN_TIMEOUT).
+-define(AWAITING_SYNC_TIMEOUT(_), ?MIN_TIMEOUT).
 -define(STABLE_TIMEOUT(State),
         begin
           #state{session_timeout = SessionTimeout} = State,
@@ -88,6 +92,12 @@
         end).
 
 %% API.
+
+% @doc
+% Return the list of members for a consumer
+% @end
+members(Consumer) ->
+  kafe_consumer_sup:sync_call(Consumer, members).
 
 % @hidden
 -spec start_link(atom(), map()) -> {ok, pid()}.
@@ -116,7 +126,7 @@ init([GroupId, Options]) ->
              % members
              % protocol_group
             },
-  setelement(1, next_state(State), ok).
+  setelement(1, next_state(dead, State), ok).
 
 % @hidden
 dead(timeout, #state{group_id = GroupId,
@@ -158,7 +168,9 @@ awaiting_sync(timeout, #state{group_id = GroupId,
                               members = Members,
                               topics = Topics} = State) ->
   lager:info("AwaitingSync : Sync!"),
-  case kafe:sync_group(GroupId, GenerationId, MemberId, group_assignment(MemberId, Topics, Members)) of
+  GroupAssignment = group_assignment(MemberId, Topics, Members),
+  lager:info("~p :: GroupAssignment => ~p", [MemberId, GroupAssignment]),
+  case kafe:sync_group(GroupId, GenerationId, MemberId, GroupAssignment) of
     {ok, #{error_code := none}} ->
       next_state(State);
     {error, Reason} ->
@@ -187,6 +199,8 @@ handle_event(_Event, StateName, State) ->
 	{next_state, StateName, State}.
 
 % @hidden
+handle_sync_event(members, _From, StateName, #state{members = Members} = State) ->
+	{reply, Members, StateName, State, ?MIN_TIMEOUT};
 handle_sync_event(_Event, _From, StateName, State) ->
 	{reply, ignored, StateName, State}.
 
@@ -234,31 +248,27 @@ state_by_name(<<"AwaitingSync">>) -> awaiting_sync;
 state_by_name(<<"Stable">>) -> stable.
 
 group_assignment(MemberId, Topics, Members) ->
-  {HasMemberId,
-   GroupAssignment} = lists:foldl(
-                        fun(#{member_id := MemberId1,
-                              member_assignment := MemberAssignment}, {HasMemberId, MembersAcc}) ->
-                            {if
-                               MemberId1 == MemberId -> true;
-                               true -> HasMemberId
-                             end, [#{member_id => MemberId1,
-                                     member_assignment => MemberAssignment}|MembersAcc]}
-                        end, {false, []}, Members),
-  if
-    HasMemberId -> GroupAssignment;
-    true ->
-      [#{member_id => MemberId,
-         member_assignment => #{
-           version => ?DEFAULT_GROUP_PROTOCOL_VERSION,
-           user_data => ?DEFAULT_GROUP_USER_DATA,
-           partition_assignment => lists:map(fun
-                                               ({T, P}) ->
-                                                 #{topic => T,
-                                                   partitions => P};
-                                               (T) ->
-                                                 #{topic => T,
-                                                   partitions => maps:keys(maps:get(T, kafe:topics(), #{}))}
-                                             end, Topics)
-          }}|GroupAssignment]
-  end.
+  GroupAssignment = lists:foldl(
+                      fun
+                        (#{member_id := MemberId1}, Acc) when MemberId1 == <<>> orelse
+                                                              MemberId1 == MemberId ->
+                          Acc;
+                        (#{member_id := MemberId1,
+                           member_assignment := MemberAssignment}, Acc) ->
+                          [#{member_id => MemberId1,
+                             member_assignment => MemberAssignment}|Acc]
+                      end, [], Members),
+  [#{member_id => MemberId,
+     member_assignment => #{
+       version => ?DEFAULT_GROUP_PROTOCOL_VERSION,
+       user_data => ?DEFAULT_GROUP_USER_DATA,
+       partition_assignment => lists:map(fun
+                                           ({T, P}) ->
+                                             #{topic => T,
+                                               partitions => P};
+                                           (T) ->
+                                             #{topic => T,
+                                               partitions => maps:keys(maps:get(T, kafe:topics(), #{}))}
+                                         end, Topics)
+      }}|GroupAssignment].
 

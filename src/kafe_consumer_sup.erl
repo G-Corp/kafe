@@ -7,6 +7,7 @@
          start_link/0
          , start_child/2
          , stop_child/1
+         , sync_call/2
         ]).
 -export([init/1]).
 
@@ -26,6 +27,14 @@ stop_child(GroupId) when is_atom(GroupId) ->
   end;
 stop_child(GroupId) when is_pid(GroupId) ->
   supervisor:terminate_child(?MODULE, GroupId).
+
+sync_call(GroupId, Data) when is_atom(GroupId) ->
+  case global:whereis_name(GroupId) of
+    undefined -> undefined;
+    Pid -> sync_call(Pid, Data)
+  end;
+sync_call(GroupId, Data) when is_pid(GroupId) ->
+  gen_fsm:sync_send_all_state_event(GroupId, Data).
 
 init([]) ->
   SupFlags = #{strategy => simple_one_for_one,
