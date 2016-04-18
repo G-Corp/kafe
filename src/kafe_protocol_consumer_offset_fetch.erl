@@ -6,7 +6,7 @@
 -export([
          run/2,
          request/3,
-         response/1
+         response/2
         ]).
 
 run(ConsumerGroup, Options) ->
@@ -19,21 +19,25 @@ run(ConsumerGroup, Options) ->
       gen_server:call(kafe:broker_by_name(BrokerName),
                       {call,
                        fun ?MODULE:request/3, [ConsumerGroup, Options1],
-                       fun ?MODULE:response/1},
+                       fun ?MODULE:response/2},
                       infinity);
     E -> E
   end.
 
-request(ConsumerGroup, Options, State) ->
+request(ConsumerGroup, Options, #{api_version := ApiVersion} = State) ->
   kafe_protocol:request(
     ?OFFSET_FETCH_REQUEST,
     <<(kafe_protocol:encode_string(ConsumerGroup))/binary, (topics(Options))/binary>>,
-    State).
+    State,
+    api_version(ApiVersion)).
 
-response(<<NumberOfTopics:32/signed, Remainder/binary>>) ->
-  {ok, response(NumberOfTopics, Remainder)}.
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, _ApiVersion) ->
+  {ok, response2(NumberOfTopics, Remainder)}.
 
 % Private
+
+api_version(?V0) -> ?V0;
+api_version(_) -> ?V1.
 
 topics(Options) ->
   topics(Options, <<(length(Options)):32/signed>>).
@@ -51,9 +55,9 @@ topics([{TopicName, Partitions}|Rest], Result) ->
 topics([TopicName|Rest], Result) ->
   topics([{TopicName, maps:keys(maps:get(TopicName, kafe:topics(), #{}))}|Rest], Result).
 
-response(0, <<>>) ->
+response2(0, <<>>) ->
   [];
-response(N,
+response2(N,
          <<
            TopicNameLength:16/signed,
            TopicName:TopicNameLength/bytes,
@@ -61,7 +65,7 @@ response(N,
            PartitionsRemainder/binary
          >>) ->
   {PartitionsOffset, Remainder} = partitions_offset(NumberOfPartitions, PartitionsRemainder, []),
-  [#{name => TopicName, partitions_offset => PartitionsOffset} | response(N - 1, Remainder)].
+  [#{name => TopicName, partitions_offset => PartitionsOffset} | response2(N - 1, Remainder)].
 
 partitions_offset(0, Remainder, Acc) ->
   {Acc, Remainder};

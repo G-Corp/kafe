@@ -10,7 +10,7 @@
          request_v0/3,
          request_v1/5,
          request_v2/6,
-         response/1
+         response/2
         ]).
 
 run_v0(ConsumerGroup, Topics) ->
@@ -19,7 +19,7 @@ run_v0(ConsumerGroup, Topics) ->
       gen_server:call(kafe:broker_by_name(BrokerName),
                       {call,
                        fun ?MODULE:request_v0/3, [ConsumerGroup, Topics],
-                       fun ?MODULE:response/1},
+                       fun ?MODULE:response/2},
                       infinity);
     E -> E
   end.
@@ -33,7 +33,7 @@ run_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
                                                   ConsumerGroupGenerationId,
                                                   ConsumerId,
                                                   Topics],
-                       fun ?MODULE:response/1},
+                       fun ?MODULE:response/2},
                       infinity);
     E -> E
   end.
@@ -48,7 +48,7 @@ run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topi
                                                   ConsumerId,
                                                   RetentionTime,
                                                   Topics],
-                       fun ?MODULE:response/1},
+                       fun ?MODULE:response/2},
                       infinity);
     E -> E
   end.
@@ -60,7 +60,8 @@ request_v0(ConsumerGroup, Topics, State) ->
       (kafe_protocol:encode_string(ConsumerGroup))/binary,
       (topics_v0_v2(Topics))/binary
     >>,
-    State).
+    State,
+    ?V0).
 
 request_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics, State) ->
   kafe_protocol:request(
@@ -71,7 +72,8 @@ request_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics, State) 
       (kafe_protocol:encode_string(ConsumerId))/binary,
       (topics_v1(Topics))/binary
     >>,
-    State).
+    State,
+    ?V1).
 
 request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics, State) ->
   kafe_protocol:request(
@@ -83,10 +85,11 @@ request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, 
       RetentionTime:64/signed,
       (topics_v0_v2(Topics))/binary
     >>,
-    State).
+    State,
+    ?V2).
 
-response(<<NumberOfTopics:32/signed, Remainder/binary>>) ->
-  {ok, response(NumberOfTopics, Remainder)}.
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, _ApiVersion) ->
+  {ok, response2(NumberOfTopics, Remainder)}.
 
 % Private
 
@@ -123,9 +126,9 @@ topics_v1([{TopicName, Partitions}|Rest], Acc) ->
                    ))/binary
                >>).
 
-response(0, <<>>) ->
+response2(0, <<>>) ->
   [];
-response(N,
+response2(N,
          <<
            TopicNameLength:16/signed,
            TopicName:TopicNameLength/bytes,
@@ -133,7 +136,7 @@ response(N,
            PartitionsRemainder/binary
          >>) ->
   {Partitions, Remainder} = partitions(NumberOfPartitions, PartitionsRemainder, []),
-  [#{name => TopicName, partitions => Partitions} | response(N - 1, Remainder)].
+  [#{name => TopicName, partitions => Partitions} | response2(N - 1, Remainder)].
 
 partitions(0, Remainder, Acc) ->
   {Acc, Remainder};
