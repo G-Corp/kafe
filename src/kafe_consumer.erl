@@ -46,12 +46,25 @@
                   Key :: binary(),
                   Value :: binary()) -> ok.
 
+-export([
+         describe/1
+        ]).
+
 -export([start_link/2]).
 -export([init/1]).
 
+% @doc
+% Return consumer group descrition
+% @end
+-spec describe(atom()) -> {ok, kafe:describe_group()} | {error, term()}.
+describe(GroupId) ->
+  kafe_consumer_sup:call_srv(GroupId, describe).
+
+% @hidden
 start_link(GroupId, Options) ->
   supervisor:start_link({global, GroupId}, ?MODULE, [GroupId, Options]).
 
+% @hidden
 init([GroupId, Options]) ->
   {ok, {
      #{strategy => one_for_one,

@@ -61,22 +61,22 @@ When you are done with your consumer, stop it :
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr><tr><td valign="top"><a href="#start_link-2">start_link/2</a></td><td></td></tr></table>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
+Return consumer group descrition.</td></tr></table>
 
 
 <a name="functions"></a>
 
 ## Function Details ##
 
-<a name="init-1"></a>
+<a name="describe-1"></a>
 
-### init/1 ###
+### describe/1 ###
 
-`init(X1) -> any()`
+<pre><code>
+describe(GroupId::atom()) -&gt; {ok, <a href="kafe.md#type-describe_group">kafe:describe_group()</a>} | {error, term()}
+</code></pre>
+<br />
 
-<a name="start_link-2"></a>
-
-### start_link/2 ###
-
-`start_link(GroupId, Options) -> any()`
+Return consumer group descrition
 

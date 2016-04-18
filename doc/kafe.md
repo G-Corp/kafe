@@ -374,7 +374,7 @@ Create a default protocol as defined in the [Kafka Protocol Guide](https://cwiki
 ### describe_group/1 ###
 
 <pre><code>
-describe_group(GroupId::binary()) -&gt; {error, <a href="#type-describe_group">describe_group()</a>} | {ok, any()}
+describe_group(GroupId::binary()) -&gt; {error, term()} | {ok, <a href="#type-describe_group">describe_group()</a>}
 </code></pre>
 <br />
 

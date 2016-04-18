@@ -74,7 +74,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--export_type([group_member_ex/0]).
+-export_type([describe_group/0]).
 
 -type error_code() :: no_error
 | unknown
@@ -508,7 +508,7 @@ leave_group(GroupId, MemberId) ->
 % @doc
 % TODO : SPEC
 % @end
--spec describe_group(binary()) -> {error, describe_group()} | {ok, any()}.
+-spec describe_group(binary()) -> {error, term()} | {ok, describe_group()}.
 describe_group(GroupId) when is_binary(GroupId) ->
   kafe_protocol_describe_group:run(GroupId).
 
