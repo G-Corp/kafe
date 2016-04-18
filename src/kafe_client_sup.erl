@@ -9,18 +9,18 @@
 -define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
 
 start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+  supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 start_child(Addr, Port) ->
   IP = bucinet:ip_to_string(Addr),
   ClientID = kafe_utils:broker_id(IP, Port),
   case supervisor:start_child(?MODULE,
-                         {ClientID,
-                          {kafe_client, start_link, [ClientID, Addr, Port]},
-                          permanent,
-                          infinity,
-                          worker,
-                          [kafe_client]}) of
+                              {ClientID,
+                               {kafe_client, start_link, [ClientID, Addr, Port]},
+                               permanent,
+                               infinity,
+                               worker,
+                               [kafe_client]}) of
     {ok, _ChildPID} ->
       {ok, ClientID};
     {ok, _ChildPID, _Info} ->
@@ -39,5 +39,5 @@ stop_child(ID) ->
   end.
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} }.
+  {ok, { {one_for_one, 5, 10}, []} }.
 
