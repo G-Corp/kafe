@@ -2,7 +2,7 @@
 
 # A Kafka client for Erlang #
 
-Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 Bots Unit
+Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 BotsUnit
 
 __Version:__ 1.2.0
 
@@ -35,7 +35,7 @@ kafe is available for use under the following license, commonly known as the 3-c
 
 Copyright (c) 2014, 2015 Finexkap<br />
 Copyright (c) 2015, G-Corp<br />
-Copyright (c) 2015, 2016, 2016 Bots Unit<br />
+Copyright (c) 2015, 2016 BotsUnit<br />
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:* Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.

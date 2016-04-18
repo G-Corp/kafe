@@ -12,7 +12,7 @@ Copyright (c) 2014-2015 Finexkap, 2015 G-Corp, 2015-2016 BotsUnit
 
 __Introduced in:__ 2014
 
-__Behaviours:__ [`gen_fsm`](gen_fsm.md).
+__Behaviours:__ [`supervisor`](supervisor.md).
 
 __Authors:__ Grégoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire.lejeune@botsunit.com)).
 
@@ -61,22 +61,22 @@ When you are done with your consumer, stop it :
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#members-1">members/1</a></td><td>
-Return the list of members for a consumer.</td></tr></table>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr><tr><td valign="top"><a href="#start_link-2">start_link/2</a></td><td></td></tr></table>
 
 
 <a name="functions"></a>
 
 ## Function Details ##
 
-<a name="members-1"></a>
+<a name="init-1"></a>
 
-### members/1 ###
+### init/1 ###
 
-<pre><code>
-members(Consumer::atom() | pid()) -&gt; [<a href="kafe.md#type-group_member_ex">kafe:group_member_ex()</a>]
-</code></pre>
-<br />
+`init(X1) -> any()`
 
-Return the list of members for a consumer
+<a name="start_link-2"></a>
+
+### start_link/2 ###
+
+`start_link(GroupId, Options) -> any()`
 

@@ -7,12 +7,12 @@
          start_link/0
          , start_child/2
          , stop_child/1
-         , sync_call/2
+         , call_srv/2
         ]).
 -export([init/1]).
 
 start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+  supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 start_child(GroupId, Options) ->
   case supervisor:start_child(?MODULE, [GroupId, Options]) of
@@ -28,20 +28,28 @@ stop_child(GroupId) when is_atom(GroupId) ->
 stop_child(GroupId) when is_pid(GroupId) ->
   supervisor:terminate_child(?MODULE, GroupId).
 
-sync_call(GroupId, Data) when is_atom(GroupId) ->
+call_srv(GroupId, Data) when is_atom(GroupId) ->
   case global:whereis_name(GroupId) of
     undefined -> undefined;
-    Pid -> sync_call(Pid, Data)
+    Pid -> call_srv(Pid, Data)
   end;
-sync_call(GroupId, Data) when is_pid(GroupId) ->
-  gen_fsm:sync_send_all_state_event(GroupId, Data).
+call_srv(GroupId, Data) when is_pid(GroupId) ->
+  case lists:keyfind(kafe_consumer_srv, 1, supervisor:which_children(GroupId)) of
+    {kafe_consumer_srv, SrvPid, worker, [kafe_consumer_srv]} ->
+      gen_server:call(SrvPid, Data);
+    false ->
+      undefined
+  end.
+
 
 init([]) ->
-  SupFlags = #{strategy => simple_one_for_one,
-               intensity => 0,
-               period => 1},
-  ChildSpecs = [#{id => kafe_consumer,
-                  start => {kafe_consumer, start_link, []},
-                  shutdown => 2000}],
-  {ok, {SupFlags, ChildSpecs}}.
+  {ok, {
+     #{strategy => simple_one_for_one,
+       intensity => 0,
+       period => 1},
+     [#{id => kafe_consumer,
+        start => {kafe_consumer, start_link, []},
+        type => supervisor,
+        shutdown => 5000}]
+    }}.
 
