@@ -9,6 +9,7 @@
                   stdlib,
                   syntax_tools,
                   compiler,
+                  poolgirl,
                   goldrush,
                   lager
                  ]},
