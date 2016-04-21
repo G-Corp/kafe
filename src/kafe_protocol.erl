@@ -1,5 +1,6 @@
 % @hidden
 -module(kafe_protocol).
+-compile([{parse_transform, lager_transform}]).
 -export([
          run/1,
          run/2,
@@ -20,10 +21,12 @@ run(Request) ->
   end.
 
 run(BrokerPID, Request) when is_pid(BrokerPID) ->
+  lager:debug("Request with broker ~p", [BrokerPID]),
   Response = gen_server:call(BrokerPID, Request, infinity),
   _ = kafe:release_broker(BrokerPID),
   Response;
 run(BrokerName, Request) when is_list(BrokerName) ->
+  lager:debug("Request with broker ~p", [BrokerName]),
   case kafe:broker_by_name(BrokerName) of
     undefined ->
       {error, no_broker_found};
@@ -31,6 +34,7 @@ run(BrokerName, Request) when is_list(BrokerName) ->
       run(BrokerPID, Request)
   end;
 run(BrokerID, Request) when is_atom(BrokerID) ->
+  lager:debug("Request with broker ~p", [BrokerID]),
   case kafe:broker_by_id(BrokerID) of
     undefined ->
       {error, no_broker_found};
