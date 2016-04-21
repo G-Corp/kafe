@@ -28,15 +28,15 @@ stop_child(GroupId) when is_atom(GroupId) ->
 stop_child(GroupId) when is_pid(GroupId) ->
   supervisor:terminate_child(?MODULE, GroupId).
 
-call_srv(GroupId, Data) when is_atom(GroupId) ->
+call_srv(GroupId, Request) when is_atom(GroupId) ->
   case global:whereis_name(GroupId) of
     undefined -> undefined;
-    Pid -> call_srv(Pid, Data)
+    Pid -> call_srv(Pid, Request)
   end;
-call_srv(GroupId, Data) when is_pid(GroupId) ->
+call_srv(GroupId, Request) when is_pid(GroupId) ->
   case lists:keyfind(kafe_consumer_srv, 1, supervisor:which_children(GroupId)) of
     {kafe_consumer_srv, SrvPid, worker, [kafe_consumer_srv]} ->
-      gen_server:call(SrvPid, Data);
+      gen_server:call(SrvPid, Request);
     false ->
       undefined
   end.

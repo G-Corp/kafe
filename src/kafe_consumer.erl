@@ -10,10 +10,7 @@
 % -module(my_consumer).
 % -behaviour(kafe_consumer).
 %
-% -export([init/1, consume/3]).
-%
-% init(Args) ->
-%   {ok, Args}.
+% -export([consume/3]).
 %
 % consume(Offset, Key, Value) ->
 %   % Do something with Offset/Key/Value
@@ -26,7 +23,7 @@
 % ...
 % kafe:start(),
 % ...
-% kafe:start_consumer(my_group, my_consumer, Options),
+% kafe:start_consumer(my_group, fun my_consumer:consume/3, Options),
 % ...
 % </pre>
 %
@@ -41,17 +38,22 @@
 -module(kafe_consumer).
 -behaviour(supervisor).
 
--callback init(Args :: list()) -> {ok, any()} | ignore.
--callback consume(Offset :: integer(),
-                  Key :: binary(),
-                  Value :: binary()) -> ok.
-
 -export([
+         start/3,
+         stop/1,
          describe/1
         ]).
 
 -export([start_link/2]).
 -export([init/1]).
+
+% @equiv kafe:start_consumer(GroupId, Callback, Options)
+start(GroupId, Callback, Options) ->
+  kafe:start_consumer(GroupId, Callback, Options).
+
+% @equiv kafe:stop_consumer(GroupId)
+stop(GroupId) ->
+  kafe:stop_consumer(GroupId).
 
 % @doc
 % Return consumer group descrition

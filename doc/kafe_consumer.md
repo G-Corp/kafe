@@ -27,10 +27,7 @@ To create a consumer, use this behaviour :
  -module(my_consumer).
  -behaviour(kafe_consumer).
 
- -export([init/1, consume/3]).
-
- init(Args) ->
-   {ok, Args}.
+ -export([consume/3]).
 
  consume(Offset, Key, Value) ->
    % Do something with Offset/Key/Value
@@ -44,7 +41,7 @@ Then start a new consumer :
  ...
  kafe:start(),
  ...
- kafe:start_consumer(my_group, my_consumer, Options),
+ kafe:start_consumer(my_group, fun my_consumer:consume/3, Options),
  ...
 ```
 
@@ -62,7 +59,7 @@ When you are done with your consumer, stop it :
 
 
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
-Return consumer group descrition.</td></tr></table>
+Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupId, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupId)</tt></a>.</td></tr></table>
 
 
 <a name="functions"></a>
@@ -79,4 +76,20 @@ describe(GroupId::atom()) -&gt; {ok, <a href="kafe.md#type-describe_group">kafe:
 <br />
 
 Return consumer group descrition
+
+<a name="start-3"></a>
+
+### start/3 ###
+
+`start(GroupId, Callback, Options) -> any()`
+
+Equivalent to [`kafe:start_consumer(GroupId, Callback, Options)`](kafe.md#start_consumer-3).
+
+<a name="stop-1"></a>
+
+### stop/1 ###
+
+`stop(GroupId) -> any()`
+
+Equivalent to [`kafe:stop_consumer(GroupId)`](kafe.md#stop_consumer-1).
 
