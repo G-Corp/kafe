@@ -10,13 +10,14 @@
         ]).
 
 run(ConsumerGroup, Options) ->
-  case kafe:consumer_metadata(ConsumerGroup) of
-    {ok, #{coordinator_host := BrokerName}} ->
+  case kafe:group_coordinator(ConsumerGroup) of
+    {ok, #{coordinator_host := Host,
+           coordinator_port := Port}} ->
       Options1 = if
                    Options =:= [] -> maps:keys(kafe:topics());
                    true -> Options
                  end,
-      kafe_protocol:run(BrokerName,
+      kafe_protocol:run({host_and_port, Host, Port},
                         {call,
                          fun ?MODULE:request/3, [ConsumerGroup, Options1],
                          fun ?MODULE:response/2});

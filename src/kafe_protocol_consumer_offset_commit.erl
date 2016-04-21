@@ -15,8 +15,9 @@
 
 run_v0(ConsumerGroup, Topics) ->
   case kafe:consumer_metadata(ConsumerGroup) of
-    {ok, #{coordinator_host := BrokerName}} ->
-      kafe_protocol:run(BrokerName,
+    {ok, #{coordinator_host := Host,
+           coordinator_port := Port}} ->
+      kafe_protocol:run({host_and_port, Host, Port},
                         {call,
                          fun ?MODULE:request_v0/3, [ConsumerGroup, Topics],
                          fun ?MODULE:response/2});
