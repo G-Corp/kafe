@@ -40,7 +40,7 @@ init({Addr, Port}) ->
                                     {recbuf, RecBuf},
                                     {buffer, Buffer}]) of
     {ok, Socket} ->
-      lager:info("Connect to broker @ ~s:~p", [bucinet:ip_to_string(Addr), Port]),
+      lager:debug("Connect to broker @ ~s:~p", [bucinet:ip_to_string(Addr), Port]),
       ApiVersion = doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION),
       CorrelationID = doteki:get_env([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
       ClientID = doteki:get_env([kafe, client_id], ?DEFAULT_CLIENT_ID),
@@ -58,7 +58,7 @@ init({Addr, Port}) ->
          buffer => Buffer
         }};
     {error, Reason} ->
-      lager:info("Connection faild to ~p:~p : ~p", [bucinet:ip_to_string(Addr), Port, Reason]),
+      lager:debug("Connection faild to ~p:~p : ~p", [bucinet:ip_to_string(Addr), Port, Reason]),
       {stop, Reason}
   end.
 
@@ -103,11 +103,11 @@ handle_info(
       {stop, Reason, State}
   end;
 handle_info({tcp_closed, Socket}, State) ->
-  lager:info("Connections close ~p ...", [Socket]),
-  {noreply, State};
+  lager:debug("Connections close ~p ...", [Socket]),
+  {stop, connection_close, State};
 handle_info(Info, State) ->
-  lager:info("Invalid message : ~p", [Info]),
-  lager:info("--- State ~p", [State]),
+  lager:debug("Invalid message : ~p", [Info]),
+  lager:debug("--- State ~p", [State]),
   {noreply, State}.
 
 terminate(_Reason, #{socket := Socket}) ->

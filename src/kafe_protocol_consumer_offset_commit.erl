@@ -16,40 +16,37 @@
 run_v0(ConsumerGroup, Topics) ->
   case kafe:consumer_metadata(ConsumerGroup) of
     {ok, #{coordinator_host := BrokerName}} ->
-      gen_server:call(kafe:broker_by_name(BrokerName),
-                      {call,
-                       fun ?MODULE:request_v0/3, [ConsumerGroup, Topics],
-                       fun ?MODULE:response/2},
-                      infinity);
+      kafe_protocol:run(BrokerName,
+                        {call,
+                         fun ?MODULE:request_v0/3, [ConsumerGroup, Topics],
+                         fun ?MODULE:response/2});
     E -> E
   end.
 
 run_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
   case kafe:consumer_metadata(ConsumerGroup) of
     {ok, #{coordinator_host := BrokerName}} ->
-      gen_server:call(kafe:broker_by_name(BrokerName),
-                      {call,
-                       fun ?MODULE:request_v1/5, [ConsumerGroup,
-                                                  ConsumerGroupGenerationId,
-                                                  ConsumerId,
-                                                  Topics],
-                       fun ?MODULE:response/2},
-                      infinity);
+      kafe_protocol:run(BrokerName,
+                        {call,
+                         fun ?MODULE:request_v1/5, [ConsumerGroup,
+                                                    ConsumerGroupGenerationId,
+                                                    ConsumerId,
+                                                    Topics],
+                         fun ?MODULE:response/2});
     E -> E
   end.
 
 run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics) ->
   case kafe:consumer_metadata(ConsumerGroup) of
     {ok, #{coordinator_host := BrokerName}} ->
-      gen_server:call(kafe:broker_by_name(BrokerName),
-                      {call,
-                       fun ?MODULE:request_v2/6, [ConsumerGroup,
-                                                  ConsumerGroupGenerationId,
-                                                  ConsumerId,
-                                                  RetentionTime,
-                                                  Topics],
-                       fun ?MODULE:response/2},
-                      infinity);
+      kafe_protocol:run(BrokerName,
+                        {call,
+                         fun ?MODULE:request_v2/6, [ConsumerGroup,
+                                                    ConsumerGroupGenerationId,
+                                                    ConsumerId,
+                                                    RetentionTime,
+                                                    Topics],
+                         fun ?MODULE:response/2});
     E -> E
   end.
 

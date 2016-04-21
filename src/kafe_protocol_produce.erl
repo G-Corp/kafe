@@ -11,15 +11,10 @@
 
 run(Topic, Message, Options) ->
   Partition = maps:get(partition, Options, ?DEFAULT_PRODUCE_PARTITION),
-  case kafe:broker(Topic, Partition) of
-    undefined -> {error, no_broker_found};
-    Broker ->
-      gen_server:call(Broker,
-                      {call,
-                       fun ?MODULE:request/4, [bucs:to_binary(Topic), Message, Options],
-                       fun ?MODULE:response/2},
-                      infinity)
-  end.
+  kafe_protocol:run({topic_and_partition, Topic, Partition},
+                    {call,
+                     fun ?MODULE:request/4, [bucs:to_binary(Topic), Message, Options],
+                     fun ?MODULE:response/2}).
 
 %% Produce Request (Version: 0) => acks timeout [topic_data]
 %%   acks => INT16

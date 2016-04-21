@@ -17,12 +17,11 @@ run(ReplicaID, Topics) ->
            fun
              (undefined, _, Acc) ->
                Acc;
-             (Broker, TopicsForBroker, Acc) ->
-               {ok, Result} = gen_server:call(Broker,
-                                              {call,
-                                               fun ?MODULE:request/3, [ReplicaID, TopicsForBroker],
-                                               fun ?MODULE:response/2},
-                                              infinity),
+             (BrokerID, TopicsForBroker, Acc) ->
+               {ok, Result} = kafe_protocol:run(BrokerID,
+                                                {call,
+                                                 fun ?MODULE:request/3, [ReplicaID, TopicsForBroker],
+                                                 fun ?MODULE:response/2}),
                [Result|Acc]
            end, [], dispatch(Topics, kafe:topics()))) of
     [] ->

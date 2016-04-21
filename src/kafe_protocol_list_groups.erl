@@ -9,12 +9,11 @@
          response/2
         ]).
 
-run(Broker) ->
-  gen_server:call(Broker,
-                  {call,
-                   fun ?MODULE:request/1, [],
-                   fun ?MODULE:response/2},
-                  infinity).
+run(BrokerID) ->
+  kafe_protocol:run(BrokerID,
+                    {call,
+                     fun ?MODULE:request/1, [],
+                     fun ?MODULE:response/2}).
 
 request(State) ->
   kafe_protocol:request(?LIST_GROUPS_REQUEST, <<>>, State, ?V0).

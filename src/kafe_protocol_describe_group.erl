@@ -10,22 +10,16 @@
         ]).
 
 run(GroupId) ->
-  CoordinatorBrocker = case kafe:group_coordinator(bucs:to_binary(GroupId)) of
-                         {ok, #{coordinator_host := CoordinatorHost,
-                                coordinator_port := CoordinatorPort,
-                                error_code := none}} ->
-                           kafe:broker_by_host_and_port(CoordinatorHost, CoordinatorPort);
-                         _ ->
-                           undefined
-                       end,
-  case CoordinatorBrocker of
-    undefined -> {error, no_broker_found};
-    Broker ->
-      gen_server:call(Broker,
-                      {call,
-                       fun ?MODULE:request/2, [GroupId],
-                       fun ?MODULE:response/2},
-                       infinity)
+  case kafe:group_coordinator(bucs:to_binary(GroupId)) of
+    {ok, #{coordinator_host := Host,
+           coordinator_port := Port,
+           error_code := none}} ->
+      kafe_protocol:run({host_and_port, Host, Port},
+                        {call,
+                         fun ?MODULE:request/2, [GroupId],
+                         fun ?MODULE:response/2});
+    _ ->
+      {error, no_broker_found}
   end.
 
 % DescribeGroups Request (Version: 0) => [group_ids]

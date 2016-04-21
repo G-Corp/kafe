@@ -59,9 +59,11 @@
 -export([
          start_link/0,
          first_broker/0,
+         release_broker/1,
          broker/2,
          broker_by_name/1,
          broker_by_host_and_port/2,
+         broker_by_id/1,
          topics/0,
          partitions/1,
          max_offset/1,
@@ -181,6 +183,15 @@ first_broker() ->
   gen_server:call(?SERVER, first_broker, infinity).
 
 % @hidden
+release_broker(Broker) ->
+  case poolgirl:checkin(Broker) of
+    ok -> ok;
+    {error, Error} ->
+      lager:debug("Checkin broker ~p faild: ~p", [Broker, Error]),
+      ok
+  end.
+
+% @hidden
 broker(Topic, Partition) ->
   case gen_server:call(?SERVER, {broker, bucs:to_binary(Topic), Partition}, infinity) of
     undefined -> first_broker();
@@ -189,14 +200,18 @@ broker(Topic, Partition) ->
 
 % @hidden
 broker_by_name(BrokerName) ->
-  case gen_server:call(?SERVER, {broker_by_name, BrokerName}, infinity) of
-    undefined -> first_broker();
-    Broker -> Broker
-  end.
+  gen_server:call(?SERVER, {broker_by_name, BrokerName}, infinity).
 
 % @hidden
 broker_by_host_and_port(Host, Port) ->
-  gen_server:call(?SERVER, {broker_by_host_and_port, Host, Port}, infinity).
+  broker_by_name(kafe_utils:broker_name(Host, Port)).
+
+% @hidden
+broker_by_id(BrokerID) ->
+  case poolgirl:checkout(BrokerID) of
+    {ok, BrokerPID} -> BrokerPID;
+    _ -> undefined
+  end.
 
 % @hidden
 topics() ->
@@ -602,9 +617,15 @@ handle_call({broker, Topic, Partition}, _From, #{topics := Topics, brokers := Br
       end
   end;
 handle_call({broker_by_name, BrokerName}, _From, #{brokers := BrokersAddr} = State) ->
-  {reply, maps:get(bucs:to_string(BrokerName), BrokersAddr, undefined), State};
-handle_call({broker_by_host_and_port, Host, Port}, _From, #{brokers := BrokersAddr} = State) ->
-  {reply, maps:get(kafe_utils:broker_name(Host, Port), BrokersAddr, undefined), State};
+  case maps:get(bucs:to_string(BrokerName), BrokersAddr, undefined) of
+    undefined ->
+      {reply, undefined, State};
+    BrokerID ->
+      case poolgirl:checkout(BrokerID) of
+        {ok, BrokerPID} -> {reply, BrokerPID, State};
+        _ -> {reply, undefined, State}
+      end
+  end;
 handle_call(topics, _From, #{topics := Topics} = State) ->
   {reply, Topics, State};
 handle_call({partitions, Topic}, _From, #{topics := Topics} = State) ->
@@ -673,17 +694,25 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                 lager:debug("All host already registered for ~p:~p", [bucinet:ip_to_string(BrokerAddr), Port]),
                 get_connection(Rest, State);
               BrokerHostList1 ->
-                case kafe_client_sup:start_child(BrokerAddr, Port) of
-                  {ok, BrokerID} ->
-                    lager:debug("Reference ~p to ~p", [BrokerID, BrokerHostList1]),
-                    Brokers1 = lists:foldl(fun(BrokerHost, Acc) ->
-                                               maps:put(BrokerHost, BrokerID, Acc)
-                                           end, Brokers, BrokerHostList1),
-                    get_connection(Rest, State#{brokers => Brokers1,
-                                                brokers_list => BrokerHostList1 ++ BrokersList});
-                  {error, Reason} ->
-                    lager:debug("Connection faild to ~p:~p : ~p", [bucinet:ip_to_string(BrokerAddr), Port, Reason]),
-                    get_connection(Rest, State)
+                IP = bucinet:ip_to_string(BrokerAddr),
+                BrokerID = kafe_utils:broker_id(IP, Port),
+                case poolgirl:size(BrokerID) of
+                  {ok, N, A} when N > 0 ->
+                    lager:debug("Pool ~p size ~p/~p", [BrokerID, N, A]),
+                    get_connection(Rest, State);
+                  _ ->
+                    case poolgirl:add_pool(BrokerID, {kafe_conn, start_link, [BrokerAddr, Port]}) of
+                      {ok, PoolSize} ->
+                        lager:info("Broker pool ~p (size ~p) reference ~p", [BrokerID, PoolSize, BrokerHostList1]),
+                        Brokers1 = lists:foldl(fun(BrokerHost, Acc) ->
+                                                   maps:put(BrokerHost, BrokerID, Acc)
+                                               end, Brokers, BrokerHostList1),
+                        get_connection(Rest, State#{brokers => Brokers1,
+                                                    brokers_list => BrokerHostList1 ++ BrokersList});
+                      {error, Reason} ->
+                        lager:debug("Connection faild to ~p:~p : ~p", [bucinet:ip_to_string(BrokerAddr), Port, Reason]),
+                        get_connection(Rest, State)
+                    end
                 end
             end
         end;
@@ -715,6 +744,7 @@ update_state_with_metadata(State) ->
                                                    fun kafe_protocol_metadata:request/2, [[]],
                                                    fun kafe_protocol_metadata:response/2},
                                                   infinity),
+      ok = release_broker(FirstBroker),
       {Brokers1, State3} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, StateAcc}) ->
                                            {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
                                             get_connection([{bucs:to_string(Host), Port}], StateAcc)}
@@ -747,7 +777,7 @@ remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->
                                  true ->
                                    ok;
                                  false ->
-                                   _ = kafe_client_sup:stop_child(BrokerID)
+                                   _ = poolgirl:remove_pool(BrokerID)
                                end,
                                Acc
                            end
@@ -764,15 +794,24 @@ remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
                                lists:delete(Broker, BrokersList1),
                                State1);
                     BrokerID ->
-                      case gen_server:call(BrokerID, alive, infinity) of
-                        ok ->
-                          State1;
-                        {error, Reason} ->
-                          _ = kafe_client_sup:stop_child(BrokerID),
-                          lager:debug("Broker ~p not alive : ~p", [Broker, Reason]),
+                      case poolgirl:checkout(BrokerID) of
+                        {ok, BrokerPID} ->
+                          case gen_server:call(BrokerPID, alive, infinity) of
+                            ok ->
+                              _ = poolgirl:checkin(BrokerPID),
+                              State1;
+                            {error, Reason} ->
+                              _ = poolgirl:checkin(BrokerPID),
+                              _ = poolgirl:remove_pool(BrokerID),
+                              lager:debug("Broker ~p (from ~p) not alive : ~p", [Broker, BrokerID, Reason]),
+                              maps:put(brokers_list,
+                                       lists:delete(Broker, BrokersList1),
+                                       maps:put(brokers, maps:remove(Broker, Brokers1), State1))
+                          end;
+                        _ ->
                           maps:put(brokers_list,
                                    lists:delete(Broker, BrokersList1),
-                                   maps:put(brokers, maps:remove(Broker, Brokers1), State1))
+                                   State1)
                       end
                   end
               end, State, BrokersList).
@@ -795,11 +834,19 @@ get_host([Addr|Rest], Hostname, AddrType) ->
 get_first_broker(#{brokers := Brokers}) ->
   get_first_broker(maps:values(Brokers));
 get_first_broker([]) -> undefined;
-get_first_broker([Broker|Rest]) ->
-  case gen_server:call(Broker, alive, infinity) of
-    ok -> Broker;
+get_first_broker([BrokerID|Rest]) ->
+  case poolgirl:checkout(BrokerID) of
+    {ok, Broker} ->
+      case gen_server:call(Broker, alive, infinity) of
+        ok ->
+          Broker;
+        {error, Reason} ->
+          _ = poolgirl:checkin(Broker),
+          lager:debug("Broker ~p is not alive : ~p", [Broker, Reason]),
+          get_first_broker(Rest)
+      end;
     {error, Reason} ->
-      lager:debug("Broker ~p is not alive : ~p", [Broker, Reason]),
+      lager:debug("Can't checkout broker from pool ~p: ~p", [BrokerID, Reason]),
       get_first_broker(Rest)
   end.
 

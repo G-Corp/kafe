@@ -23,16 +23,11 @@ run(ReplicaID, TopicName, Options) ->
                         end,
   Options1 = Options#{partition => Partition,
                       offset => Offset},
-  case kafe:broker(TopicName, Partition) of
-    undefined -> {error, no_broker_found};
-    Broker ->
-      lager:debug("Fetch ~p (partition #~p, offset ~p) on ~p", [TopicName, Partition, Offset, Broker]),
-      gen_server:call(Broker,
-                      {call,
-                       fun ?MODULE:request/4, [ReplicaID, bucs:to_binary(TopicName), Options1],
-                       fun ?MODULE:response/2},
-                      infinity)
-  end.
+  lager:debug("Fetch ~p (partition #~p, offset ~p)", [TopicName, Partition, Offset]),
+  kafe_protocol:run({topic_and_partition, TopicName, Partition},
+                    {call,
+                     fun ?MODULE:request/4, [ReplicaID, bucs:to_binary(TopicName), Options1],
+                     fun ?MODULE:response/2}).
 
 % FetchRequest => ReplicaId MaxWaitTime MinBytes [TopicName [Partition FetchOffset MaxBytes]]
 %   ReplicaId => int32

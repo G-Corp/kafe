@@ -1,6 +1,8 @@
 % @hidden
 -module(kafe_protocol).
 -export([
+         run/1,
+         run/2,
          request/3,
          request/4,
          response/2,
@@ -8,6 +10,47 @@
          encode_bytes/1,
          encode_array/1
         ]).
+
+run(Request) ->
+  case kafe:first_broker() of
+    undefined ->
+      {error, no_broker_found};
+    BrokerPID ->
+      run(BrokerPID, Request)
+  end.
+
+run(BrokerPID, Request) when is_pid(BrokerPID) ->
+  Response = gen_server:call(BrokerPID, Request, infinity),
+  _ = kafe:release_broker(BrokerPID),
+  Response;
+run(BrokerName, Request) when is_list(BrokerName) ->
+  case kafe:broker_by_name(BrokerName) of
+    undefined ->
+      {error, no_broker_found};
+    BrokerPID ->
+      run(BrokerPID, Request)
+  end;
+run(BrokerID, Request) when is_atom(BrokerID) ->
+  case kafe:broker_by_id(BrokerID) of
+    undefined ->
+      {error, no_broker_found};
+    BrokerPID ->
+      run(BrokerPID, Request)
+  end;
+run({host_and_port, Host, Port}, Request) ->
+  case kafe:broker_by_host_and_port(Host, Port) of
+    undefined ->
+      {error, no_broker_found};
+    BrokerPID ->
+      run(BrokerPID, Request)
+  end;
+run({topic_and_partition, Topic, Partition}, Request) ->
+  case kafe:broker(Topic, Partition) of
+    undefined ->
+      {error, no_broker_found};
+    BrokerPID ->
+      run(BrokerPID, Request)
+  end.
 
 request(ApiKey, RequestMessage,
         #{api_version := ApiVersion} = State) ->

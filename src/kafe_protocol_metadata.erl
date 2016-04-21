@@ -10,15 +10,9 @@
         ]).
 
 run(Topics) ->
-  case kafe:first_broker() of
-    undefined -> {error, no_broker_found};
-    Broker ->
-      gen_server:call(Broker,
-                      {call,
-                       fun ?MODULE:request/2, [Topics],
-                       fun ?MODULE:response/2},
-                      infinity)
-  end.
+  kafe_protocol:run({call,
+                     fun ?MODULE:request/2, [Topics],
+                     fun ?MODULE:response/2}).
 
 % Metadata Request (Version: 0) => [topics]
 request(TopicNames, State) ->

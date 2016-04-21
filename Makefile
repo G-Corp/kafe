@@ -42,6 +42,7 @@ dev: deps app
 release: app mix.all
 
 distclean::
+	@rm -rf log
 	@rm -rf test/eunit
 	@rm -rf test/ct
 	@rm -f test/*.beam

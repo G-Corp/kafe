@@ -16,11 +16,10 @@ run(ConsumerGroup, Options) ->
                    Options =:= [] -> maps:keys(kafe:topics());
                    true -> Options
                  end,
-      gen_server:call(kafe:broker_by_name(BrokerName),
-                      {call,
-                       fun ?MODULE:request/3, [ConsumerGroup, Options1],
-                       fun ?MODULE:response/2},
-                      infinity);
+      kafe_protocol:run(BrokerName,
+                        {call,
+                         fun ?MODULE:request/3, [ConsumerGroup, Options1],
+                         fun ?MODULE:response/2});
     E -> E
   end.
 
