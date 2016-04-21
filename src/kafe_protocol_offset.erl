@@ -78,7 +78,7 @@ dispatch([{Topic, Partitions}|Rest], TopicsInfos, Result) ->
   dispatch(Rest,
            TopicsInfos,
            lists:foldl(fun({ID, _, _} = Partition, Acc) ->
-                           Broker = kafe:broker(Topic, ID),
+                           Broker = kafe:broker_id_by_topic_and_partition(Topic, ID),
                            Topics = maps:get(Broker, Acc, []),
                            maps:put(Broker, [{Topic, [Partition]}|Topics], Acc)
                        end, Result, Partitions));

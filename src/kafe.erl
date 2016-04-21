@@ -60,7 +60,7 @@
          start_link/0,
          first_broker/0,
          release_broker/1,
-         broker/2,
+         broker_id_by_topic_and_partition/2,
          broker_by_name/1,
          broker_by_host_and_port/2,
          broker_by_id/1,
@@ -192,11 +192,8 @@ release_broker(Broker) ->
   end.
 
 % @hidden
-broker(Topic, Partition) ->
-  case gen_server:call(?SERVER, {broker, bucs:to_binary(Topic), Partition}, infinity) of
-    undefined -> first_broker();
-    Broker -> Broker
-  end.
+broker_id_by_topic_and_partition(Topic, Partition) ->
+  gen_server:call(?SERVER, {broker_id_by_topic_and_partition, bucs:to_binary(Topic), Partition}, infinity).
 
 % @hidden
 broker_by_name(BrokerName) ->
@@ -608,7 +605,7 @@ handle_call(brokers, _From, #{brokers := Brokers} = State) ->
   {reply, maps:values(Brokers), State};
 handle_call(first_broker, _From, State) ->
   {reply, get_first_broker(State), State};
-handle_call({broker, Topic, Partition}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
+handle_call({broker_id_by_topic_and_partition, Topic, Partition}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
   case maps:get(Topic, Topics, undefined) of
     undefined ->
       {reply, undefined, State};

@@ -49,11 +49,11 @@ run({host_and_port, Host, Port}, Request) ->
       run(BrokerPID, Request)
   end;
 run({topic_and_partition, Topic, Partition}, Request) ->
-  case kafe:broker(Topic, Partition) of
+  case kafe:broker_id_by_topic_and_partition(Topic, Partition) of
     undefined ->
       {error, no_broker_found};
-    BrokerPID ->
-      run(BrokerPID, Request)
+    BrokerID ->
+      run(BrokerID, Request)
   end.
 
 request(ApiKey, RequestMessage,
