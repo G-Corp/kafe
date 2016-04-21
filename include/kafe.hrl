@@ -8,6 +8,8 @@
 -define(DEFAULT_SOCKET_SNDBUF, 4194304).
 -define(DEFAULT_SOCKET_RECBUF, 4194304).
 -define(DEFAULT_MAX_RETRY_ON_ERROR, 3).
+-define(DEFAULT_POOL_SIZE, 5).
+-define(DEFAULT_CHUNK_POOL_SIZE, 10).
 
 -define(V0, 0).
 -define(V1, 1).

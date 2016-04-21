@@ -586,6 +586,8 @@ init(_) ->
   Offset = doteki:get_env([kafe, offset], ?DEFAULT_OFFSET),
   BrokersUpdateFreq = doteki:get_env([kafe, brokers_update_frequency], ?DEFAULT_BROKER_UPDATE),
   MaxRetryOnError = doteki:get_env([kafe, max_retry_on_error], ?DEFAULT_MAX_RETRY_ON_ERROR),
+  PoolSize = doteki:get_env([kafe, pool_size], ?DEFAULT_POOL_SIZE),
+  ChunkPoolSize = doteki:get_env([kafe, chunk_pool_size], ?DEFAULT_CHUNK_POOL_SIZE),
   State = #{brokers => #{},
             brokers_list => [],
             topics => #{},
@@ -594,7 +596,9 @@ init(_) ->
             correlation_id => CorrelationID,
             client_id => ClientID,
             offset => Offset,
-            max_retry_on_error => MaxRetryOnError},
+            max_retry_on_error => MaxRetryOnError,
+            pool_size => PoolSize,
+            chunk_pool_size => ChunkPoolSize},
   State1 = update_state_with_metadata(init_connexions(State)),
   erlang:send_after(BrokersUpdateFreq, self(), update_brokers),
   {ok, State1}.
@@ -671,7 +675,9 @@ init_connexions(State) ->
 get_connection([], State) ->
   State;
 get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
-                                      brokers := Brokers} = State) ->
+                                      brokers := Brokers,
+                                      pool_size := PoolSize,
+                                      chunk_pool_size := ChunkPoolSize} = State) ->
   lager:debug("Get connection for ~s:~p", [Host, Port]),
   try
     case inet:gethostbyname(Host) of
@@ -701,9 +707,12 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                     lager:debug("Pool ~p size ~p/~p", [BrokerID, N, A]),
                     get_connection(Rest, State);
                   _ ->
-                    case poolgirl:add_pool(BrokerID, {kafe_conn, start_link, [BrokerAddr, Port]}) of
-                      {ok, PoolSize} ->
-                        lager:info("Broker pool ~p (size ~p) reference ~p", [BrokerID, PoolSize, BrokerHostList1]),
+                    case poolgirl:add_pool(BrokerID,
+                                           {kafe_conn, start_link, [BrokerAddr, Port]},
+                                           #{size => PoolSize,
+                                             chunk_size => ChunkPoolSize}) of
+                      {ok, PoolSize1} ->
+                        lager:info("Broker pool ~p (size ~p) reference ~p", [BrokerID, PoolSize1, BrokerHostList1]),
                         Brokers1 = lists:foldl(fun(BrokerHost, Acc) ->
                                                    maps:put(BrokerHost, BrokerID, Acc)
                                                end, Brokers, BrokerHostList1),
