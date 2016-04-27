@@ -36,7 +36,7 @@ request(Topic, Message, Options, #{api_version := ApiVersion} = State) ->
                           ?DEFAULT_PRODUCE_REQUIRED_ACKS),
   {Key, Value} = if
     is_tuple(Message) -> Message;
-    true -> {undefined, Message}
+    true -> {<<>>, Message}
   end,
   Partition = maps:get(partition, Options, ?DEFAULT_PRODUCE_PARTITION),
   Msg = if
