@@ -8,7 +8,6 @@
 %
 % <pre>
 % -module(my_consumer).
-% -behaviour(kafe_consumer).
 %
 % -export([consume/5]).
 %

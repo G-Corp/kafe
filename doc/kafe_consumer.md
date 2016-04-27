@@ -25,7 +25,6 @@ To create a consumer, create a function with 5 parameters :
 ```
 
  -module(my_consumer).
- -behaviour(kafe_consumer).
 
  -export([consume/5]).
 
