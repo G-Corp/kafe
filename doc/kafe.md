@@ -750,7 +750,7 @@ Start kafe application
 
 ### start_consumer/3 ###
 
-`start_consumer(GroupId, CallbackModule, Options) -> any()`
+`start_consumer(GroupId, Callback, Options) -> any()`
 
 
 Start a new consumer.
@@ -763,6 +763,10 @@ Options:
 empty (i.e. <<>>, default), but a rejoining member should use the same memberId from the previous generation.
 
 * `topics :: [binary() | {binary(), [integer()]}]` : List or topics (and partitions).
+
+* `fetch_interval :: integer()` : Fetch interval in ms (default : 1000)
+
+* `fetch_size :: integer()` : Maximum number of offset to fetch(default : 1)
 
 
 TODO DOC + SPEC

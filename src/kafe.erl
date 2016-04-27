@@ -912,11 +912,11 @@ offsets({TopicName, PartitionsList}, ConsumerGroup, Nth) ->
                           end
                       end, Result, NewOffsets);
         _ ->
-          lager:debug("Can't retriece offsets for consumer group ~p on topic ~p", [ConsumerGroup, TopicName]),
+          lager:debug("Can't retrieve offsets for consumer group ~p on topic ~p", [ConsumerGroup, TopicName]),
           error
       end;
     _ ->
-      lager:debug("Can't retriece offsets for topic ~p", [TopicName]),
+      lager:debug("Can't retrieve offsets for topic ~p", [TopicName]),
       error
   end.
 
@@ -952,12 +952,14 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberId must be
 % empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberId from the previous generation.</li>
 % <li><tt>topics :: [binary() | {binary(), [integer()]}]</tt> : List or topics (and partitions).</li>
+% <li><tt>fetch_interval :: integer()</tt> : Fetch interval in ms (default : 1000)</li>
+% <li><tt>fetch_size :: integer()</tt> : Maximum number of offset to fetch(default : 1)</li>
 % </ul>
 %
 % TODO DOC + SPEC
 % @end
-start_consumer(GroupId, CallbackModule, Options) ->
-  kafe_consumer_sup:start_child(GroupId, Options#{callback_module => CallbackModule}).
+start_consumer(GroupId, Callback, Options) when is_function(Callback, 5) ->
+  kafe_consumer_sup:start_child(GroupId, Options#{callback => Callback}).
 
 % @doc
 % TODO DOC + SPEC

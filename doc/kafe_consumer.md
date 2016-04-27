@@ -20,17 +20,17 @@ __Authors:__ Grégoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoir
 
 ## Description ##
 
-To create a consumer, use this behaviour :
+To create a consumer, create a function with 5 parameters :
 
 ```
 
  -module(my_consumer).
  -behaviour(kafe_consumer).
 
- -export([consume/3]).
+ -export([consume/5]).
 
- consume(Offset, Key, Value) ->
-   % Do something with Offset/Key/Value
+ consume(Topic, Partition, Offset, Key, Value) ->
+   % Do something with Topic/Partition/Offset/Key/Value
    ok.
 ```
 
@@ -41,7 +41,7 @@ Then start a new consumer :
  ...
  kafe:start(),
  ...
- kafe:start_consumer(my_group, fun my_consumer:consume/3, Options),
+ kafe:start_consumer(my_group, fun my_consumer:consume/5, Options),
  ...
 ```
 

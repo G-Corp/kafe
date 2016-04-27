@@ -68,3 +68,6 @@
                                          ?DEFAULT_GROUP_PROTOCOL_TOPICS,
                                          ?DEFAULT_GROUP_USER_DATA)]).
 
+-define(DEFAULT_CONSUMER_FETCH_INTERVAL, 1000).
+-define(DEFAULT_CONSUMER_FETCH_SIZE, 1).
+

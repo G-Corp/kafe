@@ -4,16 +4,16 @@
 % @doc
 % A Kafka client for Erlang
 %
-% To create a consumer, use this behaviour :
+% To create a consumer, create a function with 5 parameters :
 %
 % <pre>
 % -module(my_consumer).
 % -behaviour(kafe_consumer).
 %
-% -export([consume/3]).
+% -export([consume/5]).
 %
-% consume(Offset, Key, Value) ->
-%   % Do something with Offset/Key/Value
+% consume(Topic, Partition, Offset, Key, Value) ->
+%   % Do something with Topic/Partition/Offset/Key/Value
 %   ok.
 % </pre>
 %
@@ -23,7 +23,7 @@
 % ...
 % kafe:start(),
 % ...
-% kafe:start_consumer(my_group, fun my_consumer:consume/3, Options),
+% kafe:start_consumer(my_group, fun my_consumer:consume/5, Options),
 % ...
 % </pre>
 %
@@ -112,7 +112,7 @@ init([GroupId, Options]) ->
        period => 5},
      [
       #{id => kafe_consumer_srv,
-        start => {kafe_consumer_srv, start_link, [GroupId]},
+        start => {kafe_consumer_srv, start_link, [GroupId, Options]},
         restart => permanent,
         shutdown => 5000,
         type => worker,
