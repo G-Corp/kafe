@@ -3,7 +3,7 @@ PROJECT = kafe
 DEP_PLUGINS = mix.mk
 BUILD_DEPS = mix.mk bristow
 ELIXIR_VERSION = ~> 1.2
-ELIXIR_BINDINGS = kafe
+ELIXIR_BINDINGS = kafe kafe_consumer
 
 dep_mix.mk = git https://github.com/botsunit/mix.mk.git master
 dep_bristow = git https://github.com/botsunit/bristow.git master

@@ -39,13 +39,21 @@
 -behaviour(supervisor).
 
 -export([
-         start/3,
-         stop/1,
-         describe/1
+         start/3
+         , stop/1
+         , describe/1
+         , member_id/1
+         , generation_id/1
+         , topics/1
         ]).
 
--export([start_link/2]).
--export([init/1]).
+-export([
+         start_link/2
+         , init/1
+         , member_id/2
+         , generation_id/2
+         , topics/2
+        ]).
 
 % @equiv kafe:start_consumer(GroupId, Callback, Options)
 start(GroupId, Callback, Options) ->
@@ -63,8 +71,38 @@ describe(GroupId) ->
   kafe_consumer_sup:call_srv(GroupId, describe).
 
 % @hidden
+member_id(GroupId, MemberId) ->
+  kafe_consumer_sup:call_srv(GroupId, {member_id, MemberId}).
+
+% @doc
+% Return the <tt>member_id</tt> of the consumer
+% @end
+member_id(GroupId) ->
+  kafe_consumer_sup:call_srv(GroupId, member_id).
+
+% @hidden
+generation_id(GroupId, MemberId) ->
+  kafe_consumer_sup:call_srv(GroupId, {generation_id, MemberId}).
+
+% @doc
+% Return the <tt>generation_id</tt> of the consumer
+% @end
+generation_id(GroupId) ->
+  kafe_consumer_sup:call_srv(GroupId, generation_id).
+
+% @hidden
+topics(GroupId, MemberId) ->
+  kafe_consumer_sup:call_srv(GroupId, {topics, MemberId}).
+
+% @doc
+% Return the topics (and partitions) of the consumer
+% @end
+topics(GroupId) ->
+  kafe_consumer_sup:call_srv(GroupId, topics).
+
+% @hidden
 start_link(GroupId, Options) ->
-  supervisor:start_link({global, GroupId}, ?MODULE, [GroupId, Options]).
+  supervisor:start_link({global, bucs:to_atom(GroupId)}, ?MODULE, [GroupId, Options]).
 
 % @hidden
 init([GroupId, Options]) ->
@@ -72,17 +110,19 @@ init([GroupId, Options]) ->
      #{strategy => one_for_one,
        intensity => 1,
        period => 5},
-     [#{id => kafe_consumer_fsm,
+     [
+      #{id => kafe_consumer_srv,
+        start => {kafe_consumer_srv, start_link, [GroupId]},
+        restart => permanent,
+        shutdown => 5000,
+        type => worker,
+        modules => [kafe_consumer_srv]},
+      #{id => kafe_consumer_fsm,
         start => {kafe_consumer_fsm, start_link, [GroupId, Options]},
         restart => permanent,
         shutdown => 5000,
         type => worker,
-        modules => [kafe_consumer_fsm]},
-      #{id => kafe_consumer_srv,
-        start => {kafe_consumer_srv, start_link, [GroupId, Options]},
-        restart => permanent,
-        shutdown => 5000,
-        type => worker,
-        modules => [kafe_consumer_srv]}]
+        modules => [kafe_consumer_fsm]}
+     ]
     }}.
 

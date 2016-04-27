@@ -14,7 +14,7 @@
         ]).
 
 run_v0(ConsumerGroup, Topics) ->
-  case kafe:consumer_metadata(ConsumerGroup) of
+  case kafe:group_coordinator(ConsumerGroup) of
     {ok, #{coordinator_host := Host,
            coordinator_port := Port}} ->
       kafe_protocol:run({host_and_port, Host, Port},
@@ -25,9 +25,10 @@ run_v0(ConsumerGroup, Topics) ->
   end.
 
 run_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
-  case kafe:consumer_metadata(ConsumerGroup) of
-    {ok, #{coordinator_host := BrokerName}} ->
-      kafe_protocol:run(BrokerName,
+  case kafe:group_coordinator(ConsumerGroup) of
+    {ok, #{coordinator_host := Host,
+           coordinator_port := Port}} ->
+      kafe_protocol:run({host_and_port, Host, Port},
                         {call,
                          fun ?MODULE:request_v1/5, [ConsumerGroup,
                                                     ConsumerGroupGenerationId,
@@ -38,9 +39,10 @@ run_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
   end.
 
 run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics) ->
-  case kafe:consumer_metadata(ConsumerGroup) of
-    {ok, #{coordinator_host := BrokerName}} ->
-      kafe_protocol:run(BrokerName,
+  case kafe:group_coordinator(ConsumerGroup) of
+    {ok, #{coordinator_host := Host,
+           coordinator_port := Port}} ->
+      kafe_protocol:run({host_and_port, Host, Port},
                         {call,
                          fun ?MODULE:request_v2/6, [ConsumerGroup,
                                                     ConsumerGroupGenerationId,

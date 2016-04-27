@@ -3,13 +3,15 @@
 -compile([{parse_transform, lager_transform}]).
 -behaviour(gen_server).
 
+-include("../include/kafe.hrl").
+
 -callback init(Args :: list()) -> {ok, any()} | ignore.
 -callback consume(Offset :: integer(),
                   Key :: binary(),
                   Value :: binary()) -> ok.
 
 %% API.
--export([start_link/2]).
+-export([start_link/1]).
 
 %% gen_server.
 -export([init/1]).
@@ -20,31 +22,43 @@
 -export([code_change/3]).
 
 -record(state, {
-          group_id = undefined,
-          options = options
+          group_id,
+          generation_id = -1,
+          member_id = <<>>,
+          topics = []
          }).
 
 %% API.
 
 % @hidden
--spec start_link(atom(), map()) -> {ok, pid()}.
-start_link(GroupId, Options) ->
-  gen_server:start_link(?MODULE, [GroupId, Options], []).
+-spec start_link(atom()) -> {ok, pid()}.
+start_link(GroupId) ->
+  gen_server:start_link(?MODULE, GroupId, []).
 
 %% gen_server.
 
 % @hidden
-init([GroupId, Options]) ->
+init(GroupId) ->
   _ = erlang:process_flag(trap_exit, true),
-  lager:info("Start consumer server ~p", [GroupId]),
   {ok, #state{
-          group_id = bucs:to_binary(GroupId),
-          options = Options
+          group_id = bucs:to_binary(GroupId)
          }}.
 
 % @hidden
 handle_call(describe, _From, #state{group_id = GroupId} = State) ->
   {reply, kafe:describe_group(GroupId), State};
+handle_call(member_id, _From, #state{member_id = MemberId} = State) ->
+  {reply, MemberId, State};
+handle_call({member_id, MemberId}, _From, State) ->
+  {reply, ok, State#state{member_id = MemberId}};
+handle_call(generation_id, _From, #state{generation_id = GenerationId} = State) ->
+  {reply, GenerationId, State};
+handle_call({generation_id, GenerationId}, _From, State) ->
+  {reply, ok, State#state{generation_id = GenerationId}};
+handle_call(topics, _From, #state{topics = Topics} = State) ->
+  {reply, Topics, State};
+handle_call({topics, Topics}, _From, State) ->
+  {reply, ok, State#state{topics = Topics}};
 handle_call(_Request, _From, State) ->
   {reply, ignored, State}.
 

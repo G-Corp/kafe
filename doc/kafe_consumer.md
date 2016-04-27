@@ -59,7 +59,10 @@ When you are done with your consumer, stop it :
 
 
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
-Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupId, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupId)</tt></a>.</td></tr></table>
+Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#generation_id-1">generation_id/1</a></td><td>
+Return the <tt>generation_id</tt> of the consumer.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
+Return the <tt>member_id</tt> of the consumer.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupId, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupId)</tt></a>.</td></tr><tr><td valign="top"><a href="#topics-1">topics/1</a></td><td>
+Return the topics (and partitions) of the consumer.</td></tr></table>
 
 
 <a name="functions"></a>
@@ -77,6 +80,22 @@ describe(GroupId::atom()) -&gt; {ok, <a href="kafe.md#type-describe_group">kafe:
 
 Return consumer group descrition
 
+<a name="generation_id-1"></a>
+
+### generation_id/1 ###
+
+`generation_id(GroupId) -> any()`
+
+Return the `generation_id` of the consumer
+
+<a name="member_id-1"></a>
+
+### member_id/1 ###
+
+`member_id(GroupId) -> any()`
+
+Return the `member_id` of the consumer
+
 <a name="start-3"></a>
 
 ### start/3 ###
@@ -92,4 +111,12 @@ Equivalent to [`kafe:start_consumer(GroupId, Callback, Options)`](kafe.md#start_
 `stop(GroupId) -> any()`
 
 Equivalent to [`kafe:stop_consumer(GroupId)`](kafe.md#stop_consumer-1).
+
+<a name="topics-1"></a>
+
+### topics/1 ###
+
+`topics(GroupId) -> any()`
+
+Return the topics (and partitions) of the consumer
 

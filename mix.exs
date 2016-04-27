@@ -11,14 +11,15 @@ defmodule Kafe.Mixfile do
 	end
 
 	def application do
-		[applications: [:syntax_tools,:compiler,:goldrush,:lager], mod: {:kafe_app, []}]
+		[applications: [:syntax_tools,:compiler,:poolgirl,:goldrush,:lager], mod: {:kafe_app, []}]
 	end
 
 	defp deps do
 		[ 
 			{:lager, ~r/.*/, git: "https://github.com/basho/lager.git", branch: "master"},  
 			{:bucs, ~r/.*/, git: "https://github.com/botsunit/bucs.git", branch: "master"},  
-			{:doteki, ~r/.*/, git: "https://github.com/botsunit/doteki.git", branch: "master"},
+			{:doteki, ~r/.*/, git: "https://github.com/botsunit/doteki.git", branch: "master"},  
+			{:poolgirl, ~r/.*/, git: "https://github.com/botsunit/poolgirl.git", branch: "master"},
 		]
 	end
 end

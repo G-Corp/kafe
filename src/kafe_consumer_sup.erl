@@ -28,6 +28,8 @@ stop_child(GroupId) when is_atom(GroupId) ->
 stop_child(GroupId) when is_pid(GroupId) ->
   supervisor:terminate_child(?MODULE, GroupId).
 
+call_srv(GroupId, Request) when is_binary(GroupId) ->
+  call_srv(bucs:to_atom(GroupId), Request);
 call_srv(GroupId, Request) when is_atom(GroupId) ->
   case global:whereis_name(GroupId) of
     undefined -> undefined;

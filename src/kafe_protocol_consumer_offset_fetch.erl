@@ -43,7 +43,7 @@ topics(Options) ->
   topics(Options, <<(length(Options)):32/signed>>).
 
 topics([], Result) -> Result;
-topics([{TopicName, Partitions}|Rest], Result) ->
+topics([{TopicName, Partitions}|Rest], Result) when is_list(Partitions) ->
   topics(Rest,
          <<
            Result/binary,
@@ -52,6 +52,8 @@ topics([{TopicName, Partitions}|Rest], Result) ->
               [<<Partition:32/signed>> || Partition <- Partitions]
              ))/binary
          >>);
+topics([{TopicName, Partition}|Rest], Result) when is_integer(Partition) ->
+  topics([{TopicName, [Partition]}|Rest], Result);
 topics([TopicName|Rest], Result) ->
   topics([{TopicName, maps:keys(maps:get(TopicName, kafe:topics(), #{}))}|Rest], Result).
 
