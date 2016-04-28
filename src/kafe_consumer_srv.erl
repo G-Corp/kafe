@@ -20,7 +20,7 @@
          , handle_info/2
          , terminate/2
          , code_change/3]).
--export([fetch/6]).
+-export([fetch/2]).
 
 -record(state, {
           group_id,
@@ -31,7 +31,10 @@
           timer = undefined,
           fetch_interval = ?DEFAULT_CONSUMER_FETCH_INTERVAL,
           fetch_pids = [],
-          fetch_size = ?DEFAULT_CONSUMER_FETCH_SIZE
+          fetch_size = ?DEFAULT_CONSUMER_FETCH_SIZE,
+          max_bytes = ?DEFAULT_FETCH_MAX_BYTES,
+          min_bytes = ?DEFAULT_FETCH_MIN_BYTES,
+          max_wait_time = ?DEFAULT_FETCH_MAX_WAIT_TIME
          }).
 
 %% API.
@@ -48,12 +51,18 @@ init([GroupID, Options]) ->
   _ = erlang:process_flag(trap_exit, true),
   FetchInterval = maps:get(fetch_interval, Options, ?DEFAULT_CONSUMER_FETCH_INTERVAL),
   FetchSize = maps:get(fetch_size, Options, ?DEFAULT_CONSUMER_FETCH_SIZE),
+  MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
+  MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
+  MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
   {ok, #state{
           group_id = bucs:to_binary(GroupID),
           callback = maps:get(callback, Options),
           fetch_interval = FetchInterval,
           fetch_size = FetchSize,
-          timer = erlang:send_after(FetchInterval, self(), fetch)
+          timer = erlang:send_after(FetchInterval, self(), fetch),
+          max_bytes = MaxBytes,
+          min_bytes = MinBytes,
+          max_wait_time = MaxWaitTime
          }}.
 
 % @hidden
@@ -79,15 +88,10 @@ handle_cast(_Msg, State) ->
   {noreply, State}.
 
 % @hidden
-handle_info(fetch, #state{group_id = GroupID,
-                          fetch_interval = FetchInterval,
-                          fetch_size = FetchSize,
+handle_info(fetch, #state{fetch_interval = FetchInterval,
                           topics = Topics,
-                          generation_id = GenerationID,
-                          member_id = MemberID,
-                          callback = Callback,
                           fetch_pids = []} = State) ->
-  Pids = [erlang:spawn_link(?MODULE, fetch, [T, FetchSize, GroupID, GenerationID, MemberID, Callback]) || T <- Topics],
+  Pids = [erlang:spawn_link(?MODULE, fetch, [T, State]) || T <- Topics],
   {noreply, State#state{
               timer = erlang:send_after(FetchInterval, self(), fetch),
               fetch_pids = Pids}};
@@ -111,7 +115,14 @@ code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
 % @hidden
-fetch({Topic, Partitions}, Size, GroupID, GenerationID, MemberID, Callback) ->
+fetch({Topic, Partitions}, #state{fetch_size = Size,
+                                  group_id = GroupID,
+                                  generation_id = GenerationID,
+                                  member_id = MemberID,
+                                  callback = Callback,
+                                  max_bytes = MaxBytes,
+                                  min_bytes = MinBytes,
+                                  max_wait_time = MaxWaitTime}) ->
   lager:debug("Fetch ~p offsets for ~p:~p, ~p", [Size, Topic, Partitions, GroupID]),
   NoError = kafe_error:code(0),
   case kafe:offset([Topic]) of
@@ -137,7 +148,11 @@ fetch({Topic, Partitions}, Size, GroupID, GenerationID, MemberID, Callback) ->
                                             [{Topic, [{PartitionID, Max, <<>>}]}]) of
                       {ok, _} ->
                         lists:foreach(fun(O) ->
-                                          case kafe:fetch(-1, Topic, #{partition => PartitionID, offset => O}) of
+                                          case kafe:fetch(-1, Topic, #{partition => PartitionID,
+                                                                       offset => O,
+                                                                       max_bytes => MaxBytes,
+                                                                       min_bytes => MinBytes,
+                                                                       max_wait_time => MaxWaitTime}) of
                                             {ok, #{topics :=
                                                    [#{name := Topic,
                                                       partitions :=

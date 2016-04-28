@@ -954,9 +954,19 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % <li><tt>topics :: [binary() | {binary(), [integer()]}]</tt> : List or topics (and partitions).</li>
 % <li><tt>fetch_interval :: integer()</tt> : Fetch interval in ms (default : 1000)</li>
 % <li><tt>fetch_size :: integer()</tt> : Maximum number of offset to fetch(default : 1)</li>
+% <li><tt>max_bytes :: integer()</tt> : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
+% 1024*1024)</li>
+% <li><tt>min_bytes :: integer()</tt> : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0
+% the server will always respond immediately, however if there is no new data since their last request they will just get back empty message sets. If this is
+% set to 1, the server will respond as soon as at least one partition has at least 1 byte of data or the specified timeout occurs. By setting higher values in
+% combination with the timeout the consumer can tune for throughput and trade a little additional latency for reading only large chunks of data (e.g. setting
+% MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait up to 100ms to try to accumulate 64k of data before responding) (default :
+% 1).</li>
+% <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
+% at the time the request is issued (default : 1).</li>
 % </ul>
 %
-% TODO DOC + SPEC
+% TODO SPEC
 % @end
 start_consumer(GroupId, Callback, Options) when is_function(Callback, 5) ->
   kafe_consumer_sup:start_child(GroupId, Options#{callback => Callback}).
