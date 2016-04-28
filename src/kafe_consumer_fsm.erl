@@ -60,9 +60,13 @@ init([GroupId, Options]) ->
   _ = erlang:process_flag(trap_exit, true),
   SessionTimeout = maps:get(session_timeout, Options, ?DEFAULT_JOIN_GROUP_SESSION_TIMEOUT),
   MemberId = maps:get(member_id, Options, ?DEFAULT_JOIN_GROUP_MEMBER_ID),
-  Topics = maps:get(topics, Options, lists:map(fun(#{topic := Topic, partitions := Partitions}) ->
-                                                   {Topic, Partitions}
-                                               end, ?DEFAULT_GROUP_PARTITION_ASSIGNMENT)),
+  Topics = lists:map(fun
+                       ({_, _} = T) -> T;
+                       (T) -> {T, kafe:partitions(T)}
+                     end, maps:get(topics, Options,
+                                   lists:map(fun(#{topic := Topic, partitions := Partitions}) ->
+                                                 {Topic, Partitions}
+                                             end, ?DEFAULT_GROUP_PARTITION_ASSIGNMENT))),
   State = #state{
              group_id_atom = bucs:to_atom(GroupId),
              group_id = bucs:to_binary(GroupId),
