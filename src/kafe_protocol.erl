@@ -22,9 +22,15 @@ run(Request) ->
 
 run(BrokerPID, Request) when is_pid(BrokerPID) ->
   lager:debug("Request with broker ~p", [BrokerPID]),
-  Response = gen_server:call(BrokerPID, Request, infinity),
-  _ = kafe:release_broker(BrokerPID),
-  Response;
+  try
+    Response = gen_server:call(BrokerPID, Request, infinity),
+    _ = kafe:release_broker(BrokerPID),
+    Response
+  catch
+    Type:Error ->
+      lager:info("Request error : ~p:~p", [Type, Error]),
+      {error, Error}
+  end;
 run(BrokerName, Request) when is_list(BrokerName) ->
   lager:debug("Request with broker ~p", [BrokerName]),
   case kafe:broker_by_name(BrokerName) of
