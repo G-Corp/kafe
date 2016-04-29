@@ -112,6 +112,8 @@ dead(timeout, #state{group_id_atom = GroupIdAtom,
                              protocol_group = ProtocolGroup});
     {ok, #{error_code := unknown_member_id}} ->
       next_state(dead, State#state{member_id = <<>>});
+    {ok, #{error_code := _}} ->
+      next_state(dead, State);
     {error, Reason} ->
       lager:info("Join group faild: ~p", [Reason]),
       next_state(State)
@@ -174,6 +176,9 @@ next_state(#state{group_id = GroupId} = State) ->
             members := Members}]} ->
       {NextState, Timeout} = group_state(State, GroupState),
       {next_state, NextState, State#state{members = Members}, Timeout};
+    {ok, [#{error_code := Error}]} ->
+      lager:info("Can't get group ~p description : ~p", [GroupId, Error]),
+      next_state(dead, State);
     {error, _} ->
       next_state(dead, State)
   end.
