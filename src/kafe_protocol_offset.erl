@@ -10,7 +10,12 @@
         ]).
 
 run(ReplicaID, []) ->
-  run(ReplicaID, maps:keys(kafe:topics()));
+  case maps:keys(kafe:topics()) of
+    Topics when is_list(Topics), length(Topics) > 0 ->
+      run(ReplicaID, maps:keys(kafe:topics()));
+    _ ->
+      {error, cant_retrieve_topics}
+  end;
 run(ReplicaID, Topics) ->
   case lists:flatten(
          maps:fold(
@@ -18,11 +23,15 @@ run(ReplicaID, Topics) ->
              (undefined, _, Acc) ->
                Acc;
              (BrokerID, TopicsForBroker, Acc) ->
-               {ok, Result} = kafe_protocol:run(BrokerID,
-                                                {call,
-                                                 fun ?MODULE:request/3, [ReplicaID, TopicsForBroker],
-                                                 fun ?MODULE:response/2}),
-               [Result|Acc]
+               case kafe_protocol:run(BrokerID,
+                                      {call,
+                                       fun ?MODULE:request/3, [ReplicaID, TopicsForBroker],
+                                       fun ?MODULE:response/2}) of
+                 {ok, Result} ->
+                   [Result|Acc];
+                 _ ->
+                   Acc
+               end
            end, [], dispatch(Topics, kafe:topics()))) of
     [] ->
       {error, no_broker_found};

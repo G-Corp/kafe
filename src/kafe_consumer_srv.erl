@@ -147,40 +147,41 @@ fetch({Topic, Partitions}, #state{fetch_size = Size,
                     case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
                                             [{Topic, [{PartitionID, Max, <<>>}]}]) of
                       {ok, _} ->
-                        lists:foreach(fun(O) ->
-                                          case kafe:fetch(-1, Topic, #{partition => PartitionID,
-                                                                       offset => O,
-                                                                       max_bytes => MaxBytes,
-                                                                       min_bytes => MinBytes,
-                                                                       max_wait_time => MaxWaitTime}) of
-                                            {ok, #{topics :=
-                                                   [#{name := Topic,
-                                                      partitions :=
-                                                      [#{error_code := NoError,
-                                                         message := #{key := Key,
-                                                                      offset := O,
-                                                                      value := Value},
-                                                         partition := PartitionID}]}]}} ->
-                                              _ = erlang:apply(Callback, [Topic, PartitionID, O, Key, Value]);
-                                            _ ->
-                                              lager:error("Faild to fetch message #~p topic ~p:~p in group ~p", [O, Topic, PartitionID, GroupID])
-                                          end
-                                      end, Offsets);
-                      Error1 ->
-                        lager:debug("Faild to commit offet ~p for topic ~p:~p in group ~p : ~p", [Max, Topic, PartitionID, GroupID, Error1])
+                        lists:foreach(
+                          fun(O) ->
+                              case kafe:fetch(-1, Topic, #{partition => PartitionID,
+                                                           offset => O,
+                                                           max_bytes => MaxBytes,
+                                                           min_bytes => MinBytes,
+                                                           max_wait_time => MaxWaitTime}) of
+                                {ok, #{topics :=
+                                       [#{name := Topic,
+                                          partitions :=
+                                          [#{error_code := NoError,
+                                             message := #{key := Key,
+                                                          offset := O,
+                                                          value := Value},
+                                             partition := PartitionID}]}]}} ->
+                                  _ = erlang:apply(Callback, [Topic, PartitionID, O, Key, Value]);
+                                Error3 ->
+                                  lager:error("Faild to fetch message #~p topic ~p:~p in group ~p : ~p", [O, Topic, PartitionID, GroupID, Error3])
+                              end
+                          end, Offsets);
+                      Error2 ->
+                        lager:debug("Faild to commit offet ~p for topic ~p:~p in group ~p : ~p", [Max, Topic, PartitionID, GroupID, Error2])
                     end;
                   {ok, _} ->
                     ok;
-                  Error ->
-                    lager:debug("Faild to fetch offset for ~p:~p in group ~p : ~p", [Topic, PartitionID, GroupID, Error])
+                  Error1 ->
+                    lager:debug("Faild to fetch offset for ~p:~p in group ~p : ~p", [Topic, PartitionID, GroupID, Error1])
                 end;
               false ->
                 ok
             end
         end, PartitionsList),
       erlang:exit(done);
-    _ ->
-      lager:debug("Can't retrieve offsets for topic ~p in ~p", [Topic, GroupID]),
+    Error0 ->
+      lager:debug("Can't retrieve offsets for topic ~p in ~p: ~p", [Topic, GroupID, Error0]),
       erlang:exit(offset_error)
   end.
 

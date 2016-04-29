@@ -19,7 +19,7 @@ run(GroupId, Options) ->
                          fun ?MODULE:request/3, [GroupId, Options],
                          fun ?MODULE:response/2});
     _ ->
-      {error_code, no_broker_found}
+      {error, no_broker_found}
   end.
 
 request(GroupId, Options, State) ->
