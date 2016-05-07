@@ -15,10 +15,11 @@ defmodule Kafe.Mixfile do
 	end
 
 	defp deps do
-		[ 
-			{:lager, ~r/.*/, git: "https://github.com/basho/lager.git", branch: "master"},  
-			{:bucs, ~r/.*/, git: "https://github.com/botsunit/bucs.git", branch: "master"},  
-			{:doteki, ~r/.*/, git: "https://github.com/botsunit/doteki.git", branch: "master"},  
+		[
+                        {:bristow, git: "git@github.com:botsunit/bristow.git", branch: "master"},
+			{:lager, ~r/.*/, git: "https://github.com/basho/lager.git", branch: "master"},
+			{:bucs, ~r/.*/, git: "https://github.com/botsunit/bucs.git", branch: "master"},
+			{:doteki, ~r/.*/, git: "https://github.com/botsunit/doteki.git", branch: "master"},
 			{:poolgirl, ~r/.*/, git: "https://github.com/botsunit/poolgirl.git", branch: "master"},
 		]
 	end
