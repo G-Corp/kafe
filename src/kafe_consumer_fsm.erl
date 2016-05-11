@@ -105,7 +105,6 @@ dead(timeout, #state{group_id_atom = GroupIdAtom,
            protocol_group := ProtocolGroup}} ->
       _ = kafe_consumer:member_id(GroupIdAtom, NewMemberId),
       _ = kafe_consumer:generation_id(GroupIdAtom, GenerationId),
-      _ = kafe_consumer:topics(GroupIdAtom, Topics),
       next_state(State#state{generation_id = GenerationId,
                              leader_id = LeaderId,
                              member_id = NewMemberId,
@@ -123,9 +122,10 @@ dead(timeout, #state{group_id_atom = GroupIdAtom,
 awaiting_sync(timeout, #state{group_id = GroupId,
                               generation_id = GenerationId,
                               member_id = MemberId,
+                              leader_id = LeaderId,
                               members = Members,
                               topics = Topics} = State) ->
-  GroupAssignment = group_assignment(MemberId, Topics, Members),
+  GroupAssignment = group_assignment(LeaderId, MemberId, Topics, Members),
   case kafe:sync_group(GroupId, GenerationId, MemberId, GroupAssignment) of
     {ok, #{error_code := none}} ->
       next_state(State);
@@ -169,11 +169,21 @@ terminate(_Reason, _StateName, _State) ->
 code_change(_OldVsn, StateName, State, _Extra) ->
 	{ok, StateName, State}.
 
-next_state(#state{group_id = GroupId} = State) ->
+next_state(#state{group_id = GroupId,
+                  group_id_atom = GroupIdAtom,
+                  member_id = MemberId} = State) ->
   case kafe:describe_group(GroupId) of
     {ok, [#{error_code := none,
             state := GroupState,
             members := Members}]} ->
+      case [T || #{member_assignment := #{partition_assignment := T,
+                                          version := V},
+                   member_id := M} <- Members, M == MemberId, V =/= -1] of
+        [] ->
+          ok;
+        [Topics] ->
+          kafe_consumer:topics(GroupIdAtom, [{T, P} || #{partitions := P, topic := T} <- Topics])
+      end,
       {NextState, Timeout} = group_state(State, GroupState),
       {next_state, NextState, State#state{members = Members}, Timeout};
     {ok, [#{error_code := Error}]} ->
@@ -201,28 +211,47 @@ state_by_name(<<"Dead">>) -> dead;
 state_by_name(<<"AwaitingSync">>) -> awaiting_sync;
 state_by_name(<<"Stable">>) -> stable.
 
-group_assignment(MemberId, Topics, Members) ->
-  GroupAssignment = lists:foldl(
-                      fun
-                        (#{member_id := MemberId1}, Acc) when MemberId1 == <<>> orelse
-                                                              MemberId1 == MemberId ->
-                          Acc;
-                        (#{member_id := MemberId1,
-                           member_assignment := MemberAssignment}, Acc) ->
-                          [#{member_id => MemberId1,
-                             member_assignment => MemberAssignment}|Acc]
-                      end, [], Members),
-  [#{member_id => MemberId,
+group_assignment(MemberId, MemberId, Topics, Members) ->
+  MemberIDs = [M || #{member_id := M} <- Members],
+  [#{member_id => Member,
      member_assignment => #{
        version => ?DEFAULT_GROUP_PROTOCOL_VERSION,
        user_data => ?DEFAULT_GROUP_USER_DATA,
-       partition_assignment => lists:map(fun
-                                           ({T, P}) ->
-                                             #{topic => T,
-                                               partitions => P};
-                                           (T) ->
-                                             #{topic => T,
-                                               partitions => maps:keys(maps:get(T, kafe:topics(), #{}))}
-                                         end, Topics)
-      }}|GroupAssignment].
+       partition_assignment => [#{topic => T,
+                                  partitions => P} || {T, P} <- Assignment, length(P) =/= 0]}}
+   || {Member, Assignment} <- lists:zip(MemberIDs, assign(Topics, length(MemberIDs), lists:duplicate(length(MemberIDs), [])))];
+group_assignment(_, _, _, _) ->
+  [].
+
+assign([], _, Acc) ->
+  Acc;
+assign([{T, P}|Rest], S, Acc) ->
+  Repartition = split_list_parts(P, S),
+  Repartition1 = if
+                   S > length(Repartition) ->
+                     Repartition ++ lists:duplicate(S - length(Repartition), []);
+                   true ->
+                     Repartition
+                 end,
+  Repartition2 = lists:zip(lists:duplicate(S, T), Repartition1),
+  assign(Rest, S, assign_zip(Acc, Repartition2, [])).
+
+split_list_parts(List, N) ->
+  split_list_parts(List, erlang:length(List), N, []).
+
+split_list_parts([], _, _, Acc) ->
+  lists:reverse(Acc);
+split_list_parts(List, Size, N, Acc) ->
+  NE = Size div N,
+  case lists:split(NE, List) of
+    {[], Rest} ->
+      split_list_parts(Rest, Size, N - 1, Acc);
+    {R, Rest} ->
+      split_list_parts(Rest, Size - erlang:length(R), N - 1, [R|Acc])
+  end.
+
+assign_zip([], [], Acc) ->
+  Acc;
+assign_zip([L|RL], [E|RE], Acc) ->
+  assign_zip(RL, RE, [[E|L]|Acc]).
 

@@ -80,8 +80,8 @@ member_id(GroupId) ->
   kafe_consumer_sup:call_srv(GroupId, member_id).
 
 % @hidden
-generation_id(GroupId, MemberId) ->
-  kafe_consumer_sup:call_srv(GroupId, {generation_id, MemberId}).
+generation_id(GroupId, GenerationId) ->
+  kafe_consumer_sup:call_srv(GroupId, {generation_id, GenerationId}).
 
 % @doc
 % Return the <tt>generation_id</tt> of the consumer
@@ -90,8 +90,8 @@ generation_id(GroupId) ->
   kafe_consumer_sup:call_srv(GroupId, generation_id).
 
 % @hidden
-topics(GroupId, MemberId) ->
-  kafe_consumer_sup:call_srv(GroupId, {topics, MemberId}).
+topics(GroupId, Topics) ->
+  kafe_consumer_sup:call_srv(GroupId, {topics, Topics}).
 
 % @doc
 % Return the topics (and partitions) of the consumer
