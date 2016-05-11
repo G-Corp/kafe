@@ -1,18 +1,18 @@
 PROJECT = kafe
 
 DEP_PLUGINS = mix.mk
-BUILD_DEPS = mix.mk bristow
+BUILD_DEPS = mix.mk
 ELIXIR_VERSION = ~> 1.2
 ELIXIR_BINDINGS = kafe kafe_consumer
 
 dep_mix.mk = git https://github.com/botsunit/mix.mk.git master
-dep_bristow = git https://github.com/botsunit/bristow.git master
 
-DEPS = lager bucs doteki poolgirl
+DEPS = lager bucs doteki poolgirl bristow
 dep_lager = git https://github.com/basho/lager.git master
 dep_bucs = git https://github.com/botsunit/bucs.git master
 dep_doteki = git https://github.com/botsunit/doteki.git master
 dep_poolgirl = git https://github.com/botsunit/poolgirl.git master
+dep_bristow = git https://github.com/botsunit/bristow.git master
 
 DOC_DEPS = edown
 dep_edown = git https://github.com/botsunit/edown.git master
