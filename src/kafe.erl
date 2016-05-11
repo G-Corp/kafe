@@ -679,7 +679,7 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                                       chunk_pool_size := ChunkPoolSize} = State) ->
   lager:debug("Get connection for ~s:~p", [Host, Port]),
   try
-    case inet:gethostbyname(Host) of
+    case inet:gethostbyname(bucs:to_string(Host)) of
       {ok, #hostent{h_name = Hostname,
                     h_addrtype = AddrType,
                     h_addr_list = AddrsList}} ->
