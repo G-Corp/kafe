@@ -17,6 +17,9 @@ dep_bristow = git https://github.com/botsunit/bristow.git master
 DOC_DEPS = edown
 dep_edown = git https://github.com/botsunit/edown.git master
 
+TEST_DEPS = meck
+dep_meck = git https://github.com/eproxus/meck.git master
+
 app::
 
 tests::

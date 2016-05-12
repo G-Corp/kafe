@@ -14,6 +14,7 @@ start_link() ->
 init([]) ->
     {ok, { {one_for_one, 5, 10}, [
                                   ?CHILD(kafe_consumer_sup, supervisor, infinity),
+                                  ?CHILD(kafe_rr, worker, 5000),
                                   ?CHILD(kafe, worker, 5000)
                                  ]} }.
 

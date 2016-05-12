@@ -352,7 +352,11 @@ produce(Topic, Message) ->
 % @end
 -spec produce(binary(), message(), produce_options()) -> {ok, [topic_partition_info()]} | {error,  term()}.
 produce(Topic, Message, Options) ->
-  kafe_protocol_produce:run(Topic, Message, Options).
+  Options1 = case Options of
+               #{partition := _} -> Options;
+               _ -> Options#{partition => kafe_rr:next(Topic)}
+             end,
+  kafe_protocol_produce:run(Topic, Message, Options1).
 
 % @equiv fetch(-1, TopicName, #{})
 fetch(TopicName) when is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName) ->
