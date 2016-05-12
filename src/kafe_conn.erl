@@ -104,7 +104,7 @@ handle_info(
   end;
 handle_info({tcp_closed, Socket}, State) ->
   lager:debug("Connections close ~p ...", [Socket]),
-  {stop, connection_close, State};
+  {stop, normal, State};
 handle_info(Info, State) ->
   lager:debug("Invalid message : ~p", [Info]),
   lager:debug("--- State ~p", [State]),
