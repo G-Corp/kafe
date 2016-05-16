@@ -14,29 +14,31 @@
 start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
-start_child(GroupId, Options) ->
-  case supervisor:start_child(?MODULE, [GroupId, Options]) of
+start_child(GroupID, Options) ->
+  case supervisor:start_child(?MODULE, [GroupID, Options]) of
     {ok, Child, _} -> {ok, Child};
     Other -> Other
   end.
 
-stop_child(GroupId) when is_atom(GroupId) ->
-  case global:whereis_name(GroupId) of
+stop_child(GroupID) when is_binary(GroupID) ->
+  stop_child(bucs:to_atom(GroupID));
+stop_child(GroupID) when is_atom(GroupID) ->
+  case global:whereis_name(GroupID) of
     undefined -> undefined;
     Pid -> stop_child(Pid)
   end;
-stop_child(GroupId) when is_pid(GroupId) ->
-  supervisor:terminate_child(?MODULE, GroupId).
+stop_child(GroupID) when is_pid(GroupID) ->
+  supervisor:terminate_child(?MODULE, GroupID).
 
-call_srv(GroupId, Request) when is_binary(GroupId) ->
-  call_srv(bucs:to_atom(GroupId), Request);
-call_srv(GroupId, Request) when is_atom(GroupId) ->
-  case global:whereis_name(GroupId) of
+call_srv(GroupID, Request) when is_binary(GroupID) ->
+  call_srv(bucs:to_atom(GroupID), Request);
+call_srv(GroupID, Request) when is_atom(GroupID) ->
+  case global:whereis_name(GroupID) of
     undefined -> undefined;
     Pid -> call_srv(Pid, Request)
   end;
-call_srv(GroupId, Request) when is_pid(GroupId) ->
-  case lists:keyfind(kafe_consumer_srv, 1, supervisor:which_children(GroupId)) of
+call_srv(GroupID, Request) when is_pid(GroupID) ->
+  case lists:keyfind(kafe_consumer_srv, 1, supervisor:which_children(GroupID)) of
     {kafe_consumer_srv, SrvPid, worker, [kafe_consumer_srv]} ->
       gen_server:call(SrvPid, Request);
     false ->

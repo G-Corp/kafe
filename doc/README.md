@@ -15,9 +15,55 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 
 
 
+### Create a consumer ###
+
+To create a consumer, create a function with 6 parameters :
+
+```
+
+-module(my_consumer).
+
+-export([consume/6]).
+
+consume(CommitID, Topic, Partition, Offset, Key, Value) ->
+  % Do something with Topic/Partition/Offset/Key/Value
+  ok.
+
+```
+
+The `consume` function must return `ok` if the message was treated, `false` otherwise.
+
+Then start a new consumer :
+
+```
+
+...
+kafe:start(),
+...
+kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
+...
+
+```
+
+See [`kafe:start_consumer/3`](kafe.md#start_consumer-3) for the available `Options`.
+
+In the `consume` function, if you didn't start the consumer with `autocommit` set to `true`, you need to commit manually when you
+have finished to treat the message. To do so, use [`kafe_consumer:commit/1`](kafe_consumer.md#commit-1) with the `CommitID` as parameter.
+
+When you are done with your consumer, stop it :
+
+```
+
+...
+kafe:stop_consumer(my_group),
+...
+
+```
+
+
 ### API Documentation ###
 
-See [documentation](doc/kafe.md)
+See [documentation](doc/)
 
 
 ### Contributing ###

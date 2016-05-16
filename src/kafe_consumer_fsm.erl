@@ -1,4 +1,5 @@
 % @hidden
+% see https://cwiki.apache.org/confluence/display/KAFKA/Kafka+0.9+Consumer+Rewrite+Design
 -module(kafe_consumer_fsm).
 -compile([{parse_transform, lager_transform}]).
 -behaviour(gen_fsm).

@@ -20,21 +20,23 @@
          , handle_info/2
          , terminate/2
          , code_change/3]).
--export([fetch/2]).
 
 -record(state, {
           group_id,
           generation_id = -1,
           member_id = <<>>,
           topics = [],
+          fetchers = [],
           callback = undefined,
-          timer = undefined,
           fetch_interval = ?DEFAULT_CONSUMER_FETCH_INTERVAL,
           fetch_pids = [],
           fetch_size = ?DEFAULT_CONSUMER_FETCH_SIZE,
           max_bytes = ?DEFAULT_FETCH_MAX_BYTES,
           min_bytes = ?DEFAULT_FETCH_MIN_BYTES,
-          max_wait_time = ?DEFAULT_FETCH_MAX_WAIT_TIME
+          max_wait_time = ?DEFAULT_FETCH_MAX_WAIT_TIME,
+          autocommit = ?DEFAULT_CONSUMER_AUTOCOMMIT,
+          allow_unordered_commit = ?DEFAULT_CONSUMER_ALLOW_UNORDERED_COMMIT,
+          commits = #{}
          }).
 
 %% API.
@@ -54,15 +56,18 @@ init([GroupID, Options]) ->
   MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
   MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
   MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
+  Autocommit = maps:get(autocommit, Options, ?DEFAULT_CONSUMER_AUTOCOMMIT),
+  AllowUnorderedCommit = maps:get(allow_unordered_commit, Options, ?DEFAULT_CONSUMER_ALLOW_UNORDERED_COMMIT),
   {ok, #state{
           group_id = bucs:to_binary(GroupID),
           callback = maps:get(callback, Options),
           fetch_interval = FetchInterval,
           fetch_size = FetchSize,
-          timer = erlang:send_after(FetchInterval, self(), fetch),
           max_bytes = MaxBytes,
           min_bytes = MinBytes,
-          max_wait_time = MaxWaitTime
+          max_wait_time = MaxWaitTime,
+          autocommit = Autocommit,
+          allow_unordered_commit = AllowUnorderedCommit
          }}.
 
 % @hidden
@@ -78,8 +83,65 @@ handle_call({generation_id, GenerationID}, _From, State) ->
   {reply, ok, State#state{generation_id = GenerationID}};
 handle_call(topics, _From, #state{topics = Topics} = State) ->
   {reply, Topics, State};
-handle_call({topics, Topics}, _From, State) ->
-  {reply, ok, State#state{topics = Topics}};
+handle_call({topics, Topics}, _From, #state{topics = CurrentTopics} = State) ->
+  if
+    Topics == CurrentTopics ->
+      {reply, ok, State};
+    true ->
+      {reply, ok, start_fetchers(Topics, State#state{topics = Topics})}
+  end;
+handle_call({commit, Topic, Partition, Offset}, _From, #state{allow_unordered_commit = true,
+                                                              commits = Commits,
+                                                              group_id = GroupID,
+                                                              generation_id = GenerationID,
+                                                              member_id = MemberID} = State) ->
+  CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
+  CommitsList = maps:get(CommitStoreKey, Commits, []),
+  case lists:keyfind({Topic, Partition, Offset}, 1, CommitsList) of
+    {{Topic, Partition, Offset}, _} ->
+      case commit(
+             lists:keyreplace({Topic, Partition, Offset}, 1, CommitsList, {{Topic, Partition, Offset}, true}),
+             ok, GroupID, GenerationID, MemberID) of
+        {ok, CommitsList1} ->
+          case lists:keyfind({Topic, Partition, Offset}, 1, CommitsList1) of
+            {{Topic, Partition, Offset}, true} ->
+              {reply, delayed, State#state{commits = maps:put(CommitStoreKey, CommitsList1, Commits)}};
+            false ->
+              {reply, ok, State#state{commits = maps:put(CommitStoreKey, CommitsList1, Commits)}}
+          end;
+        {Error, CommitsList1} ->
+          {reply, Error, State#state{commits = maps:put(CommitStoreKey, CommitsList1, Commits)}}
+      end;
+    false ->
+      {reply, {error, invalid_commit_ref}, State}
+  end;
+handle_call({commit, Topic, Partition, Offset}, _From, #state{allow_unordered_commit = false,
+                                                              commits = Commits,
+                                                             group_id = GroupID,
+                                                             generation_id = GenerationID,
+                                                             member_id = MemberID} = State) ->
+  CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
+  case maps:get(CommitStoreKey, Commits, []) of
+    [{{Topic, Partition, Offset}, _}|CommitsList] ->
+      lager:info("COMMIT Offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]), % TODO lager:debug
+      case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
+                              [{Topic, [{Partition, Offset, <<>>}]}]) of
+        {ok, _} -> % TODO error
+          {reply, ok, State#state{commits = maps:put(CommitStoreKey, CommitsList, Commits)}};
+        Error ->
+          {reply, Error, State}
+      end;
+    _ ->
+      {reply, {error, missing_previous_commit}, State}
+  end;
+handle_call({store_for_commit, Topic, Partition, Offset}, _From, #state{commits = Commits} = State) ->
+  CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
+  CommitsList = lists:append(maps:get(CommitStoreKey, Commits, []),
+                             [{{Topic, Partition, Offset}, false}]),
+  lager:debug("STORE FOR COMMIT Offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]),
+  {reply,
+   kafe_consumer:encode_group_commit_identifier(self(), Topic, Partition, Offset),
+   State#state{commits = maps:put(CommitStoreKey, CommitsList, Commits)}};
 handle_call(_Request, _From, State) ->
   {reply, ignored, State}.
 
@@ -88,26 +150,15 @@ handle_cast(_Msg, State) ->
   {noreply, State}.
 
 % @hidden
-handle_info(fetch, #state{fetch_interval = FetchInterval,
-                          topics = Topics,
-                          fetch_pids = []} = State) ->
-  Pids = [erlang:spawn_link(?MODULE, fetch, [T, State]) || T <- Topics],
-  {noreply, State#state{
-              timer = erlang:send_after(FetchInterval, self(), fetch),
-              fetch_pids = Pids}};
-handle_info(fetch, #state{fetch_interval = FetchInterval} = State) ->
-  lager:debug("Previous fetch not terminated!"),
-  {noreply, State#state{
-              timer = erlang:send_after(FetchInterval, self(), fetch)}};
-handle_info({'EXIT', Pid, Reason}, #state{fetch_pids = FetchPids} = State) ->
-  lager:debug("Fetch ~p terminated: ~p", [Pid, Reason]),
-  {noreply, State#state{fetch_pids = lists:delete(Pid, FetchPids)}};
+handle_info({'DOWN', MonitorRef, Type, Object, Info}, State) ->
+  lager:info("DOWN ~p, ~p, ~p, ~p", [MonitorRef, Type, Object, Info]), % TODO lager:debug
+  {noreply, State};
 handle_info(_Info, State) ->
   {noreply, State}.
 
 % @hidden
-terminate(_Reason, _State) ->
-  lager:info("Terminate server !!!"),
+terminate(_Reason, #state{fetchers = Fetchers} = State) ->
+  _ = stop_fetchers([TP || {TP, _, _} <- Fetchers], State),
   ok.
 
 % @hidden
@@ -115,73 +166,75 @@ code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
 % @hidden
-fetch({Topic, Partitions}, #state{fetch_size = Size,
-                                  group_id = GroupID,
-                                  generation_id = GenerationID,
-                                  member_id = MemberID,
-                                  callback = Callback,
-                                  max_bytes = MaxBytes,
-                                  min_bytes = MinBytes,
-                                  max_wait_time = MaxWaitTime}) ->
-  lager:debug("Fetch ~p offsets for ~p:~p, ~p", [Size, Topic, Partitions, GroupID]),
-  NoError = kafe_error:code(0),
-  case kafe:offset([Topic]) of
-    {ok, [#{name := Topic, partitions := PartitionsList}]} ->
-      lists:foreach(
-        fun(#{id := PartitionID,
-              offsets := [Offset|_],
-              error_code := NoError1}) ->
-            case ((NoError1 == NoError) and
-                  lists:member(PartitionID, Partitions) and
-                  (Offset - 1 > -1)) of
-              true ->
-                case kafe:offset_fetch(GroupID, [{Topic, [PartitionID]}]) of
-                  {ok, [#{name := Topic,
-                          partitions_offset := [#{error_code := NoError,
-                                                  offset := OffsetFetch,
-                                                  partition := PartitionID}]}]}
-                    when OffsetFetch + 1 =< Offset -1 ->
-                    Offsets = lists:sublist(lists:seq(OffsetFetch + 1, Offset - 1), Size),
-                    Max = lists:max(Offsets),
-                    lager:debug("Fetch ~p", [Offsets]),
-                    case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
-                                            [{Topic, [{PartitionID, Max, <<>>}]}]) of
-                      {ok, _} ->
-                        lists:foreach(
-                          fun(O) ->
-                              case kafe:fetch(-1, Topic, #{partition => PartitionID,
-                                                           offset => O,
-                                                           max_bytes => MaxBytes,
-                                                           min_bytes => MinBytes,
-                                                           max_wait_time => MaxWaitTime}) of
-                                {ok, #{topics :=
-                                       [#{name := Topic,
-                                          partitions :=
-                                          [#{error_code := NoError,
-                                             message := #{key := Key,
-                                                          offset := O,
-                                                          value := Value},
-                                             partition := PartitionID}]}]}} ->
-                                  _ = erlang:apply(Callback, [Topic, PartitionID, O, Key, Value]);
-                                Error3 ->
-                                  lager:error("Faild to fetch message #~p topic ~p:~p in group ~p : ~p", [O, Topic, PartitionID, GroupID, Error3])
-                              end
-                          end, Offsets);
-                      Error2 ->
-                        lager:debug("Faild to commit offet ~p for topic ~p:~p in group ~p : ~p", [Max, Topic, PartitionID, GroupID, Error2])
-                    end;
-                  {ok, _} ->
-                    ok;
-                  Error1 ->
-                    lager:debug("Faild to fetch offset for ~p:~p in group ~p : ~p", [Topic, PartitionID, GroupID, Error1])
-                end;
-              false ->
-                ok
-            end
-        end, PartitionsList),
-      erlang:exit(done);
-    Error0 ->
-      lager:debug("Can't retrieve offsets for topic ~p in ~p: ~p", [Topic, GroupID, Error0]),
-      erlang:exit(offset_error)
+start_fetchers(Topics, #state{fetchers = Fetchers} = State) ->
+  State1 = stop_fetchers(
+             [TP || {TP, _, _} <- Fetchers] -- lists:foldl(fun({Topic, Partitions}, Acc) ->
+                                                               lists:zip(
+                                                                 lists:duplicate(length(Partitions), Topic),
+                                                                 Partitions) ++ Acc
+                                                           end, [], Topics),
+             State),
+  start_fetchers_for_topic(Topics, State1).
+
+start_fetchers_for_topic([], State) ->
+  State;
+start_fetchers_for_topic([{Topic, Partitions}|Rest], State) ->
+  start_fetchers_for_topic(Rest,
+                           start_fetchers_for_topic_and_partition(Partitions, Topic, State)).
+
+start_fetchers_for_topic_and_partition([], _, State) ->
+  State;
+start_fetchers_for_topic_and_partition([Partition|Partitions], Topic, #state{fetchers = Fetchers,
+                                                                             fetch_interval = FetchInterval,
+                                                                             group_id = GroupID,
+                                                                             generation_id = GenerationID,
+                                                                             member_id = MemberID,
+                                                                             fetch_size = FetchSize,
+                                                                             autocommit = Autocommit,
+                                                                             min_bytes = MinBytes,
+                                                                             max_bytes = MaxBytes,
+                                                                             max_wait_time = MaxWaitTime,
+                                                                             callback = Callback} = State) ->
+  case lists:keyfind({Topic, Partition}, 1, Fetchers) of
+    false ->
+      case kafe_consumer_fetcher_sup:start_child(Topic, Partition, self(), FetchInterval,
+                                                 GroupID, GenerationID, MemberID,
+                                                 FetchSize, Autocommit,
+                                                 MinBytes, MaxBytes, MaxWaitTime, Callback) of
+        {ok, Pid} ->
+          MRef = erlang:monitor(process, Pid),
+          start_fetchers_for_topic_and_partition(Partitions, Topic, State#state{fetchers = [{{Topic, Partition}, Pid, MRef}|Fetchers]});
+        {error, Error} ->
+          lager:info("Faild to start fetcher for ~p#~p : ~p", [Topic, Partition, Error]), % TODO error
+          start_fetchers_for_topic_and_partition(Partitions, Topic, State)
+      end;
+    _ ->
+      start_fetchers_for_topic_and_partition(Partitions, Topic, State)
+  end.
+
+stop_fetchers([], State) ->
+  State;
+stop_fetchers([TP|Rest], #state{fetchers = Fetchers, commits = Commits} = State) ->
+  case lists:keyfind(TP, 1, Fetchers) of
+    {TP, Pid, MRef} ->
+      CommitStoreKey = erlang:term_to_binary(TP),
+      _ = erlang:demonitor(MRef),
+      _ = kafe_consumer_fetcher_sup:stop_child(Pid),
+      stop_fetchers(Rest, State#state{fetchers = lists:keydelete(TP, 1, Fetchers),
+                                      commits = maps:remove(CommitStoreKey, Commits)});
+    false ->
+      stop_fetchers(Rest, State)
+  end.
+
+commit([{_, false}|_] = Rest, Result, _, _, _) ->
+  {Result, Rest};
+commit([{{T, P, O}, true}|Rest] = All, ok, GroupID, GenerationID, MemberID) ->
+  lager:info("COMMIT Offset ~p for Topic ~p, partition ~p", [O, T, P]), % TODO lager:debug
+  case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
+                          [{T, [{P, O, <<>>}]}]) of
+    {ok, _} -> % TODO error
+      commit(Rest, ok, GroupID, GenerationID, MemberID);
+    Error ->
+      {Error, All}
   end.
 

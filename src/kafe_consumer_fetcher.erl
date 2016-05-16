@@ -1,0 +1,192 @@
+% @hidden
+-module(kafe_consumer_fetcher).
+-compile([{parse_transform, lager_transform}]).
+-behaviour(gen_server).
+
+-include("../include/kafe.hrl").
+
+%% API.
+-export([start_link/13]).
+
+%% gen_server.
+-export([init/1]).
+-export([handle_call/3]).
+-export([handle_cast/2]).
+-export([handle_info/2]).
+-export([terminate/2]).
+-export([code_change/3]).
+
+-record(state, {
+          topic = undefined,
+          partition = undefined,
+          server = undefined,
+          fetch_interval = undefined,
+          timer = undefined,
+          offset = -1,
+          group_id = undefined,
+          generation_id = undefined,
+          member_id = undefined,
+          fetch_size = ?DEFAULT_CONSUMER_FETCH_SIZE,
+          autocommit = ?DEFAULT_CONSUMER_AUTOCOMMIT,
+          min_bytes = ?DEFAULT_FETCH_MIN_BYTES,
+          max_bytes = ?DEFAULT_FETCH_MAX_BYTES,
+          max_wait_time = ?DEFAULT_FETCH_MAX_WAIT_TIME,
+          callback = undefined
+         }).
+
+start_link(Topic, Partition, Srv, FetchInterval,
+           GroupID, GenerationID, MemberID,
+           FetchSize, Autocommit,
+           MinBytes, MaxBytes, MaxWaitTime, Callback) ->
+	gen_server:start_link(?MODULE, [
+                                  Topic
+                                  , Partition
+                                  , Srv
+                                  , FetchInterval
+                                  , GroupID
+                                  , GenerationID
+                                  , MemberID
+                                  , FetchSize
+                                  , Autocommit
+                                  , MinBytes
+                                  , MaxBytes
+                                  , MaxWaitTime
+                                  , Callback
+                                 ], []).
+
+%% gen_server.
+
+init([Topic, Partition, Srv, FetchInterval,
+      GroupID, GenerationID, MemberID,
+      FetchSize, Autocommit,
+      MinBytes, MaxBytes, MaxWaitTime, Callback]) ->
+  NoError = kafe_error:code(0),
+  case kafe:offset_fetch(GroupID, [{Topic, [Partition]}]) of
+    {ok, [#{name := Topic,
+            partitions_offset := [#{error_code := NoError,
+                                    offset := Offset,
+                                    partition := Partition}]}]} ->
+      lager:info("Start fetcher for ~p#~p with offset ~p", [Topic, Partition, Offset]),
+      {ok, #state{
+              topic = Topic,
+              partition = Partition,
+              server = Srv,
+              fetch_interval = FetchInterval,
+              timer = erlang:send_after(FetchInterval, self(), fetch),
+              offset = Offset,
+              group_id = GroupID,
+              generation_id = GenerationID,
+              member_id = MemberID,
+              fetch_size = FetchSize,
+              autocommit = Autocommit,
+              min_bytes = MinBytes,
+              max_bytes = MaxBytes,
+              max_wait_time = MaxWaitTime,
+              callback = Callback
+             }};
+    _ ->
+      lager:debug("Faild to fetch offset for ~p:~p in group ~p", [Topic, Partition, GroupID]),
+      {stop, fetch_offset_faild}
+  end.
+
+handle_call(_Request, _From, State) ->
+	{reply, ignored, State}.
+
+handle_cast(_Msg, State) ->
+	{noreply, State}.
+
+handle_info(fetch, State) ->
+  {noreply, fetch(State)};
+handle_info(_Info, State) ->
+	{noreply, State}.
+
+terminate(_Reason, _State) ->
+  lager:info("Stop fetcher ~p", [_State]),
+	ok.
+
+code_change(_OldVsn, State, _Extra) ->
+	{ok, State}.
+
+fetch(#state{fetch_interval = FetchInterval,
+             topic = Topic,
+             partition = Partition,
+             server = Srv,
+             offset = OffsetFetch,
+             fetch_size = FetchSize,
+             autocommit = Autocommit,
+             min_bytes = MinBytes,
+             max_bytes = MaxBytes,
+             max_wait_time = MaxWaitTime,
+             callback = Callback} = State) ->
+  OffsetFetch1 = case kafe:offset([{Topic, [{Partition, -1, 1}]}]) of
+                   {ok, [#{name := Topic,
+                           partitions := [#{error_code := none,
+                                            id := Partition,
+                                            offsets := [Offset]}]}]} ->
+                     if
+                       OffsetFetch + 1 =< Offset - 1 ->
+                         Offsets = lists:sublist(lists:seq(OffsetFetch + 1, Offset - 1), FetchSize),
+                         lager:debug("~p#~p Fetch ~p", [Topic, Partition, Offsets]),
+                         lists:max(perform_fetch(Offsets, [], Topic, Partition,
+                                                 Autocommit, Srv, Callback,
+                                                 MinBytes, MaxBytes, MaxWaitTime));
+                       true ->
+                         OffsetFetch
+                     end;
+                   {ok, [#{name := Topic,
+                           partitions := [#{error_code := Error}]}]} ->
+                     lager:error("Get offset for ~p#~p error : ~p", [Topic, Partition, Error]),
+                     OffsetFetch;
+                   {error, Error} ->
+                     lager:error("Get offset for ~p#~p error : ~p", [Topic, Partition, Error]),
+                     OffsetFetch
+                 end,
+  State#state{timer = erlang:send_after(FetchInterval, self(), fetch),
+              offset = OffsetFetch1}.
+
+perform_fetch([], Acc, _, _, _, _, _, _, _, _) ->
+  Acc;
+perform_fetch([Offset|Offsets], Acc,
+              Topic, Partition, Autocommit, Srv, Callback,
+              MinBytes, MaxBytes, MaxWaitTime) ->
+  NoError = kafe_error:code(0),
+  CommitRef = gen_server:call(Srv, {store_for_commit, Topic, Partition, Offset}),
+  case kafe:fetch(-1, Topic, #{partition => Partition,
+                               offset => Offset,
+                               max_bytes => MaxBytes,
+                               min_bytes => MinBytes,
+                               max_wait_time => MaxWaitTime}) of
+    {ok, #{topics :=
+           [#{name := Topic,
+              partitions :=
+              [#{error_code := NoError,
+                 message := #{key := Key,
+                              offset := Offset,
+                              value := Value},
+                 partition := Partition}]}]}} ->
+      lager:debug("Fetch offset ~p for ~p#~p with commit ref ~p", [Offset, Topic, Partition, CommitRef]),
+      case erlang:apply(Callback, [CommitRef, Topic, Partition, Offset, Key, Value]) of
+        ok ->
+          if
+            Autocommit == true ->
+              case kafe_consumer:commit(CommitRef) of
+                {error, Reason} ->
+                  lager:info("Commit error for offset ~p of ~p#~p : ~p", [Offset, Topic, Partition, Reason]), % TODO lager:error
+                  Acc; % TODO
+                _ ->
+                  perform_fetch(Offsets, [Offset|Acc], Topic, Partition, Autocommit, Srv, Callback,
+                                MinBytes, MaxBytes, MaxWaitTime)
+              end;
+            true ->
+              perform_fetch(Offsets, [Offset|Acc], Topic, Partition, Autocommit, Srv, Callback,
+                            MinBytes, MaxBytes, MaxWaitTime)
+          end;
+        error ->
+          lager:info("Callback for message #~p or ~p#~p return error!!!", [Offset, Topic, Partition]), % TODO lager:error
+          Acc % TODO
+      end;
+    Error ->
+      lager:info("Faild to fetch message #~p topic ~p:~p : ~p", [Offset, Topic, Partition, Error]), % TODO lager:error
+      Acc % TODO
+  end.
+

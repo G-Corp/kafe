@@ -38,6 +38,16 @@ broker_id() = atom()
 
 
 
+### <a name="type-consumer_options">consumer_options()</a> ###
+
+
+<pre><code>
+consumer_options() = #{session_timeout =&gt; integer(), member_id =&gt; binary(), topics =&gt; [binary() | {binary(), [integer()]}], fetch_interval =&gt; integer(), fetch_size =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), autocommit =&gt; boolean(), allow_unordered_commit =&gt; boolean()}
+</code></pre>
+
+
+
+
 ### <a name="type-describe_group">describe_group()</a> ###
 
 
@@ -83,6 +93,16 @@ group() = #{group_id =&gt; binary(), protocol_type =&gt; binary()}
 
 <pre><code>
 group_assignment() = #{member_id =&gt; binary(), member_assignment =&gt; <a href="#type-member_assignment">member_assignment()</a>}
+</code></pre>
+
+
+
+
+### <a name="type-group_commit_identifier">group_commit_identifier()</a> ###
+
+
+<pre><code>
+group_commit_identifier() = binary()
 </code></pre>
 
 
@@ -342,7 +362,7 @@ Return the list of the next Nth unread offsets for a given topic and consumer gr
 Send a message.</td></tr><tr><td valign="top"><a href="#start-0">start/0</a></td><td>
 Start kafe application.</td></tr><tr><td valign="top"><a href="#start_consumer-3">start_consumer/3</a></td><td> 
 Start a new consumer.</td></tr><tr><td valign="top"><a href="#stop_consumer-1">stop_consumer/1</a></td><td>
-TODO DOC + SPEC.</td></tr><tr><td valign="top"><a href="#sync_group-4">sync_group/4</a></td><td> 
+Stop the given consumer.</td></tr><tr><td valign="top"><a href="#sync_group-4">sync_group/4</a></td><td> 
 The sync group request is used by the group leader to assign state (e.g.</td></tr></table>
 
 
@@ -750,7 +770,10 @@ Start kafe application
 
 ### start_consumer/3 ###
 
-`start_consumer(GroupId, Callback, Options) -> any()`
+<pre><code>
+start_consumer(GroupID::binary(), Callback::fun((CommitID::<a href="#type-group_commit_identifier">group_commit_identifier()</a>, Topic::binary(), PartitionID::integer(), Offset::integer(), Key::binary(), Value::binary()) -&gt; ok | error), Options::<a href="#type-consumer_options">consumer_options()</a>) -&gt; {ok, GroupPID::pid()} | {error, term()}
+</code></pre>
+<br />
 
 
 Start a new consumer.
@@ -781,16 +804,21 @@ MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait
 * `max_wait_time :: integer()` : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
 at the time the request is issued (default : 1).
 
+* `autocommit :: boolean()` : Autocommit offset (default: true).
 
-TODO SPEC
+* `allow_unordered_commit :: boolean()` : Allow unordered commit (default: false).
+
 
 <a name="stop_consumer-1"></a>
 
 ### stop_consumer/1 ###
 
-`stop_consumer(GroupId) -> any()`
+<pre><code>
+stop_consumer(GroupPIDOrID::binary() | atom() | pid()) -&gt; ok | {error, not_found | simple_one_for_one} | undefined
+</code></pre>
+<br />
 
-TODO DOC + SPEC
+Stop the given consumer
 
 <a name="sync_group-4"></a>
 

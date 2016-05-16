@@ -20,18 +20,20 @@ __Authors:__ Grégoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoir
 
 ## Description ##
 
-To create a consumer, create a function with 5 parameters :
+To create a consumer, create a function with 6 parameters :
 
 ```
 
  -module(my_consumer).
 
- -export([consume/5]).
+ -export([consume/6]).
 
- consume(Topic, Partition, Offset, Key, Value) ->
+ consume(CommitID, Topic, Partition, Offset, Key, Value) ->
    % Do something with Topic/Partition/Offset/Key/Value
    ok.
 ```
+
+The `consume` function must return `ok` if the message was treated, `false` otherwise.
 
 Then start a new consumer :
 
@@ -40,9 +42,14 @@ Then start a new consumer :
  ...
  kafe:start(),
  ...
- kafe:start_consumer(my_group, fun my_consumer:consume/5, Options),
+ kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
  ...
 ```
+
+See [`kafe:start_consumer/3`](kafe.md#start_consumer-3) for the available `Options`.
+
+In the `consume` function, if you didn't start the consumer with `autocommit` set to `true`, you need to commit manually when you
+have finished to treat the message. To do so, use [`kafe_consumer:commit/1`](kafe_consumer.md#commit-1) with the `CommitID` as parameter.
 
 When you are done with your consumer, stop it :
 
@@ -57,10 +64,12 @@ When you are done with your consumer, stop it :
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
-Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#generation_id-1">generation_id/1</a></td><td>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#commit-1">commit/1</a></td><td>
+Commit the offset (in Kafka) for the given <tt>GroupCommitIdentifier</tt> received in the <tt>Callback</tt> specified when starting the
+consumer group (see <a href="kafe.md#start_consumer-3"><code>kafe:start_consumer/3</code></a></td></tr><tr><td valign="top"><a href="#decode_group_commit_identifier-1">decode_group_commit_identifier/1</a></td><td></td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
+Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#encode_group_commit_identifier-4">encode_group_commit_identifier/4</a></td><td></td></tr><tr><td valign="top"><a href="#generation_id-1">generation_id/1</a></td><td>
 Return the <tt>generation_id</tt> of the consumer.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
-Return the <tt>member_id</tt> of the consumer.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupId, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupId)</tt></a>.</td></tr><tr><td valign="top"><a href="#topics-1">topics/1</a></td><td>
+Return the <tt>member_id</tt> of the consumer.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupID, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupID)</tt></a>.</td></tr><tr><td valign="top"><a href="#topics-1">topics/1</a></td><td>
 Return the topics (and partitions) of the consumer.</td></tr></table>
 
 
@@ -68,22 +77,56 @@ Return the topics (and partitions) of the consumer.</td></tr></table>
 
 ## Function Details ##
 
+<a name="commit-1"></a>
+
+### commit/1 ###
+
+<pre><code>
+commit(GroupCommitIdentifier::<a href="kafe.md#type-group_commit_identifier">kafe:group_commit_identifier()</a>) -&gt; ok | {error, term()} | delayed
+</code></pre>
+<br />
+
+Commit the offset (in Kafka) for the given `GroupCommitIdentifier` received in the `Callback` specified when starting the
+consumer group (see [`kafe:start_consumer/3`](kafe.md#start_consumer-3)
+
+If the `GroupCommitIdentifier` is not the lowerest offset to commit in the group :
+
+* If the consumer was created with `allow_unordered_commit`, the commit is delayed
+
+* Otherwise this function return `{error, cant_commit}`
+
+
+<a name="decode_group_commit_identifier-1"></a>
+
+### decode_group_commit_identifier/1 ###
+
+`decode_group_commit_identifier(GroupCommitIdentifier) -> any()`
+
 <a name="describe-1"></a>
 
 ### describe/1 ###
 
 <pre><code>
-describe(GroupId::atom()) -&gt; {ok, <a href="kafe.md#type-describe_group">kafe:describe_group()</a>} | {error, term()}
+describe(GroupPIDOrID::atom() | pid() | binary()) -&gt; {ok, <a href="kafe.md#type-describe_group">kafe:describe_group()</a>} | {error, term()}
 </code></pre>
 <br />
 
 Return consumer group descrition
 
+<a name="encode_group_commit_identifier-4"></a>
+
+### encode_group_commit_identifier/4 ###
+
+`encode_group_commit_identifier(Pid, Topic, Partition, Offset) -> any()`
+
 <a name="generation_id-1"></a>
 
 ### generation_id/1 ###
 
-`generation_id(GroupId) -> any()`
+<pre><code>
+generation_id(GroupPIDOrID::atom() | pid() | binary()) -&gt; integer()
+</code></pre>
+<br />
 
 Return the `generation_id` of the consumer
 
@@ -91,7 +134,10 @@ Return the `generation_id` of the consumer
 
 ### member_id/1 ###
 
-`member_id(GroupId) -> any()`
+<pre><code>
+member_id(GroupPIDOrID::atom() | pid() | binary()) -&gt; binary()
+</code></pre>
+<br />
 
 Return the `member_id` of the consumer
 
@@ -99,23 +145,26 @@ Return the `member_id` of the consumer
 
 ### start/3 ###
 
-`start(GroupId, Callback, Options) -> any()`
+`start(GroupID, Callback, Options) -> any()`
 
-Equivalent to [`kafe:start_consumer(GroupId, Callback, Options)`](kafe.md#start_consumer-3).
+Equivalent to [`kafe:start_consumer(GroupID, Callback, Options)`](kafe.md#start_consumer-3).
 
 <a name="stop-1"></a>
 
 ### stop/1 ###
 
-`stop(GroupId) -> any()`
+`stop(GroupID) -> any()`
 
-Equivalent to [`kafe:stop_consumer(GroupId)`](kafe.md#stop_consumer-1).
+Equivalent to [`kafe:stop_consumer(GroupID)`](kafe.md#stop_consumer-1).
 
 <a name="topics-1"></a>
 
 ### topics/1 ###
 
-`topics(GroupId) -> any()`
+<pre><code>
+topics(GroupPIDOrID::atom() | pid() | binary()) -&gt; [{binary(), [integer()]}]
+</code></pre>
+<br />
 
 Return the topics (and partitions) of the consumer
 

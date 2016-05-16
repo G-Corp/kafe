@@ -76,7 +76,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--export_type([describe_group/0]).
+-export_type([describe_group/0, group_commit_identifier/0]).
 
 -type error_code() :: no_error
 | unknown
@@ -173,6 +173,17 @@
                              protocol => binary(),
                              protocol_type => binary(),
                              state => binary()}].
+-type consumer_options() :: #{session_timeout => integer(),
+                              member_id => binary(),
+                              topics => [binary() | {binary(), [integer()]}],
+                              fetch_interval => integer(),
+                              fetch_size => integer(),
+                              max_bytes => integer(),
+                              min_bytes => integer(),
+                              max_wait_time => integer(),
+                              autocommit => boolean(),
+                              allow_unordered_commit => boolean()}.
+-type group_commit_identifier() :: binary().
 
 % @hidden
 start_link() ->
@@ -968,16 +979,25 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % 1).</li>
 % <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
 % at the time the request is issued (default : 1).</li>
+% <li><tt>autocommit :: boolean()</tt> : Autocommit offset (default: true).</li>
+% <li><tt>allow_unordered_commit :: boolean()</tt> : Allow unordered commit (default: false).</li>
 % </ul>
-%
-% TODO SPEC
 % @end
-start_consumer(GroupId, Callback, Options) when is_function(Callback, 5) ->
-  kafe_consumer_sup:start_child(GroupId, Options#{callback => Callback}).
+-spec start_consumer(GroupID :: binary(),
+                     Callback :: fun((CommitID :: group_commit_identifier(),
+                                      Topic :: binary(),
+                                      PartitionID :: integer(),
+                                      Offset :: integer(),
+                                      Key :: binary(),
+                                      Value :: binary()) -> ok | error),
+                                   Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
+start_consumer(GroupID, Callback, Options) when is_function(Callback, 6) ->
+  kafe_consumer_sup:start_child(GroupID, Options#{callback => Callback}).
 
 % @doc
-% TODO DOC + SPEC
+% Stop the given consumer
 % @end
-stop_consumer(GroupId) ->
-  kafe_consumer_sup:stop_child(GroupId).
+-spec stop_consumer(GroupPIDOrID :: binary() | atom() | pid()) -> ok | {error, not_found | simple_one_for_one} | undefined.
+stop_consumer(GroupPIDOrID) ->
+  kafe_consumer_sup:stop_child(GroupPIDOrID).
 

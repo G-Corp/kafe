@@ -13,9 +13,48 @@
   <li><a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol">Apache Kafka Protocol</a></li>
 </ul>
 
+<h3>Create a consumer</h3>
+
+To create a consumer, create a function with 6 parameters :
+
+<pre>
+-module(my_consumer).
+
+-export([consume/6]).
+
+consume(CommitID, Topic, Partition, Offset, Key, Value) ->
+  % Do something with Topic/Partition/Offset/Key/Value
+  ok.
+</pre>
+
+The <tt>consume</tt> function must return <tt>ok</tt> if the message was treated, <tt>false</tt> otherwise.
+
+Then start a new consumer :
+
+<pre>
+...
+kafe:start(),
+...
+kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
+...
+</pre>
+
+See {@link kafe:start_consumer/3} for the available <tt>Options</tt>.
+
+In the <tt>consume</tt> function, if you didn't start the consumer with <tt>autocommit</tt> set to <tt>true</tt>, you need to commit manually when you
+have finished to treat the message. To do so, use {@link kafe_consumer:commit/1} with the <tt>CommitID</tt> as parameter.
+
+When you are done with your consumer, stop it :
+
+<pre>
+...
+kafe:stop_consumer(my_group),
+...
+</pre>
+
 <h3>API Documentation</h3>
 
-See <a href="doc/kafe.md">documentation</a>
+See <a href="doc/">documentation</a>
 
 <h3>Contributing</h3>
 

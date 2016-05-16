@@ -4,17 +4,19 @@
 % @doc
 % A Kafka client for Erlang
 %
-% To create a consumer, create a function with 5 parameters :
+% To create a consumer, create a function with 6 parameters :
 %
 % <pre>
 % -module(my_consumer).
 %
-% -export([consume/5]).
+% -export([consume/6]).
 %
-% consume(Topic, Partition, Offset, Key, Value) ->
+% consume(CommitID, Topic, Partition, Offset, Key, Value) ->
 %   % Do something with Topic/Partition/Offset/Key/Value
 %   ok.
 % </pre>
+%
+% The <tt>consume</tt> function must return <tt>ok</tt> if the message was treated, <tt>false</tt> otherwise.
 %
 % Then start a new consumer :
 %
@@ -22,9 +24,14 @@
 % ...
 % kafe:start(),
 % ...
-% kafe:start_consumer(my_group, fun my_consumer:consume/5, Options),
+% kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
 % ...
 % </pre>
+%
+% See {@link kafe:start_consumer/3} for the available <tt>Options</tt>.
+%
+% In the <tt>consume</tt> function, if you didn't start the consumer with <tt>autocommit</tt> set to <tt>true</tt>, you need to commit manually when you
+% have finished to treat the message. To do so, use {@link kafe_consumer:commit/1} with the <tt>CommitID</tt> as parameter.
 %
 % When you are done with your consumer, stop it :
 %
@@ -37,91 +44,125 @@
 -module(kafe_consumer).
 -behaviour(supervisor).
 
+% API
 -export([
          start/3
          , stop/1
+         , commit/1
          , describe/1
          , member_id/1
          , generation_id/1
          , topics/1
         ]).
 
+% Private
 -export([
          start_link/2
          , init/1
          , member_id/2
          , generation_id/2
          , topics/2
+         , encode_group_commit_identifier/4
+         , decode_group_commit_identifier/1
         ]).
 
-% @equiv kafe:start_consumer(GroupId, Callback, Options)
-start(GroupId, Callback, Options) ->
-  kafe:start_consumer(GroupId, Callback, Options).
+% @equiv kafe:start_consumer(GroupID, Callback, Options)
+start(GroupID, Callback, Options) ->
+  kafe:start_consumer(GroupID, Callback, Options).
 
-% @equiv kafe:stop_consumer(GroupId)
-stop(GroupId) ->
-  kafe:stop_consumer(GroupId).
+% @equiv kafe:stop_consumer(GroupID)
+stop(GroupID) ->
+  kafe:stop_consumer(GroupID).
 
 % @doc
 % Return consumer group descrition
 % @end
--spec describe(atom()) -> {ok, kafe:describe_group()} | {error, term()}.
-describe(GroupId) ->
-  kafe_consumer_sup:call_srv(GroupId, describe).
+-spec describe(GroupPIDOrID :: atom() | pid() | binary()) -> {ok, kafe:describe_group()} | {error, term()}.
+describe(GroupID) ->
+  kafe_consumer_sup:call_srv(GroupID, describe).
+
+% @doc
+% Commit the offset (in Kafka) for the given <tt>GroupCommitIdentifier</tt> received in the <tt>Callback</tt> specified when starting the
+% consumer group (see {@link kafe:start_consumer/3}
+%
+% If the <tt>GroupCommitIdentifier</tt> is not the lowerest offset to commit in the group :
+% <ul>
+% <li>If the consumer was created with <tt>allow_unordered_commit</tt>, the commit is delayed</li>
+% <li>Otherwise this function return <tt>{error, cant_commit}</tt></li>
+% </ul>
+% @end
+-spec commit(GroupCommitIdentifier :: kafe:group_commit_identifier()) -> ok | {error, term()} | delayed.
+commit(GroupCommitIdentifier) ->
+  case decode_group_commit_identifier(GroupCommitIdentifier) of
+    {Pid, Topic, Partition, Offset} ->
+      gen_server:call(Pid, {commit, Topic, Partition, Offset});
+    _ ->
+      {error, invalid_group_commit_identifier}
+  end.
+
 
 % @hidden
-member_id(GroupId, MemberId) ->
-  kafe_consumer_sup:call_srv(GroupId, {member_id, MemberId}).
+member_id(GroupID, MemberID) ->
+  kafe_consumer_sup:call_srv(GroupID, {member_id, MemberID}).
 
 % @doc
 % Return the <tt>member_id</tt> of the consumer
 % @end
-member_id(GroupId) ->
-  kafe_consumer_sup:call_srv(GroupId, member_id).
+-spec member_id(GroupPIDOrID :: atom() | pid() | binary()) -> binary().
+member_id(GroupID) ->
+  kafe_consumer_sup:call_srv(GroupID, member_id).
 
 % @hidden
-generation_id(GroupId, GenerationId) ->
-  kafe_consumer_sup:call_srv(GroupId, {generation_id, GenerationId}).
+generation_id(GroupID, GenerationID) ->
+  kafe_consumer_sup:call_srv(GroupID, {generation_id, GenerationID}).
 
 % @doc
 % Return the <tt>generation_id</tt> of the consumer
 % @end
-generation_id(GroupId) ->
-  kafe_consumer_sup:call_srv(GroupId, generation_id).
+-spec generation_id(GroupPIDOrID :: atom() | pid() | binary()) -> integer().
+generation_id(GroupID) ->
+  kafe_consumer_sup:call_srv(GroupID, generation_id).
 
 % @hidden
-topics(GroupId, Topics) ->
-  kafe_consumer_sup:call_srv(GroupId, {topics, Topics}).
+topics(GroupID, Topics) ->
+  kafe_consumer_sup:call_srv(GroupID, {topics, Topics}).
 
 % @doc
 % Return the topics (and partitions) of the consumer
 % @end
-topics(GroupId) ->
-  kafe_consumer_sup:call_srv(GroupId, topics).
+-spec topics(GroupPIDOrID :: atom() | pid() | binary()) -> [{binary(), [integer()]}].
+topics(GroupID) ->
+  kafe_consumer_sup:call_srv(GroupID, topics).
 
 % @hidden
-start_link(GroupId, Options) ->
-  supervisor:start_link({global, bucs:to_atom(GroupId)}, ?MODULE, [GroupId, Options]).
+start_link(GroupID, Options) ->
+  supervisor:start_link({global, bucs:to_atom(GroupID)}, ?MODULE, [GroupID, Options]).
 
 % @hidden
-init([GroupId, Options]) ->
+init([GroupID, Options]) ->
   {ok, {
      #{strategy => one_for_one,
        intensity => 1,
        period => 5},
      [
       #{id => kafe_consumer_srv,
-        start => {kafe_consumer_srv, start_link, [GroupId, Options]},
+        start => {kafe_consumer_srv, start_link, [GroupID, Options]},
         restart => permanent,
         shutdown => 5000,
         type => worker,
         modules => [kafe_consumer_srv]},
       #{id => kafe_consumer_fsm,
-        start => {kafe_consumer_fsm, start_link, [GroupId, Options]},
+        start => {kafe_consumer_fsm, start_link, [GroupID, Options]},
         restart => permanent,
         shutdown => 5000,
         type => worker,
         modules => [kafe_consumer_fsm]}
      ]
     }}.
+
+encode_group_commit_identifier(Pid, Topic, Partition, Offset) ->
+  base64:encode(erlang:term_to_binary({Pid, Topic, Partition, Offset}, [compressed])).
+
+decode_group_commit_identifier(GroupCommitIdentifier) ->
+  erlang:binary_to_term(base64:decode(GroupCommitIdentifier)).
 
