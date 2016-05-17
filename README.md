@@ -63,7 +63,7 @@ kafe:stop_consumer(my_group),
 
 ### Using with Elixir ###
 
-Elixir' user can use `Kafe` and `Kafe.Consumer` instead of `:kafe` and `:kafe_consumer`.
+Elixir' users can use `Kafe` and `Kafe.Consumer` instead of `:kafe` and `:kafe_consumer`.
 
 ```
 

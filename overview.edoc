@@ -54,7 +54,7 @@ kafe:stop_consumer(my_group),
 
 <h3>Using with Elixir</h3>
 
-Elixir' user can use <tt>Kafe</tt> and <tt>Kafe.Consumer</tt> instead of <tt>:kafe</tt> and <tt>:kafe_consumer</tt>.
+Elixir' users can use <tt>Kafe</tt> and <tt>Kafe.Consumer</tt> instead of <tt>:kafe</tt> and <tt>:kafe_consumer</tt>.
 
 <pre>
 defmodule MyConsumer do
