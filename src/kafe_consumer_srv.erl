@@ -117,17 +117,24 @@ handle_call({commit, Topic, Partition, Offset}, _From, #state{allow_unordered_co
   end;
 handle_call({commit, Topic, Partition, Offset}, _From, #state{allow_unordered_commit = false,
                                                               commits = Commits,
-                                                             group_id = GroupID,
-                                                             generation_id = GenerationID,
-                                                             member_id = MemberID} = State) ->
+                                                              group_id = GroupID,
+                                                              generation_id = GenerationID,
+                                                              member_id = MemberID} = State) ->
+  NoError = kafe_error:code(0),
   CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
   case maps:get(CommitStoreKey, Commits, []) of
     [{{Topic, Partition, Offset}, _}|CommitsList] ->
-      lager:info("COMMIT Offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]), % TODO lager:debug
+      lager:debug("COMMIT Offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]),
       case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
                               [{Topic, [{Partition, Offset, <<>>}]}]) of
-        {ok, _} -> % TODO error
+        {ok, [#{name := Topic,
+                partitions := [#{error_code := NoError,
+                                 partition := Partition}]}]} ->
           {reply, ok, State#state{commits = maps:put(CommitStoreKey, CommitsList, Commits)}};
+        {ok, [#{name := Topic,
+                partitions := [#{error_code := Error,
+                                 partition := Partition}]}]} ->
+          {reply, {error, Error}, State};
         Error ->
           {reply, Error, State}
       end;
@@ -151,7 +158,7 @@ handle_cast(_Msg, State) ->
 
 % @hidden
 handle_info({'DOWN', MonitorRef, Type, Object, Info}, State) ->
-  lager:info("DOWN ~p, ~p, ~p, ~p", [MonitorRef, Type, Object, Info]), % TODO lager:debug
+  lager:info("DOWN ~p, ~p, ~p, ~p", [MonitorRef, Type, Object, Info]),
   {noreply, State};
 handle_info(_Info, State) ->
   {noreply, State}.
@@ -205,7 +212,7 @@ start_fetchers_for_topic_and_partition([Partition|Partitions], Topic, #state{fet
           MRef = erlang:monitor(process, Pid),
           start_fetchers_for_topic_and_partition(Partitions, Topic, State#state{fetchers = [{{Topic, Partition}, Pid, MRef}|Fetchers]});
         {error, Error} ->
-          lager:info("Faild to start fetcher for ~p#~p : ~p", [Topic, Partition, Error]), % TODO error
+          lager:error("Faild to start fetcher for ~p#~p : ~p", [Topic, Partition, Error]),
           start_fetchers_for_topic_and_partition(Partitions, Topic, State)
       end;
     _ ->
@@ -229,11 +236,18 @@ stop_fetchers([TP|Rest], #state{fetchers = Fetchers, commits = Commits} = State)
 commit([{_, false}|_] = Rest, Result, _, _, _) ->
   {Result, Rest};
 commit([{{T, P, O}, true}|Rest] = All, ok, GroupID, GenerationID, MemberID) ->
-  lager:info("COMMIT Offset ~p for Topic ~p, partition ~p", [O, T, P]), % TODO lager:debug
+  lager:debug("COMMIT Offset ~p for Topic ~p, partition ~p", [O, T, P]),
+  NoError = kafe_error:code(0),
   case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
                           [{T, [{P, O, <<>>}]}]) of
-    {ok, _} -> % TODO error
+    {ok, [#{name := T,
+            partitions := [#{error_code := NoError,
+                             partition := P}]}]} ->
       commit(Rest, ok, GroupID, GenerationID, MemberID);
+    {ok, [#{name := T,
+            partitions := [#{error_code := Error,
+                             partition := P}]}]} ->
+      {{error, Error}, All};
     Error ->
       {Error, All}
   end.

@@ -12,6 +12,9 @@ defmodule Kafe.Consumer do
 	def unquote(:"describe")(arg1) do
 		:erlang.apply(:"kafe_consumer", :"describe", [arg1])
 	end
+	def unquote(:"commit")(arg1) do
+		:erlang.apply(:"kafe_consumer", :"commit", [arg1])
+	end
 	def unquote(:"member_id")(arg1, arg2) do
 		:erlang.apply(:"kafe_consumer", :"member_id", [arg1, arg2])
 	end
@@ -35,5 +38,11 @@ defmodule Kafe.Consumer do
 	end
 	def unquote(:"init")(arg1) do
 		:erlang.apply(:"kafe_consumer", :"init", [arg1])
+	end
+	def unquote(:"encode_group_commit_identifier")(arg1, arg2, arg3, arg4) do
+		:erlang.apply(:"kafe_consumer", :"encode_group_commit_identifier", [arg1, arg2, arg3, arg4])
+	end
+	def unquote(:"decode_group_commit_identifier")(arg1) do
+		:erlang.apply(:"kafe_consumer", :"decode_group_commit_identifier", [arg1])
 	end
 end

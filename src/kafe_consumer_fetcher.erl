@@ -165,14 +165,18 @@ perform_fetch([Offset|Offsets], Acc,
                               value := Value},
                  partition := Partition}]}]}} ->
       lager:debug("Fetch offset ~p for ~p#~p with commit ref ~p", [Offset, Topic, Partition, CommitRef]),
-      case erlang:apply(Callback, [CommitRef, Topic, Partition, Offset, Key, Value]) of
+      case try
+             erlang:apply(Callback, [CommitRef, Topic, Partition, Offset, Key, Value])
+           catch
+             _:_ -> {error, callback_exception}
+           end of
         ok ->
           if
             Autocommit == true ->
               case kafe_consumer:commit(CommitRef) of
                 {error, Reason} ->
-                  lager:info("Commit error for offset ~p of ~p#~p : ~p", [Offset, Topic, Partition, Reason]), % TODO lager:error
-                  Acc; % TODO
+                  lager:error("Commit error for offset ~p of ~p#~p : ~p", [Offset, Topic, Partition, Reason]),
+                  Acc;
                 _ ->
                   perform_fetch(Offsets, [Offset|Acc], Topic, Partition, Autocommit, Srv, Callback,
                                 MinBytes, MaxBytes, MaxWaitTime)
@@ -181,12 +185,12 @@ perform_fetch([Offset|Offsets], Acc,
               perform_fetch(Offsets, [Offset|Acc], Topic, Partition, Autocommit, Srv, Callback,
                             MinBytes, MaxBytes, MaxWaitTime)
           end;
-        error ->
-          lager:info("Callback for message #~p or ~p#~p return error!!!", [Offset, Topic, Partition]), % TODO lager:error
-          Acc % TODO
+        {error, Error} ->
+          lager:error("Callback for message #~p or ~p#~p return error : ~p", [Offset, Topic, Partition, Error]),
+          Acc
       end;
     Error ->
-      lager:info("Faild to fetch message #~p topic ~p:~p : ~p", [Offset, Topic, Partition, Error]), % TODO lager:error
-      Acc % TODO
+      lager:error("Faild to fetch message #~p topic ~p:~p : ~p", [Offset, Topic, Partition, Error]),
+      Acc
   end.
 

@@ -989,7 +989,7 @@ delete_offset_for_partition(PartitionID, Offsets) ->
                                       PartitionID :: integer(),
                                       Offset :: integer(),
                                       Key :: binary(),
-                                      Value :: binary()) -> ok | error),
+                                      Value :: binary()) -> ok | {error, term()}),
                                    Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
 start_consumer(GroupID, Callback, Options) when is_function(Callback, 6) ->
   kafe_consumer_sup:start_child(GroupID, Options#{callback => Callback}).
