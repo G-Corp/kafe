@@ -59,7 +59,7 @@ Elixir' user can use <tt>Kafe</tt> and <tt>Kafe.Consumer</tt> instead of <tt>:ka
 <pre>
 defmodule MyConsumer do
   def consume(commit_id, topic, partition, offset, key, value) do
-    % Do something with topic/partition/offset/key/value
+    # Do something with topic/partition/offset/key/value
     :ok
   end
 end

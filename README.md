@@ -69,7 +69,7 @@ Elixir' user can use `Kafe` and `Kafe.Consumer` instead of `:kafe` and `:kafe_co
 
 defmodule MyConsumer do
   def consume(commit_id, topic, partition, offset, key, value) do
-    % Do something with topic/partition/offset/key/value
+    # Do something with topic/partition/offset/key/value
     :ok
   end
 end
