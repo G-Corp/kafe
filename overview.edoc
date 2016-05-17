@@ -27,7 +27,7 @@ consume(CommitID, Topic, Partition, Offset, Key, Value) ->
   ok.
 </pre>
 
-The <tt>consume</tt> function must return <tt>ok</tt> if the message was treated, <tt>false</tt> otherwise.
+The <tt>consume</tt> function must return <tt>ok</tt> if the message was treated, or <tt>{error, term()}</tt> on error.
 
 Then start a new consumer :
 
@@ -49,6 +49,29 @@ When you are done with your consumer, stop it :
 <pre>
 ...
 kafe:stop_consumer(my_group),
+...
+</pre>
+
+<h3>Using with Elixir</h3>
+
+Elixir' user can use <tt>Kafe</tt> and <tt>Kafe.Consumer</tt> instead of <tt>:kafe</tt> and <tt>:kafe_consumer</tt>.
+
+<pre>
+defmodule MyConsumer do
+  def consume(commit_id, topic, partition, offset, key, value) do
+    % Do something with topic/partition/offset/key/value
+    :ok
+  end
+end
+</pre>
+
+<pre>
+...
+Kafe:start()
+...
+Kafe:start_consumer(:my_group, &amp;My.Consumer.consume/6, options)
+...
+Kafe:stop_consumer(:my_group)
 ...
 </pre>
 

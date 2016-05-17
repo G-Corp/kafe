@@ -16,7 +16,7 @@
 %   ok.
 % </pre>
 %
-% The <tt>consume</tt> function must return <tt>ok</tt> if the message was treated, <tt>false</tt> otherwise.
+% The <tt>consume</tt> function must return <tt>ok</tt> if the message was treated, or <tt>{error, term()}</tt> on error.
 %
 % Then start a new consumer :
 %

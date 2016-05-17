@@ -33,7 +33,7 @@ To create a consumer, create a function with 6 parameters :
    ok.
 ```
 
-The `consume` function must return `ok` if the message was treated, `false` otherwise.
+The `consume` function must return `ok` if the message was treated, or `{error, term()}` on error.
 
 Then start a new consumer :
 
