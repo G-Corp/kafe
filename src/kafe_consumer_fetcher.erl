@@ -178,7 +178,7 @@ perform_fetch([Offset|Offsets], Acc,
         ok ->
           if
             Autocommit == true ->
-              case kafe_consumer:commit(CommitRef) of
+              case kafe_consumer:commit(CommitRef, #{retry => 3, delay => 1000}) of
                 {error, Reason} ->
                   lager:error("Commit error for offset ~p of ~p#~p : ~p", [Offset, Topic, Partition, Reason]),
                   Acc;

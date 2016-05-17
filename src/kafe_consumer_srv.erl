@@ -90,18 +90,20 @@ handle_call({topics, Topics}, _From, #state{topics = CurrentTopics} = State) ->
     true ->
       {reply, ok, start_fetchers(Topics, State#state{topics = Topics})}
   end;
-handle_call({commit, Topic, Partition, Offset}, _From, #state{allow_unordered_commit = true,
-                                                              commits = Commits,
-                                                              group_id = GroupID,
-                                                              generation_id = GenerationID,
-                                                              member_id = MemberID} = State) ->
+handle_call({commit, Topic, Partition, Offset, Options}, _From, #state{allow_unordered_commit = true,
+                                                                       commits = Commits,
+                                                                       group_id = GroupID,
+                                                                       generation_id = GenerationID,
+                                                                       member_id = MemberID} = State) ->
+  Retry = maps:get(retry, Options, ?DEFAULT_CONSUMER_COMMIT_RETRY),
+  Delay = maps:get(delay, Options, ?DEFAULT_CONSUMER_COMMIT_DELAY),
   CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
   CommitsList = maps:get(CommitStoreKey, Commits, []),
   case lists:keyfind({Topic, Partition, Offset}, 1, CommitsList) of
     {{Topic, Partition, Offset}, _} ->
       case commit(
              lists:keyreplace({Topic, Partition, Offset}, 1, CommitsList, {{Topic, Partition, Offset}, true}),
-             ok, GroupID, GenerationID, MemberID) of
+             ok, GroupID, GenerationID, MemberID, Retry, Delay) of
         {ok, CommitsList1} ->
           case lists:keyfind({Topic, Partition, Offset}, 1, CommitsList1) of
             {{Topic, Partition, Offset}, true} ->
@@ -115,18 +117,23 @@ handle_call({commit, Topic, Partition, Offset}, _From, #state{allow_unordered_co
     false ->
       {reply, {error, invalid_commit_ref}, State}
   end;
-handle_call({commit, Topic, Partition, Offset}, _From, #state{allow_unordered_commit = false,
-                                                              commits = Commits,
-                                                              group_id = GroupID,
-                                                              generation_id = GenerationID,
-                                                              member_id = MemberID} = State) ->
+handle_call({commit, Topic, Partition, Offset, Options}, _From, #state{allow_unordered_commit = false,
+                                                                       commits = Commits,
+                                                                       group_id = GroupID,
+                                                                       generation_id = GenerationID,
+                                                                       member_id = MemberID} = State) ->
+  Retry = maps:get(retry, Options, ?DEFAULT_CONSUMER_COMMIT_RETRY),
+  Delay = maps:get(delay, Options, ?DEFAULT_CONSUMER_COMMIT_DELAY),
   NoError = kafe_error:code(0),
   CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
   case maps:get(CommitStoreKey, Commits, []) of
     [{{Topic, Partition, Offset}, _}|CommitsList] ->
       lager:debug("COMMIT Offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]),
-      case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
-                              [{Topic, [{Partition, Offset, <<>>}]}]) of
+      % case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
+      %                         [{Topic, [{Partition, Offset, <<>>}]}]) of
+      case do_commit(GroupID, GenerationID, MemberID,
+                     Topic, Partition, Offset,
+                     Retry, Delay, {error, invalid_retry}) of
         {ok, [#{name := Topic,
                 partitions := [#{error_code := NoError,
                                  partition := Partition}]}]} ->
@@ -149,6 +156,8 @@ handle_call({store_for_commit, Topic, Partition, Offset}, _From, #state{commits 
   {reply,
    kafe_consumer:encode_group_commit_identifier(self(), Topic, Partition, Offset),
    State#state{commits = maps:put(CommitStoreKey, CommitsList, Commits)}};
+handle_call(clear_commits, _From, State) ->
+  {reply, ok, State#state{commits = #{}}};
 handle_call(_Request, _From, State) ->
   {reply, ignored, State}.
 
@@ -233,22 +242,40 @@ stop_fetchers([TP|Rest], #state{fetchers = Fetchers, commits = Commits} = State)
       stop_fetchers(Rest, State)
   end.
 
-commit([{_, false}|_] = Rest, Result, _, _, _) ->
+commit([{_, false}|_] = Rest, Result, _, _, _, _, _) ->
   {Result, Rest};
-commit([{{T, P, O}, true}|Rest] = All, ok, GroupID, GenerationID, MemberID) ->
+commit([{{T, P, O}, true}|Rest] = All, ok, GroupID, GenerationID, MemberID, Retry, Delay) ->
   lager:debug("COMMIT Offset ~p for Topic ~p, partition ~p", [O, T, P]),
   NoError = kafe_error:code(0),
-  case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
-                          [{T, [{P, O, <<>>}]}]) of
+  %case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
+  %                        [{T, [{P, O, <<>>}]}]) of
+  case do_commit(GroupID, GenerationID, MemberID,
+                 T, P, O,
+                 Retry, Delay, {error, invalid_retry}) of
     {ok, [#{name := T,
             partitions := [#{error_code := NoError,
                              partition := P}]}]} ->
-      commit(Rest, ok, GroupID, GenerationID, MemberID);
+      commit(Rest, ok, GroupID, GenerationID, MemberID, Retry, Delay);
     {ok, [#{name := T,
             partitions := [#{error_code := Error,
                              partition := P}]}]} ->
       {{error, Error}, All};
     Error ->
       {Error, All}
+  end.
+
+do_commit(_, _, _, _, _, _, Retry, _, Return) when Retry < 0 ->
+  Return;
+do_commit(GroupID, GenerationID, MemberID, Topic, Partition, Offset, Retry, Delay, _) ->
+  NoError = kafe_error:code(0),
+  case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
+                          [{Topic, [{Partition, Offset, <<>>}]}]) of
+    {ok, [#{name := Topic,
+            partitions := [#{error_code := NoError,
+                             partition := Partition}]}]} = R ->
+      R;
+    Other ->
+      _ = timer:sleep(Delay),
+      do_commit(GroupID, GenerationID, MemberID, Topic, Partition, Offset, Retry - 1, Delay, Other)
   end.
 

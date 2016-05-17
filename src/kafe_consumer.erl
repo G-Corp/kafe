@@ -49,6 +49,8 @@
          start/3
          , stop/1
          , commit/1
+         , commit/2
+         , clear_commits/1
          , describe/1
          , member_id/1
          , generation_id/1
@@ -78,8 +80,13 @@ stop(GroupID) ->
 % Return consumer group descrition
 % @end
 -spec describe(GroupPIDOrID :: atom() | pid() | binary()) -> {ok, kafe:describe_group()} | {error, term()}.
-describe(GroupID) ->
-  kafe_consumer_sup:call_srv(GroupID, describe).
+describe(GroupPIDOrID) ->
+  kafe_consumer_sup:call_srv(GroupPIDOrID, describe).
+
+% @equiv commit(GroupCommitIdentifier, #{})
+-spec commit(GroupCommitIdentifier :: kafe:group_commit_identifier()) -> ok | {error, term()} | delayed.
+commit(GroupCommitIdentifier) ->
+  commit(GroupCommitIdentifier, #{}).
 
 % @doc
 % Commit the offset (in Kafka) for the given <tt>GroupCommitIdentifier</tt> received in the <tt>Callback</tt> specified when starting the
@@ -90,16 +97,29 @@ describe(GroupID) ->
 % <li>If the consumer was created with <tt>allow_unordered_commit</tt>, the commit is delayed</li>
 % <li>Otherwise this function return <tt>{error, cant_commit}</tt></li>
 % </ul>
+%
+% Available options:
+%
+% <ul>
+% <li><tt>retry :: integer()</tt> : max retry (default 0).</li>
+% <li><tt>delay :: integer()</tt> : Time (in ms) between each retry.</li>
+% </ul>
 % @end
--spec commit(GroupCommitIdentifier :: kafe:group_commit_identifier()) -> ok | {error, term()} | delayed.
-commit(GroupCommitIdentifier) ->
+-spec commit(GroupCommitIdentifier :: kafe:group_commit_identifier(), Options :: map()) -> ok | {error, term()} | delayed.
+commit(GroupCommitIdentifier, Options) ->
   case decode_group_commit_identifier(GroupCommitIdentifier) of
     {Pid, Topic, Partition, Offset} ->
-      gen_server:call(Pid, {commit, Topic, Partition, Offset});
+      gen_server:call(Pid, {commit, Topic, Partition, Offset, Options});
     _ ->
       {error, invalid_group_commit_identifier}
   end.
 
+% @doc
+% Clear all commits for the given group
+% @end
+-spec clear_commits(GroupPIDOrID :: atom() | pid() | binary()) -> ok.
+clear_commits(GroupPIDOrID) ->
+  kafe_consumer_sup:call_srv(GroupPIDOrID, clear_commits).
 
 % @hidden
 member_id(GroupID, MemberID) ->
