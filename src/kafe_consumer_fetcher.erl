@@ -127,9 +127,14 @@ fetch(#state{fetch_interval = FetchInterval,
                        OffsetFetch + 1 =< Offset - 1 ->
                          Offsets = lists:sublist(lists:seq(OffsetFetch + 1, Offset - 1), FetchSize),
                          lager:debug("~p#~p Fetch ~p", [Topic, Partition, Offsets]),
-                         lists:max(perform_fetch(Offsets, [], Topic, Partition,
-                                                 Autocommit, Srv, Callback,
-                                                 MinBytes, MaxBytes, MaxWaitTime));
+                         case perform_fetch(Offsets, [], Topic, Partition,
+                                            Autocommit, Srv, Callback,
+                                            MinBytes, MaxBytes, MaxWaitTime) of
+                           [] ->
+                             OffsetFetch;
+                           Fetched ->
+                             lists:max(Fetched)
+                         end;
                        true ->
                          OffsetFetch
                      end;
@@ -150,7 +155,6 @@ perform_fetch([Offset|Offsets], Acc,
               Topic, Partition, Autocommit, Srv, Callback,
               MinBytes, MaxBytes, MaxWaitTime) ->
   NoError = kafe_error:code(0),
-  CommitRef = gen_server:call(Srv, {store_for_commit, Topic, Partition, Offset}),
   case kafe:fetch(-1, Topic, #{partition => Partition,
                                offset => Offset,
                                max_bytes => MaxBytes,
@@ -164,6 +168,7 @@ perform_fetch([Offset|Offsets], Acc,
                               offset := Offset,
                               value := Value},
                  partition := Partition}]}]}} ->
+      CommitRef = gen_server:call(Srv, {store_for_commit, Topic, Partition, Offset}),
       lager:debug("Fetch offset ~p for ~p#~p with commit ref ~p", [Offset, Topic, Partition, CommitRef]),
       case try
              erlang:apply(Callback, [CommitRef, Topic, Partition, Offset, Key, Value])
