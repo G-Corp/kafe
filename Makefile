@@ -23,6 +23,7 @@ dep_meck = git https://github.com/eproxus/meck.git master
 app::
 
 tests::
+	@docker-compose pull
 	@mkdir -p test/ct
 	@mkdir -p test/eunit
 

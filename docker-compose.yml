@@ -1,43 +1,49 @@
-zookeeper:
-  image: dockerkafka/zookeeper
-  ports:
-    - "2181:2181"
+version: "2"
 
-kafka1:
-  image: wurstmeister/kafka
-  ports:
-    - "9092:9092"
-  links:
-    - zookeeper:zk
-  environment:
-    KAFKA_ZOOKEEPER_CONNECT: zk
-    KAFKA_BROKER_ID: 1
-    KAFKA_ADVERTISED_HOST_NAME: 172.17.0.1
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
+services:
+  zookeeper:
+    image: confluent/zookeeper
+    ports:
+      - "2181:2181"
 
-kafka2:
-  image: wurstmeister/kafka
-  ports:
-    - "9093:9092"
-  links:
-    - zookeeper:zk
-  environment:
-    KAFKA_ZOOKEEPER_CONNECT: zk
-    KAFKA_BROKER_ID: 2
-    KAFKA_ADVERTISED_HOST_NAME: 172.17.0.1
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
+  kafka1:
+    image: confluent/kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ADVERTISED_HOST_NAME: 172.17.0.1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
 
-kafka3:
-  image: wurstmeister/kafka
-  ports:
-    - "9094:9092"
-  links:
-    - zookeeper:zk
-  environment:
-    KAFKA_ZOOKEEPER_CONNECT: zk
-    KAFKA_BROKER_ID: 3
-    KAFKA_ADVERTISED_HOST_NAME: 172.17.0.1
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
+  kafka2:
+    image: confluent/kafka
+    ports:
+      - "9093:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ADVERTISED_HOST_NAME: 172.17.0.1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  kafka3:
+    image: confluent/kafka
+    ports:
+      - "9094:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ADVERTISED_HOST_NAME: 172.17.0.1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  tools:
+    image: confluent/tools
+    depends_on:
+      - zookeeper
+      - kafka1
+      - kafka2
+      - kafka3
+
