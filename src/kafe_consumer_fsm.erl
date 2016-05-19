@@ -130,6 +130,9 @@ awaiting_sync(timeout, #state{group_id = GroupId,
   case kafe:sync_group(GroupId, GenerationId, MemberId, GroupAssignment) of
     {ok, #{error_code := none}} ->
       next_state(State);
+    {ok, #{error_code := Error}} ->
+      lager:info("Sync group faild: ~p", [Error]),
+      next_state(State);
     {error, Reason} ->
       lager:info("Sync group faild: ~p", [Reason]),
       next_state(State)

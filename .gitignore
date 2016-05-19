@@ -13,4 +13,4 @@ ext
 .erlang.mk
 kafe.d
 test/eunit/
-test/ct/
+docker-compose.yml

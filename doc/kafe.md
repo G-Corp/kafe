@@ -808,6 +808,11 @@ at the time the request is issued (default : 1).
 
 * `allow_unordered_commit :: boolean()` : Allow unordered commit (default: false).
 
+* `processing :: at_least_once | at_most_once :` When using `at_most_once`, the message offset will be commited before passing the message to the
+callback. With `at_least_once` the commit is executed after passing the message to the callback and only if it return `ok`. If the callback
+return an error, with `at_least_once`, the process will stop fetching messages for the partition until you manually commit the offset
+(see [`kafe_consumer:commit/2`](kafe_consumer.md#commit-2)), or remove it (see [`kafe_consumer:remove_commit/1`](kafe_consumer.md#remove_commit-1) or [`kafe_consumer:remove_commits/1`](kafe_consumer.md#remove_commits-1)))  (default: at_most_once).
+
 
 <a name="stop_consumer-1"></a>
 

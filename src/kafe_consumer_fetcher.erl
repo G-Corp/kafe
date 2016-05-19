@@ -6,7 +6,7 @@
 -include("../include/kafe.hrl").
 
 %% API.
--export([start_link/13]).
+-export([start_link/14]).
 
 %% gen_server.
 -export([init/1]).
@@ -31,13 +31,15 @@
           min_bytes = ?DEFAULT_FETCH_MIN_BYTES,
           max_bytes = ?DEFAULT_FETCH_MAX_BYTES,
           max_wait_time = ?DEFAULT_FETCH_MAX_WAIT_TIME,
-          callback = undefined
+          callback = undefined,
+          processing = ?DEFAULT_CONSUMER_PROCESSING
          }).
 
 start_link(Topic, Partition, Srv, FetchInterval,
            GroupID, GenerationID, MemberID,
            FetchSize, Autocommit,
-           MinBytes, MaxBytes, MaxWaitTime, Callback) ->
+           MinBytes, MaxBytes, MaxWaitTime,
+           Callback, Processing) ->
 	gen_server:start_link(?MODULE, [
                                   Topic
                                   , Partition
@@ -52,6 +54,7 @@ start_link(Topic, Partition, Srv, FetchInterval,
                                   , MaxBytes
                                   , MaxWaitTime
                                   , Callback
+                                  , Processing
                                  ], []).
 
 %% gen_server.
@@ -59,7 +62,8 @@ start_link(Topic, Partition, Srv, FetchInterval,
 init([Topic, Partition, Srv, FetchInterval,
       GroupID, GenerationID, MemberID,
       FetchSize, Autocommit,
-      MinBytes, MaxBytes, MaxWaitTime, Callback]) ->
+      MinBytes, MaxBytes, MaxWaitTime, Callback,
+      Processing]) ->
   NoError = kafe_error:code(0),
   case kafe:offset_fetch(GroupID, [{Topic, [Partition]}]) of
     {ok, [#{name := Topic,
@@ -82,7 +86,8 @@ init([Topic, Partition, Srv, FetchInterval,
               min_bytes = MinBytes,
               max_bytes = MaxBytes,
               max_wait_time = MaxWaitTime,
-              callback = Callback
+              callback = Callback,
+              processing = Processing
              }};
     _ ->
       lager:debug("Faild to fetch offset for ~p:~p in group ~p", [Topic, Partition, GroupID]),
@@ -169,6 +174,9 @@ perform_fetch([Offset|Offsets], Acc,
                               value := Value},
                  partition := Partition}]}]}} ->
       CommitRef = gen_server:call(Srv, {store_for_commit, Topic, Partition, Offset}),
+      % at most one
+      % Perform commit
+
       lager:debug("Fetch offset ~p for ~p#~p with commit ref ~p", [Offset, Topic, Partition, CommitRef]),
       case try
              erlang:apply(Callback, [CommitRef, Topic, Partition, Offset, Key, Value])
@@ -177,6 +185,7 @@ perform_fetch([Offset|Offsets], Acc,
            end of
         ok ->
           if
+            % at least one
             Autocommit == true ->
               case kafe_consumer:commit(CommitRef, #{retry => 3, delay => 1000}) of
                 {error, Reason} ->

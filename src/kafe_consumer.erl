@@ -50,7 +50,10 @@
          , stop/1
          , commit/1
          , commit/2
-         , clear_commits/1
+         , remove_commits/1
+         , remove_commit/1
+         , pending_commits/1
+         , pending_commits/2
          , describe/1
          , member_id/1
          , generation_id/1
@@ -115,11 +118,42 @@ commit(GroupCommitIdentifier, Options) ->
   end.
 
 % @doc
-% Clear all commits for the given group
+% Remove all pending commits for the given group
 % @end
--spec clear_commits(GroupPIDOrID :: atom() | pid() | binary()) -> ok.
-clear_commits(GroupPIDOrID) ->
-  kafe_consumer_sup:call_srv(GroupPIDOrID, clear_commits).
+-spec remove_commits(GroupPIDOrID :: atom() | pid() | binary()) -> ok.
+remove_commits(GroupPIDOrID) ->
+  kafe_consumer_sup:call_srv(GroupPIDOrID, remove_commits).
+
+% @doc
+% Remove the given commit
+% @end
+-spec remove_commit(GroupCommitIdentifier :: kafe:group_commit_identifier()) -> ok | {error, term()}.
+remove_commit(GroupCommitIdentifier) ->
+  GroupCommitIdentifier. % TODO
+
+% @doc
+% Return the list of all pending commits for the given group.
+% @end
+-spec pending_commits(GroupPIDOrID :: atom() | pid() | binary()) -> [kafe:group_commit_identifier()].
+pending_commits(GroupPIDOrID) ->
+  Topics = maps:fold(fun
+                       (<<"__consumer_offsets">>, _, Acc) -> Acc;
+                       (T, P, Acc) -> [{T, maps:keys(P)}|Acc]
+                     end, [], kafe:topics()),
+  pending_commits(GroupPIDOrID, Topics).
+
+% @doc
+% Return the list of pending commits for the given topics (and partitions) for the given group.
+% @end
+-spec pending_commits(GroupPIDOrID :: atom() | pid() | binary(), [binary() | {binary(), [integer()]}]) -> [kafe:group_commit_identifier()].
+pending_commits(GroupPIDOrID, Topics) ->
+  Topics1 = lists:foldl(fun
+                        (T, Acc) when is_binary(T) ->
+                            lists:append(Acc, [{T, X} || X <- kafe:partitions(T)]);
+                        ({T, P}, Acc) when is_binary(T), is_list(P) ->
+                            lists:append(Acc, [{T, X} || X <- P])
+                      end, [], Topics),
+  kafe_consumer_sup:call_srv(GroupPIDOrID, {pending_commits, Topics1}). % TODO
 
 % @hidden
 member_id(GroupID, MemberID) ->

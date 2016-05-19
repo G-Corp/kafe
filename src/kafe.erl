@@ -981,6 +981,10 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % at the time the request is issued (default : 1).</li>
 % <li><tt>autocommit :: boolean()</tt> : Autocommit offset (default: true).</li>
 % <li><tt>allow_unordered_commit :: boolean()</tt> : Allow unordered commit (default: false).</li>
+% <li><tt>processing :: at_least_once | at_most_once : </tt> When using <tt>at_most_once</tt>, the message offset will be commited before passing the message to the
+% callback. With <tt>at_least_once</tt> the commit is executed after passing the message to the callback and only if it return <tt>ok</tt>. If the callback
+% return an error, with <tt>at_least_once</tt>, the process will stop fetching messages for the partition until you manually commit the offset
+% (see {@link kafe_consumer:commit/2}), or remove it (see {@link kafe_consumer:remove_commit/1} or {@link kafe_consumer:remove_commits/1}))  (default: at_most_once).</li>
 % </ul>
 % @end
 -spec start_consumer(GroupID :: binary(),

@@ -23,8 +23,6 @@ dep_meck = git https://github.com/eproxus/meck.git master
 app::
 
 tests::
-	@docker-compose pull
-	@mkdir -p test/ct
 	@mkdir -p test/eunit
 
 include erlang.mk
@@ -38,7 +36,6 @@ EDOC_OPTS = {doclet, edown_doclet} \
 						, {top_level_readme, {"./README.md", "https://github.com/botsunit/kafe"}}
 
 EUNIT_OPTS = verbose, {report, {eunit_surefire, [{dir, "test/eunit"}]}}
-CT_OPTS = -ct_hooks cth_surefire -logdir test/ct
 
 dev: deps app
 	@erl -pa ebin include deps/*/ebin deps/*/include -config config/kafe.config
@@ -48,6 +45,130 @@ release: app mix.all
 distclean::
 	@rm -rf log
 	@rm -rf test/eunit
-	@rm -rf test/ct
 	@rm -f test/*.beam
+
+KAFKA_ADVERTISED_HOST_NAME = $(shell docker network inspect bridge | grep Gateway | awk -F: '{print $$2}' | sed -e 's/^\s*"//' | sed -e 's/".*$$//')
+
+define docker_compose_yml_v2
+version: "2"
+
+services:
+  zookeeper:
+    image: confluent/zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka1:
+    image: confluent/kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  kafka2:
+    image: confluent/kafka
+    ports:
+      - "9093:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  kafka3:
+    image: confluent/kafka
+    ports:
+      - "9094:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  tools:
+    image: confluent/tools
+    depends_on:
+      - zookeeper
+      - kafka1
+      - kafka2
+      - kafka3
+
+endef
+
+define docker_compose_yml_v1
+version: "2"
+
+services:
+  zookeeper:
+    image: dockerkafka/zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka1:
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    links:
+      - zookeeper:zk
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zk
+      KAFKA_BROKER_ID: 1
+      KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  kafka2:
+    image: wurstmeister/kafka
+    ports:
+      - "9093:9092"
+    links:
+      - zookeeper:zk
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zk
+      KAFKA_BROKER_ID: 2
+      KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  kafka3:
+    image: wurstmeister/kafka
+    ports:
+      - "9094:9092"
+    links:
+      - zookeeper:zk
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zk
+      KAFKA_BROKER_ID: 3
+      KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  tools:
+    image: confluent/tools
+    depends_on:
+      - zookeeper
+      - kafka1
+      - kafka2
+      - kafka3
+endef
+
+docker-compose.yml:
+	$(call render_template,docker_compose_yml_v1,docker-compose.yml)
+
+docker-start: docker-stop
+	@docker-compose up -d
+	@sleep 1
+	@docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 3 --partitions 3 --topic testone
+	@docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 3 --partitions 3 --topic testtwo
+	@docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 3 --partitions 3 --topic testthree
+
+docker-stop: docker-compose.yml
+	@docker-compose kill
+	@docker-compose rm -vf
 

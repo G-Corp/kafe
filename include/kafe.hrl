@@ -59,7 +59,7 @@
                                                              partitions => maps:keys(Partitions)}|Acc@DGPA]
                                                       end, [], kafe:topics())).
 
--define(DEFAULT_JOIN_GROUP_SESSION_TIMEOUT, 10000).
+-define(DEFAULT_JOIN_GROUP_SESSION_TIMEOUT, 30000).
 -define(DEFAULT_JOIN_GROUP_MEMBER_ID, <<>>).
 -define(DEFAULT_JOIN_GROUP_PROTOCOL_TYPE, <<"consumer">>).
 -define(DEFAULT_JOIN_GROUP_PROTOCOLS, [kafe:default_protocol(
@@ -74,4 +74,5 @@
 -define(DEFAULT_CONSUMER_ALLOW_UNORDERED_COMMIT, false).
 -define(DEFAULT_CONSUMER_COMMIT_RETRY, 0).
 -define(DEFAULT_CONSUMER_COMMIT_DELAY, 100).
+-define(DEFAULT_CONSUMER_PROCESSING, at_most_once).
 
