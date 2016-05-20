@@ -40,6 +40,34 @@
 % kafe:stop_consumer(my_group),
 % ...
 % </pre>
+%
+% <b>Internal :</b>
+%
+% <pre>
+%                                                                           one per consumer group
+%                                                               +--------------------------------------------+
+%                                                               |                                            |
+%                                                               +                                            +
+%                                                                                   +----> kafe_consumer_srv
+%                 +----> kafe_consumer_sup +---------------------> kafe_consumer +--+
+%                 |                                                                 +----> kafe_consumer_fsm
+%                 +----> kafe_consumer_fetcher_sup +------+
+%kafe_sup +-------+                                       |
+%                 +----> kafe_rr                          |
+%                 |                                       |
+%                 +----> kafe                             |  +---> kafe_consumer_fetcher
+%                                                         |  |
+%                                                         |  +---> kafe_consumer_fetcher
+%                                                         +--+
+%                                                            +---> kafe_consumer_fetcher
+%                                                            |
+%                                                            +---> kafe_consumer_fetcher
+%                                                         +                              +
+%                                                         |                              |
+%                                                         +------------------------------+
+%
+%                                                           one per {topic, partition}
+% </pre>
 % @end
 -module(kafe_consumer).
 -behaviour(supervisor).

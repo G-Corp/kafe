@@ -59,6 +59,35 @@ When you are done with your consumer, stop it :
  kafe:stop_consumer(my_group),
  ...
 ```
+
+__Internal :__
+
+```
+
+                                                                           one per consumer group
+                                                               +--------------------------------------------+
+                                                               |                                            |
+                                                               +                                            +
+                                                                                   +----> kafe_consumer_srv
+                 +----> kafe_consumer_sup +---------------------> kafe_consumer +--+
+                 |                                                                 +----> kafe_consumer_fsm
+                 +----> kafe_consumer_fetcher_sup +------+
+kafe_sup +-------+                                       |
+                 +----> kafe_rr                          |
+                 |                                       |
+                 +----> kafe                             |  +---> kafe_consumer_fetcher
+                                                         |  |
+                                                         |  +---> kafe_consumer_fetcher
+                                                         +--+
+                                                            +---> kafe_consumer_fetcher
+                                                            |
+                                                            +---> kafe_consumer_fetcher
+                                                         +                              +
+                                                         |                              |
+                                                         +------------------------------+
+
+                                                           one per {topic, partition}
+```
 <a name="index"></a>
 
 ## Function Index ##
