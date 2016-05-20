@@ -44,29 +44,32 @@
 % <b>Internal :</b>
 %
 % <pre>
-%                                                                           one per consumer group
-%                                                               +--------------------------------------------+
-%                                                               |                                            |
-%                                                               +                                            +
-%                                                                                   +----> kafe_consumer_srv
-%                 +----> kafe_consumer_sup +---------------------> kafe_consumer +--+
-%                 |                                                                 +----> kafe_consumer_fsm
-%                 +----> kafe_consumer_fetcher_sup +------+
-%kafe_sup +-------+                                       |
-%                 +----> kafe_rr                          |
-%                 |                                       |
-%                 +----> kafe                             |  +---> kafe_consumer_fetcher
-%                                                         |  |
-%                                                         |  +---> kafe_consumer_fetcher
-%                                                         +--+
-%                                                            +---> kafe_consumer_fetcher
-%                                                            |
-%                                                            +---> kafe_consumer_fetcher
-%                                                         +                              +
-%                                                         |                              |
-%                                                         +------------------------------+
+%                                                                    one per consumer group
+%                                                          +--------------------^--------------------+
+%                                                          |                                         |
 %
-%                                                           one per {topic, partition}
+%                                                                             +--&gt; kafe_consumer_srv +--+
+%                  +--&gt; kafe_consumer_sup +------so4o------&gt; kafe_consumer +--+                         |
+%                  |                                                          +--&gt; kafe_consumer_fsm    |
+%                  +--&gt; kafe_consumer_fetcher_sup +--+                                                  m
+% kafe_sup +--o4o--+                                 |                                                  o
+%                  +--&gt; kafe_rr                      s                                                  n
+%                  |                                 o                                                  |
+%                  +--&gt; kafe                         4  +--&gt; kafe_consumer_fetcher &lt;--------------------+
+%                                                    o  |                                               |
+%                                                    |  +--&gt; kafe_consumer_fetcher &lt;--------------------+
+%                                                    +--+                                               |
+%                                                       +--&gt; kafe_consumer_fetcher &lt;--------------------+
+%                                                       |                                               .
+%                                                       +--&gt; ...                                        .
+%                                                                                                       .
+%                                                          |                       |
+%                                                          +-----------v-----------+
+%                                                            one/{topic,partition}
+%
+% (o4o = one_for_one)
+% (so4o = simple_one_for_one)
+% (mon = monitor)
 % </pre>
 % @end
 -module(kafe_consumer).
