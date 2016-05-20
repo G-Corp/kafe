@@ -119,6 +119,7 @@ fetch(#state{fetch_interval = FetchInterval,
              offset = OffsetFetch,
              fetch_size = FetchSize,
              autocommit = Autocommit,
+             processing = Processing,
              min_bytes = MinBytes,
              max_bytes = MaxBytes,
              max_wait_time = MaxWaitTime,
@@ -133,7 +134,7 @@ fetch(#state{fetch_interval = FetchInterval,
                          Offsets = lists:sublist(lists:seq(OffsetFetch + 1, Offset - 1), FetchSize),
                          lager:debug("~p#~p Fetch ~p", [Topic, Partition, Offsets]),
                          case perform_fetch(Offsets, [], Topic, Partition,
-                                            Autocommit, Srv, Callback,
+                                            Autocommit, Processing, Srv, Callback,
                                             MinBytes, MaxBytes, MaxWaitTime) of
                            [] ->
                              OffsetFetch;
@@ -154,10 +155,10 @@ fetch(#state{fetch_interval = FetchInterval,
   State#state{timer = erlang:send_after(FetchInterval, self(), fetch),
               offset = OffsetFetch1}.
 
-perform_fetch([], Acc, _, _, _, _, _, _, _, _) ->
+perform_fetch([], Acc, _, _, _, _, _, _, _, _, _) ->
   Acc;
 perform_fetch([Offset|Offsets], Acc,
-              Topic, Partition, Autocommit, Srv, Callback,
+              Topic, Partition, Autocommit, Processing, Srv, Callback,
               MinBytes, MaxBytes, MaxWaitTime) ->
   NoError = kafe_error:code(0),
   case kafe:fetch(-1, Topic, #{partition => Partition,
@@ -174,37 +175,40 @@ perform_fetch([Offset|Offsets], Acc,
                               value := Value},
                  partition := Partition}]}]}} ->
       CommitRef = gen_server:call(Srv, {store_for_commit, Topic, Partition, Offset}),
-      % at most one
-      % Perform commit
-
-      lager:debug("Fetch offset ~p for ~p#~p with commit ref ~p", [Offset, Topic, Partition, CommitRef]),
-      case try
-             erlang:apply(Callback, [CommitRef, Topic, Partition, Offset, Key, Value])
-           catch
-             _:_ -> {error, callback_exception}
-           end of
-        ok ->
-          if
-            % at least one
-            Autocommit == true ->
-              case kafe_consumer:commit(CommitRef, #{retry => 3, delay => 1000}) of
+      case commit(CommitRef, Autocommit, Processing, at_most_once) of
+        {error, Reason} ->
+          lager:error("[~p] Commit error for offset ~p of ~p#~p : ~p", [Processing, Offset, Topic, Partition, Reason]),
+          Acc;
+        _ ->
+          lager:debug("Fetch offset ~p for ~p#~p with commit ref ~p", [Offset, Topic, Partition, CommitRef]),
+          case try
+                 erlang:apply(Callback, [CommitRef, Topic, Partition, Offset, Key, Value])
+               catch
+                 _:_ -> {error, callback_exception}
+               end of
+            ok ->
+              case commit(CommitRef, Autocommit, Processing, at_least_once) of
                 {error, Reason} ->
-                  lager:error("Commit error for offset ~p of ~p#~p : ~p", [Offset, Topic, Partition, Reason]),
+                  lager:error("[~p] Commit error for offset ~p of ~p#~p : ~p", [Processing, Offset, Topic, Partition, Reason]),
                   Acc;
                 _ ->
-                  perform_fetch(Offsets, [Offset|Acc], Topic, Partition, Autocommit, Srv, Callback,
+                  perform_fetch(Offsets, [Offset|Acc], Topic, Partition, Autocommit, Processing, Srv, Callback,
                                 MinBytes, MaxBytes, MaxWaitTime)
               end;
-            true ->
-              perform_fetch(Offsets, [Offset|Acc], Topic, Partition, Autocommit, Srv, Callback,
-                            MinBytes, MaxBytes, MaxWaitTime)
-          end;
-        {error, Error} ->
-          lager:error("Callback for message #~p or ~p#~p return error : ~p", [Offset, Topic, Partition, Error]),
-          Acc
+            {error, Error} ->
+              lager:error("Callback for message #~p or ~p#~p return error : ~p", [Offset, Topic, Partition, Error]),
+              Acc
+          end
       end;
     Error ->
       lager:error("Faild to fetch message #~p topic ~p:~p : ~p", [Offset, Topic, Partition, Error]),
       Acc
   end.
+
+commit(CommitRef, true, Processing, Processing) when Processing == at_least_once;
+                                                     Processing == at_most_once ->
+  kafe_consumer:commit(CommitRef, #{retry => 3, delay => 1000});
+commit(_, _, Processing, _) when Processing == at_least_once;
+                                 Processing == at_most_once ->
+  ok.
 

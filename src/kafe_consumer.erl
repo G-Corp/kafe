@@ -67,6 +67,7 @@
          , member_id/2
          , generation_id/2
          , topics/2
+         , server_pid/1
          , encode_group_commit_identifier/4
          , decode_group_commit_identifier/1
         ]).
@@ -129,7 +130,12 @@ remove_commits(GroupPIDOrID) ->
 % @end
 -spec remove_commit(GroupCommitIdentifier :: kafe:group_commit_identifier()) -> ok | {error, term()}.
 remove_commit(GroupCommitIdentifier) ->
-  GroupCommitIdentifier. % TODO
+  case decode_group_commit_identifier(GroupCommitIdentifier) of
+    {Pid, Topic, Partition, Offset} ->
+      gen_server:call(Pid, {remove_commit, Topic, Partition, Offset});
+    _ ->
+      {error, invalid_group_commit_identifier}
+  end.
 
 % @doc
 % Return the list of all pending commits for the given group.
@@ -153,7 +159,7 @@ pending_commits(GroupPIDOrID, Topics) ->
                         ({T, P}, Acc) when is_binary(T), is_list(P) ->
                             lists:append(Acc, [{T, X} || X <- P])
                       end, [], Topics),
-  kafe_consumer_sup:call_srv(GroupPIDOrID, {pending_commits, Topics1}). % TODO
+  kafe_consumer_sup:call_srv(GroupPIDOrID, {pending_commits, Topics1}).
 
 % @hidden
 member_id(GroupID, MemberID) ->
@@ -187,6 +193,10 @@ topics(GroupID, Topics) ->
 -spec topics(GroupPIDOrID :: atom() | pid() | binary()) -> [{binary(), [integer()]}].
 topics(GroupID) ->
   kafe_consumer_sup:call_srv(GroupID, topics).
+
+% @hidden
+server_pid(GroupID) ->
+  kafe_consumer_sup:server_pid(GroupID).
 
 % @hidden
 start_link(GroupID, Options) ->
