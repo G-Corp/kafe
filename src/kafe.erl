@@ -715,6 +715,8 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % return an error, with <tt>at_least_once</tt>, the process will stop fetching messages for the partition until you manually commit the offset
 % (see {@link kafe_consumer:commit/2}), or remove it (see {@link kafe_consumer:remove_commit/1} or {@link kafe_consumer:remove_commits/1})). This options has
 % no effect when <tt>autocommit</tt> is set to false.  (default: at_most_once).</li>
+% <li><tt>on_start_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher start/restart fetching. (default: undefined).</li>
+% <li><tt>on_stop_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher stop fetching. (default: undefined).</li>
 % </ul>
 % @end
 -spec start_consumer(GroupID :: binary(),

@@ -41,7 +41,9 @@
           allow_unordered_commit = ?DEFAULT_CONSUMER_ALLOW_UNORDERED_COMMIT,
           commits = #{},
           processing = ?DEFAULT_CONSUMER_PROCESSING,
-          fetch = false
+          fetch = false,
+          on_start_fetching = ?DEFAULT_CONSUMER_ON_START_FETCHING,
+          on_stop_fetching = ?DEFAULT_CONSUMER_ON_STOP_FETCHING
          }).
 
 %% API.
@@ -64,6 +66,8 @@ init([GroupID, Options]) ->
   Autocommit = maps:get(autocommit, Options, ?DEFAULT_CONSUMER_AUTOCOMMIT),
   AllowUnorderedCommit = maps:get(allow_unordered_commit, Options, ?DEFAULT_CONSUMER_ALLOW_UNORDERED_COMMIT),
   Processing = maps:get(processing, Options, ?DEFAULT_CONSUMER_PROCESSING),
+  OnStartFetching = maps:get(on_start_fetching, Options, ?DEFAULT_CONSUMER_ON_START_FETCHING),
+  OnStopFetching = maps:get(on_stop_fetching, Options, ?DEFAULT_CONSUMER_ON_STOP_FETCHING),
   {ok, #state{
           group_id = bucs:to_binary(GroupID),
           callback = maps:get(callback, Options),
@@ -75,7 +79,9 @@ init([GroupID, Options]) ->
           autocommit = Autocommit,
           allow_unordered_commit = AllowUnorderedCommit,
           processing = Processing,
-          fetch = false
+          fetch = false,
+          on_start_fetching = OnStartFetching,
+          on_stop_fetching = OnStopFetching
          }}.
 
 % @hidden
@@ -180,9 +186,25 @@ handle_call({pending_commits, Topics}, _From, #state{commits = Commits} = State)
                                 || {{T, P, O}, _} <- maps:get(erlang:term_to_binary(TP), Commits, [])])
                          end, [], Topics),
   {reply, Pendings, State};
-handle_call(start_fetch, _From, State) ->
+handle_call(start_fetch, _From, #state{fetch = true} = State) ->
+  {reply, ok, State};
+handle_call(start_fetch, _From, #state{fetch = false, group_id = GroupID, on_start_fetching = OnStartFetching} = State) ->
+  case OnStartFetching of
+    Fun when is_function(Fun, 1) ->
+      _ = erlang:spawn(fun() -> erlang:apply(Fun, [GroupID]) end);
+    undefined ->
+      ok
+  end,
   {reply, ok, State#state{fetch = true}};
-handle_call(stop_fetch, _From, State) ->
+handle_call(stop_fetch, _From, #state{fetch = false} = State) ->
+  {reply, ok, State};
+handle_call(stop_fetch, _From, #state{fetch = true, group_id = GroupID, on_stop_fetching = OnStopFetching} = State) ->
+  case OnStopFetching of
+    Fun when is_function(Fun, 1) ->
+      _ = erlang:spawn(fun() -> erlang:apply(Fun, [GroupID]) end);
+    undefined ->
+      ok
+  end,
   {reply, ok, State#state{fetch = false}};
 handle_call(can_fetch, _From, #state{fetch = Fetch} = State) ->
   {reply, Fetch, State};

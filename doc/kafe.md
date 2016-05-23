@@ -828,6 +828,10 @@ return an error, with `at_least_once`, the process will stop fetching messages f
 (see [`kafe_consumer:commit/2`](kafe_consumer.md#commit-2)), or remove it (see [`kafe_consumer:remove_commit/1`](kafe_consumer.md#remove_commit-1) or [`kafe_consumer:remove_commits/1`](kafe_consumer.md#remove_commits-1))). This options has
 no effect when `autocommit` is set to false.  (default: at_most_once).
 
+* `on_start_fetching :: fun((GroupID :: binary()) -> any())` : Function called when the fetcher start/restart fetching. (default: undefined).
+
+* `on_stop_fetching :: fun((GroupID :: binary()) -> any())` : Function called when the fetcher stop fetching. (default: undefined).
+
 
 <a name="stop_consumer-1"></a>
 
