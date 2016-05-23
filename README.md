@@ -91,7 +91,7 @@ Kafe.stop_consumer(:my_group)
 
 ### API Documentation ###
 
-See [documentation](https://github.com/botsunit/kafe/blob/master/doc/doc/)
+See [documentation](https://github.com/botsunit/kafe/blob/master/doc/.)
 
 
 ### Contributing ###

@@ -91,7 +91,7 @@ Kafe.stop_consumer(:my_group)
 
 ### API Documentation ###
 
-See [documentation](doc/)
+See [documentation](.)
 
 
 ### Contributing ###

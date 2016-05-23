@@ -77,7 +77,7 @@ Kafe.stop_consumer(:my_group)
 
 <h3>API Documentation</h3>
 
-See <a href="doc/">documentation</a>
+See <a href=".">documentation</a>
 
 <h3>Contributing</h3>
 
