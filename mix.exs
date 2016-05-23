@@ -3,7 +3,7 @@ defmodule Kafe.Mixfile do
 
 	def project do
 		[app: :kafe,
-		 version: "1.1.1",
+		 version: "1.1.2",
 		 elixir: "~> 1.2",
 		 build_embedded: Mix.env == :prod,
 		 start_permanent: Mix.env == :prod,

@@ -2,7 +2,7 @@
 @author Gregoire Lejeune <greg@g-corp.io>
 @author Gregoire Lejeune <gregoire.lejeune@botsunit.com>
 @copyright 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 BotsUnit
-@version 1.1.0
+@version 1.1.2
 @title A Kafka client for Erlang
 @doc
 
