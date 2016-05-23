@@ -255,9 +255,11 @@ init([GroupID, Options]) ->
      ]
     }}.
 
+% @hidden
 encode_group_commit_identifier(Pid, Topic, Partition, Offset) ->
   base64:encode(erlang:term_to_binary({Pid, Topic, Partition, Offset}, [compressed])).
 
+% @hidden
 decode_group_commit_identifier(GroupCommitIdentifier) ->
   erlang:binary_to_term(base64:decode(GroupCommitIdentifier)).
 

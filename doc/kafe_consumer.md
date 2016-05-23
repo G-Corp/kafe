@@ -98,8 +98,8 @@ __Internal :__
 
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#commit-1">commit/1</a></td><td>Equivalent to <a href="#commit-2"><tt>commit(GroupCommitIdentifier, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#commit-2">commit/2</a></td><td>
 Commit the offset (in Kafka) for the given <tt>GroupCommitIdentifier</tt> received in the <tt>Callback</tt> specified when starting the
-consumer group (see <a href="kafe.md#start_consumer-3"><code>kafe:start_consumer/3</code></a></td></tr><tr><td valign="top"><a href="#decode_group_commit_identifier-1">decode_group_commit_identifier/1</a></td><td></td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
-Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#encode_group_commit_identifier-4">encode_group_commit_identifier/4</a></td><td></td></tr><tr><td valign="top"><a href="#generation_id-1">generation_id/1</a></td><td>
+consumer group (see <a href="kafe.md#start_consumer-3"><code>kafe:start_consumer/3</code></a></td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
+Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#generation_id-1">generation_id/1</a></td><td>
 Return the <tt>generation_id</tt> of the consumer.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
 Return the <tt>member_id</tt> of the consumer.</td></tr><tr><td valign="top"><a href="#pending_commits-1">pending_commits/1</a></td><td>
 Return the list of all pending commits for the given group.</td></tr><tr><td valign="top"><a href="#pending_commits-2">pending_commits/2</a></td><td>
@@ -150,12 +150,6 @@ Available options:
 * `delay :: integer()` : Time (in ms) between each retry.
 
 
-<a name="decode_group_commit_identifier-1"></a>
-
-### decode_group_commit_identifier/1 ###
-
-`decode_group_commit_identifier(GroupCommitIdentifier) -> any()`
-
 <a name="describe-1"></a>
 
 ### describe/1 ###
@@ -166,12 +160,6 @@ describe(GroupPIDOrID::atom() | pid() | binary()) -&gt; {ok, <a href="kafe.md#ty
 <br />
 
 Return consumer group descrition
-
-<a name="encode_group_commit_identifier-4"></a>
-
-### encode_group_commit_identifier/4 ###
-
-`encode_group_commit_identifier(Pid, Topic, Partition, Offset) -> any()`
 
 <a name="generation_id-1"></a>
 
