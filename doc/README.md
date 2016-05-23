@@ -79,11 +79,11 @@ end
 ```
 
 ...
-Kafe:start()
+Kafe.start()
 ...
-Kafe:start_consumer(:my_group, &My.Consumer.consume/6, options)
+Kafe.start_consumer(:my_group, &My.Consumer.consume/6, options)
 ...
-Kafe:stop_consumer(:my_group)
+Kafe.stop_consumer(:my_group)
 ...
 
 ```

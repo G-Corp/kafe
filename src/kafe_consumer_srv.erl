@@ -40,7 +40,8 @@
           autocommit = ?DEFAULT_CONSUMER_AUTOCOMMIT,
           allow_unordered_commit = ?DEFAULT_CONSUMER_ALLOW_UNORDERED_COMMIT,
           commits = #{},
-          processing = ?DEFAULT_CONSUMER_PROCESSING
+          processing = ?DEFAULT_CONSUMER_PROCESSING,
+          fetch = false
          }).
 
 %% API.
@@ -73,7 +74,8 @@ init([GroupID, Options]) ->
           max_wait_time = MaxWaitTime,
           autocommit = Autocommit,
           allow_unordered_commit = AllowUnorderedCommit,
-          processing = Processing
+          processing = Processing,
+          fetch = false
          }}.
 
 % @hidden
@@ -178,6 +180,12 @@ handle_call({pending_commits, Topics}, _From, #state{commits = Commits} = State)
                                 || {{T, P, O}, _} <- maps:get(erlang:term_to_binary(TP), Commits, [])])
                          end, [], Topics),
   {reply, Pendings, State};
+handle_call(start_fetch, _From, State) ->
+  {reply, ok, State#state{fetch = true}};
+handle_call(stop_fetch, _From, State) ->
+  {reply, ok, State#state{fetch = false}};
+handle_call(can_fetch, _From, #state{fetch = Fetch} = State) ->
+  {reply, Fetch, State};
 handle_call(_Request, _From, State) ->
   {reply, ignored, State}.
 

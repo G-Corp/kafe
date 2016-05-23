@@ -39,6 +39,7 @@
 
 -define(MIN_TIMEOUT, 10).
 -define(DEAD_TIMEOUT(_), ?MIN_TIMEOUT).
+-define(PREPARING_REBALANCE(_), ?MIN_TIMEOUT).
 -define(AWAITING_SYNC_TIMEOUT(_), ?MIN_TIMEOUT).
 -define(STABLE_TIMEOUT(State),
         begin
@@ -80,7 +81,8 @@ init([GroupId, Options]) ->
              % members
              % protocol_group
             },
-  setelement(1, next_state(dead, State), ok).
+  %setelement(1, next_state(dead, State), ok).
+  {ok, dead, State, ?DEAD_TIMEOUT(State)}.
 
 % @hidden
 dead(timeout, #state{group_id_atom = GroupIdAtom,
@@ -203,14 +205,19 @@ next_state(NextState, State) ->
 
 group_state(State, Next) when is_binary(Next) ->
   group_state(State, state_by_name(Next));
-group_state(_State, dead) ->
+group_state(_State, preparing_rebalance) ->
+  {stable, ?PREPARING_REBALANCE(_State)}; % never append ?
+group_state(#state{group_id_atom = GroupIdAtom} = _State, dead) ->
+  _ = gen_server:call(kafe_consumer:server_pid(GroupIdAtom), stop_fetch),
   {dead, ?DEAD_TIMEOUT(_State)};
-group_state(_State, awaiting_sync) ->
+group_state(#state{group_id_atom = GroupIdAtom} = _State, awaiting_sync) ->
+  _ = gen_server:call(kafe_consumer:server_pid(GroupIdAtom), stop_fetch),
   {awaiting_sync, ?AWAITING_SYNC_TIMEOUT(_State)};
-group_state(State, stable) ->
+group_state(#state{group_id_atom = GroupIdAtom} = State, stable) ->
+  _ = gen_server:call(kafe_consumer:server_pid(GroupIdAtom), start_fetch),
   {stable, ?STABLE_TIMEOUT(State)}.
 
-state_by_name(A) when is_atom(A) -> A;
+state_by_name(<<"PreparingRebalance">>) -> preparing_rebalance;
 state_by_name(<<"Dead">>) -> dead;
 state_by_name(<<"AwaitingSync">>) -> awaiting_sync;
 state_by_name(<<"Stable">>) -> stable.
