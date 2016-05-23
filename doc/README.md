@@ -15,6 +15,51 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 
 
 
+### Configuration ###
+
+
+<table width="100%" border="0" summary="configuration">
+<tr><td>brokers</td><td><tt>[{inet:hostname(), inet:port_number()}]</tt></td><td>List of brokers</td><td><tt>[{"localhost", 9092}]</tt></td></tr>
+<tr><td>pool_size</td><td><tt>integer()</tt></td><td>Initial connection pool/brocker</td><td><tt>5</tt></td></tr>
+<tr><td>chunk_pool_size</td><td><tt>integer()</tt></td><td>Size of new connection pool/brocker</td><td><tt>10</tt></td></tr>
+<tr><td>brokers_update_frequency</td><td><tt>integer()</tt></td><td>Frequency (ms) for brokers update</td><td><tt>60000</tt></td></tr>
+<tr><td>client_id</td><td><tt>binary()</tt></td><td>Client ID Name</td><td><tt><<"kafe">></tt></td></tr>
+<tr><td>api_version</td><td><tt>integer()</tt></td><td>API Version</td><td><tt>1</tt></td></tr>
+<tr><td>correlation_id</td><td><tt>integer()</tt></td><td>Correlation ID</td><td><tt>0</tt></td></tr>
+<tr><td>socket</td><td><tt>[{sndbuf, integer()}, {recbuf, integer()}, {buffer, integer()}]</tt></td><td>Socker configuration</td><td><tt>[{sndbuf, 4194304}, {recbuf, 4194304}, {buffer, 4194304}]</tt></td></tr>
+</table>
+
+
+Example :
+
+```
+
+[
+  {kafe, [
+    {brokers, [
+      {"localhost", 9092},
+      {"localhost", 9093},
+      {"localhost", 9094}
+    ]},
+    {pool_size, 1},
+    {chunk_pool_size, 2},
+    {brokers_update_frequency, 10000},
+    {client_id, <<"kafe">>},
+    {api_version, 1},
+    {correlation_id, 0},
+    {socket, [
+      {sndbuf, 4194304},
+      {recbuf, 4194304},
+      {buffer, 4194304}
+    ]},
+  ]}
+]
+
+```
+
+__Kafe__ use [lager](https://github.com/basho/lager) ; see also how to [configure](https://github.com/basho/lager#configuration) it.
+
+
 ### Create a consumer ###
 
 To create a consumer, create a function with 6 parameters :

@@ -129,6 +129,18 @@ defmodule Kafe do
 	def unquote(:"offset_fetch")(arg1, arg2) do
 		:erlang.apply(:"kafe", :"offset_fetch", [arg1, arg2])
 	end
+	def unquote(:"offsets")(arg1, arg2, arg3) do
+		:erlang.apply(:"kafe", :"offsets", [arg1, arg2, arg3])
+	end
+	def unquote(:"offsets")(arg1, arg2) do
+		:erlang.apply(:"kafe", :"offsets", [arg1, arg2])
+	end
+	def unquote(:"start_consumer")(arg1, arg2, arg3) do
+		:erlang.apply(:"kafe", :"start_consumer", [arg1, arg2, arg3])
+	end
+	def unquote(:"stop_consumer")(arg1) do
+		:erlang.apply(:"kafe", :"stop_consumer", [arg1])
+	end
 	def unquote(:"init")(arg1) do
 		:erlang.apply(:"kafe", :"init", [arg1])
 	end
@@ -146,17 +158,5 @@ defmodule Kafe do
 	end
 	def unquote(:"code_change")(arg1, arg2, arg3) do
 		:erlang.apply(:"kafe", :"code_change", [arg1, arg2, arg3])
-	end
-	def unquote(:"offsets")(arg1, arg2, arg3) do
-		:erlang.apply(:"kafe", :"offsets", [arg1, arg2, arg3])
-	end
-	def unquote(:"offsets")(arg1, arg2) do
-		:erlang.apply(:"kafe", :"offsets", [arg1, arg2])
-	end
-	def unquote(:"start_consumer")(arg1, arg2, arg3) do
-		:erlang.apply(:"kafe", :"start_consumer", [arg1, arg2, arg3])
-	end
-	def unquote(:"stop_consumer")(arg1) do
-		:erlang.apply(:"kafe", :"stop_consumer", [arg1])
 	end
 end
