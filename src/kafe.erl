@@ -433,6 +433,8 @@ list_groups() ->
 
 % @doc
 % Find groups managed by a broker.
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ListGroupsRequest">Kafka protocol documentation</a>
 % @end
 -spec list_groups(Broker :: broker_id()) -> {ok, groups()} | {error, term()}.
 list_groups(Broker) when is_atom(Broker) ->
@@ -466,6 +468,8 @@ join_group(GroupId) ->
 % <li><tt>protocol_type :: binary()</tt> : Unique name for class of protocols implemented by group (default &lt;&lt;"consumer"&gt;&gt;).</li>
 % <li><tt>protocols :: [protocol()]</tt> : List of protocols.</li>
 % </ul>
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest">Kafka protocol documentation</a>.
 % @end
 -spec join_group(binary(), join_group_options()) -> {error, term()} | {ok, group_join()}.
 join_group(GroupId, Options) ->
@@ -511,6 +515,8 @@ default_protocol(Name, Version, Topics, UserData) when is_binary(Name),
 %                                                                    #{topic =&gt; &lt;&lt;"topic1"&gt;&gt;,
 %                                                                      partitions =&gt; [0, 1, 2]}]}}]).
 % </pre>
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-SyncGroupRequest">Kafka protocol documentation</a>.
 % @end
 -spec sync_group(binary(), integer(), binary(), [group_assignment()]) -> {error,term()} | {ok, sync_group()}.
 sync_group(GroupId, GenerationId, MemberId, Assignments) ->
@@ -519,6 +525,8 @@ sync_group(GroupId, GenerationId, MemberId, Assignments) ->
 % @doc
 % Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group. If not heartbeat has been received by the
 % coordinator with the configured session timeout, the member will be kicked out of the group.
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-HeartbeatRequest">Kafka protocol documentation</a>.
 % @end
 -spec heartbeat(binary(), integer(), binary()) -> {error, term()} | {ok, response_code()}.
 heartbeat(GroupId, GenerationId, MemberId) ->
@@ -527,13 +535,17 @@ heartbeat(GroupId, GenerationId, MemberId) ->
 % @doc
 % To explicitly leave a group, the client can send a leave group request. This is preferred over letting the session timeout expire since it allows the group to
 % rebalance faster, which for the consumer means that less time will elapse before partitions can be reassigned to an active member.
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-LeaveGroupRequest">Kafka protocol documentation</a>.
 % @end
 -spec leave_group(binary(), binary()) -> {error, term()} | {ok, response_code()}.
 leave_group(GroupId, MemberId) ->
   kafe_protocol_leave_group:run(GroupId, MemberId).
 
 % @doc
-% TODO : SPEC
+% Return the description of the given consumer group.
+%
+% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-DescribeGroupsRequest">Kafka protocol documentation</a>.
 % @end
 -spec describe_group(binary()) -> {error, term()} | {ok, describe_group()}.
 describe_group(GroupId) when is_binary(GroupId) ->
@@ -589,6 +601,139 @@ offset_fetch(ConsumerGroup, Options) when is_binary(ConsumerGroup), is_list(Opti
   kafe_protocol_consumer_offset_fetch:run(ConsumerGroup, Options);
 offset_fetch(ConsumerGroup, Options) when is_list(Options) ->
   offset_fetch(bucs:to_binary(ConsumerGroup), Options).
+
+% @doc
+% Return the list of the next Nth unread offsets for a given topic and consumer group
+% @end
+-spec offsets(binary() | {binary(), [integer()]}, binary(), integer()) -> [{integer(), integer()}] | error.
+offsets(TopicName, ConsumerGroup, Nth) when is_binary(TopicName) ->
+  offsets({TopicName, partitions(TopicName)}, ConsumerGroup, Nth);
+offsets({TopicName, PartitionsList}, ConsumerGroup, Nth) ->
+  NoError = kafe_error:code(0),
+  case offset([TopicName]) of
+    {ok, [#{name := TopicName, partitions := Partitions}]} ->
+      {Offsets, PartitionsID} = lists:foldl(fun
+                                              (#{id := PartitionID,
+                                                 offsets := [Offset|_],
+                                                 error_code := NoError1},
+                                               {AccOffs, AccParts} = Acc) when NoError1 =:= NoError ->
+                                                case lists:member(PartitionID, PartitionsList) of
+                                                  true ->
+                                                    {[{PartitionID, Offset - 1}|AccOffs], [PartitionID|AccParts]};
+                                                  false ->
+                                                    Acc
+                                                end;
+                                              (_, Acc) ->
+                                                Acc
+                                            end, {[], []}, Partitions),
+      case offset_fetch(ConsumerGroup, [{TopicName, PartitionsID}]) of
+        {ok,[#{name := TopicName, partitions_offset := PartitionsOffset}]} ->
+          CurrentOffsets = lists:foldl(fun
+                                         (#{offset := Offset1,
+                                            partition := PartitionID1},
+                                          Acc1) ->
+                                           [{PartitionID1, Offset1 + 1}|Acc1];
+                                         (_, Acc1) ->
+                                           Acc1
+                                       end, [], PartitionsOffset),
+          CombinedOffsets = lists:foldl(fun({P, O}, Acc) ->
+                                            case  lists:keyfind(P, 1, CurrentOffsets) of
+                                              {P, C} when C =< O -> [{P, O, C}|Acc];
+                                              _ -> Acc
+                                            end
+                                        end, [], Offsets),
+          lager:debug("Offsets = ~p / CurrentOffsets = ~p / CombinedOffsets = ~p", [Offsets, CurrentOffsets, CombinedOffsets]),
+          {NewOffsets, Result} = get_offsets_list(CombinedOffsets, [], [], Nth),
+          lists:foldl(fun({PartitionID, NewOffset}, Acc) ->
+                          case offset_commit(ConsumerGroup,
+                                             [{TopicName, [{PartitionID, NewOffset, <<>>}]}]) of
+                            {ok, [#{name := TopicName,
+                                    partitions := [#{partition := PartitionID,
+                                                     error_code := ErrorCode}]}]} when ErrorCode =:= NoError ->
+                              Acc;
+                            _ ->
+                              delete_offset_for_partition(PartitionID, Acc)
+                          end
+                      end, Result, NewOffsets);
+        _ ->
+          lager:debug("Can't retrieve offsets for consumer group ~p on topic ~p", [ConsumerGroup, TopicName]),
+          error
+      end;
+    _ ->
+      lager:debug("Can't retrieve offsets for topic ~p", [TopicName]),
+      error
+  end.
+
+% @doc
+% Return the list of all unread offsets for a given topic and consumer group
+% @end
+-spec offsets(binary(), binary()) -> [{integer(), integer()}] | error.
+offsets(TopicName, ConsumerGroup) ->
+  offsets(TopicName, ConsumerGroup, -1).
+
+get_offsets_list(Offsets, Result, Final, Nth) when Offsets =/= [], length(Result) =/= Nth ->
+  [{PartitionID, MaxOffset, CurrentOffset}|SortedOffsets] = lists:sort(fun({_, O1, C1}, {_, O2, C2}) -> (C1 < C2) and (O1 < O2) end, Offsets),
+  Offsets1 = if
+               CurrentOffset + 1 > MaxOffset -> SortedOffsets;
+               true  -> [{PartitionID, MaxOffset, CurrentOffset + 1}|SortedOffsets]
+             end,
+  Final1 = lists:keystore(PartitionID, 1, Final, {PartitionID, CurrentOffset}),
+  get_offsets_list(Offsets1, [{PartitionID, CurrentOffset}|Result], Final1, Nth);
+get_offsets_list(_, Result, Final, _) -> {Final, lists:reverse(Result)}.
+
+delete_offset_for_partition(PartitionID, Offsets) ->
+  case lists:keyfind(PartitionID, 1, Offsets) of
+    false -> Offsets;
+    _ -> delete_offset_for_partition(PartitionID, lists:keydelete(PartitionID, 1, Offsets))
+  end.
+
+% @doc
+% Start a new consumer.
+%
+% Options:
+% <ul>
+% <li><tt>session_timeout :: integer()</tt> : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)</li>
+% <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberId must be
+% empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberId from the previous generation.</li>
+% <li><tt>topics :: [binary() | {binary(), [integer()]}]</tt> : List or topics (and partitions).</li>
+% <li><tt>fetch_interval :: integer()</tt> : Fetch interval in ms (default : 1000)</li>
+% <li><tt>fetch_size :: integer()</tt> : Maximum number of offset to fetch(default : 1)</li>
+% <li><tt>max_bytes :: integer()</tt> : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
+% 1024*1024)</li>
+% <li><tt>min_bytes :: integer()</tt> : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0
+% the server will always respond immediately, however if there is no new data since their last request they will just get back empty message sets. If this is
+% set to 1, the server will respond as soon as at least one partition has at least 1 byte of data or the specified timeout occurs. By setting higher values in
+% combination with the timeout the consumer can tune for throughput and trade a little additional latency for reading only large chunks of data (e.g. setting
+% MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait up to 100ms to try to accumulate 64k of data before responding) (default :
+% 1).</li>
+% <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
+% at the time the request is issued (default : 1).</li>
+% <li><tt>autocommit :: boolean()</tt> : Autocommit offset (default: true).</li>
+% <li><tt>allow_unordered_commit :: boolean()</tt> : Allow unordered commit (default: false).</li>
+% <li><tt>processing :: at_least_once | at_most_once : </tt> When using <tt>at_most_once</tt>, the message offset will be commited before passing the message to the
+% callback. With <tt>at_least_once</tt> the commit is executed after passing the message to the callback and only if it return <tt>ok</tt>. If the callback
+% return an error, with <tt>at_least_once</tt>, the process will stop fetching messages for the partition until you manually commit the offset
+% (see {@link kafe_consumer:commit/2}), or remove it (see {@link kafe_consumer:remove_commit/1} or {@link kafe_consumer:remove_commits/1})). This options has
+% no effect when <tt>autocommit</tt> is set to false.  (default: at_most_once).</li>
+% </ul>
+% @end
+-spec start_consumer(GroupID :: binary(),
+                     Callback :: fun((CommitID :: group_commit_identifier(),
+                                      Topic :: binary(),
+                                      PartitionID :: integer(),
+                                      Offset :: integer(),
+                                      Key :: binary(),
+                                      Value :: binary()) -> ok | {error, term()}),
+                                   Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
+start_consumer(GroupID, Callback, Options) when is_function(Callback, 6) ->
+  kafe_consumer_sup:start_child(GroupID, Options#{callback => Callback}).
+
+% @doc
+% Stop the given consumer
+% @end
+-spec stop_consumer(GroupPIDOrID :: binary() | atom() | pid()) -> ok | {error, not_found | simple_one_for_one} | undefined.
+stop_consumer(GroupPIDOrID) ->
+  kafe_consumer_sup:stop_child(GroupPIDOrID).
 
 % Private
 
@@ -872,137 +1017,4 @@ get_first_broker([BrokerID|Rest]) ->
       lager:debug("Can't checkout broker from pool ~p: ~p", [BrokerID, Reason]),
       get_first_broker(Rest)
   end.
-
-% @doc
-% Return the list of the next Nth unread offsets for a given topic and consumer group
-% @end
--spec offsets(binary() | {binary(), [integer()]}, binary(), integer()) -> [{integer(), integer()}] | error.
-offsets(TopicName, ConsumerGroup, Nth) when is_binary(TopicName) ->
-  offsets({TopicName, partitions(TopicName)}, ConsumerGroup, Nth);
-offsets({TopicName, PartitionsList}, ConsumerGroup, Nth) ->
-  NoError = kafe_error:code(0),
-  case offset([TopicName]) of
-    {ok, [#{name := TopicName, partitions := Partitions}]} ->
-      {Offsets, PartitionsID} = lists:foldl(fun
-                                              (#{id := PartitionID,
-                                                 offsets := [Offset|_],
-                                                 error_code := NoError1},
-                                               {AccOffs, AccParts} = Acc) when NoError1 =:= NoError ->
-                                                case lists:member(PartitionID, PartitionsList) of
-                                                  true ->
-                                                    {[{PartitionID, Offset - 1}|AccOffs], [PartitionID|AccParts]};
-                                                  false ->
-                                                    Acc
-                                                end;
-                                              (_, Acc) ->
-                                                Acc
-                                            end, {[], []}, Partitions),
-      case offset_fetch(ConsumerGroup, [{TopicName, PartitionsID}]) of
-        {ok,[#{name := TopicName, partitions_offset := PartitionsOffset}]} ->
-          CurrentOffsets = lists:foldl(fun
-                                         (#{offset := Offset1,
-                                            partition := PartitionID1},
-                                          Acc1) ->
-                                           [{PartitionID1, Offset1 + 1}|Acc1];
-                                         (_, Acc1) ->
-                                           Acc1
-                                       end, [], PartitionsOffset),
-          CombinedOffsets = lists:foldl(fun({P, O}, Acc) ->
-                                            case  lists:keyfind(P, 1, CurrentOffsets) of
-                                              {P, C} when C =< O -> [{P, O, C}|Acc];
-                                              _ -> Acc
-                                            end
-                                        end, [], Offsets),
-          lager:debug("Offsets = ~p / CurrentOffsets = ~p / CombinedOffsets = ~p", [Offsets, CurrentOffsets, CombinedOffsets]),
-          {NewOffsets, Result} = get_offsets_list(CombinedOffsets, [], [], Nth),
-          lists:foldl(fun({PartitionID, NewOffset}, Acc) ->
-                          case offset_commit(ConsumerGroup,
-                                             [{TopicName, [{PartitionID, NewOffset, <<>>}]}]) of
-                            {ok, [#{name := TopicName,
-                                    partitions := [#{partition := PartitionID,
-                                                     error_code := ErrorCode}]}]} when ErrorCode =:= NoError ->
-                              Acc;
-                            _ ->
-                              delete_offset_for_partition(PartitionID, Acc)
-                          end
-                      end, Result, NewOffsets);
-        _ ->
-          lager:debug("Can't retrieve offsets for consumer group ~p on topic ~p", [ConsumerGroup, TopicName]),
-          error
-      end;
-    _ ->
-      lager:debug("Can't retrieve offsets for topic ~p", [TopicName]),
-      error
-  end.
-
-% @doc
-% Return the list of all unread offsets for a given topic and consumer group
-% @end
--spec offsets(binary(), binary()) -> [{integer(), integer()}] | error.
-offsets(TopicName, ConsumerGroup) ->
-  offsets(TopicName, ConsumerGroup, -1).
-
-get_offsets_list(Offsets, Result, Final, Nth) when Offsets =/= [], length(Result) =/= Nth ->
-  [{PartitionID, MaxOffset, CurrentOffset}|SortedOffsets] = lists:sort(fun({_, O1, C1}, {_, O2, C2}) -> (C1 < C2) and (O1 < O2) end, Offsets),
-  Offsets1 = if
-               CurrentOffset + 1 > MaxOffset -> SortedOffsets;
-               true  -> [{PartitionID, MaxOffset, CurrentOffset + 1}|SortedOffsets]
-             end,
-  Final1 = lists:keystore(PartitionID, 1, Final, {PartitionID, CurrentOffset}),
-  get_offsets_list(Offsets1, [{PartitionID, CurrentOffset}|Result], Final1, Nth);
-get_offsets_list(_, Result, Final, _) -> {Final, lists:reverse(Result)}.
-
-delete_offset_for_partition(PartitionID, Offsets) ->
-  case lists:keyfind(PartitionID, 1, Offsets) of
-    false -> Offsets;
-    _ -> delete_offset_for_partition(PartitionID, lists:keydelete(PartitionID, 1, Offsets))
-  end.
-
-% @doc
-% Start a new consumer.
-%
-% Options:
-% <ul>
-% <li><tt>session_timeout :: integer()</tt> : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)</li>
-% <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberId must be
-% empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberId from the previous generation.</li>
-% <li><tt>topics :: [binary() | {binary(), [integer()]}]</tt> : List or topics (and partitions).</li>
-% <li><tt>fetch_interval :: integer()</tt> : Fetch interval in ms (default : 1000)</li>
-% <li><tt>fetch_size :: integer()</tt> : Maximum number of offset to fetch(default : 1)</li>
-% <li><tt>max_bytes :: integer()</tt> : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
-% 1024*1024)</li>
-% <li><tt>min_bytes :: integer()</tt> : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0
-% the server will always respond immediately, however if there is no new data since their last request they will just get back empty message sets. If this is
-% set to 1, the server will respond as soon as at least one partition has at least 1 byte of data or the specified timeout occurs. By setting higher values in
-% combination with the timeout the consumer can tune for throughput and trade a little additional latency for reading only large chunks of data (e.g. setting
-% MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait up to 100ms to try to accumulate 64k of data before responding) (default :
-% 1).</li>
-% <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
-% at the time the request is issued (default : 1).</li>
-% <li><tt>autocommit :: boolean()</tt> : Autocommit offset (default: true).</li>
-% <li><tt>allow_unordered_commit :: boolean()</tt> : Allow unordered commit (default: false).</li>
-% <li><tt>processing :: at_least_once | at_most_once : </tt> When using <tt>at_most_once</tt>, the message offset will be commited before passing the message to the
-% callback. With <tt>at_least_once</tt> the commit is executed after passing the message to the callback and only if it return <tt>ok</tt>. If the callback
-% return an error, with <tt>at_least_once</tt>, the process will stop fetching messages for the partition until you manually commit the offset
-% (see {@link kafe_consumer:commit/2}), or remove it (see {@link kafe_consumer:remove_commit/1} or {@link kafe_consumer:remove_commits/1})). This options has
-% no effect when <tt>autocommit</tt> is set to false.  (default: at_most_once).</li>
-% </ul>
-% @end
--spec start_consumer(GroupID :: binary(),
-                     Callback :: fun((CommitID :: group_commit_identifier(),
-                                      Topic :: binary(),
-                                      PartitionID :: integer(),
-                                      Offset :: integer(),
-                                      Key :: binary(),
-                                      Value :: binary()) -> ok | {error, term()}),
-                                   Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
-start_consumer(GroupID, Callback, Options) when is_function(Callback, 6) ->
-  kafe_consumer_sup:start_child(GroupID, Options#{callback => Callback}).
-
-% @doc
-% Stop the given consumer
-% @end
--spec stop_consumer(GroupPIDOrID :: binary() | atom() | pid()) -> ok | {error, not_found | simple_one_for_one} | undefined.
-stop_consumer(GroupPIDOrID) ->
-  kafe_consumer_sup:stop_child(GroupPIDOrID).
 

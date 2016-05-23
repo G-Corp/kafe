@@ -100,13 +100,13 @@ __Internal :__
 Commit the offset (in Kafka) for the given <tt>GroupCommitIdentifier</tt> received in the <tt>Callback</tt> specified when starting the
 consumer group (see <a href="kafe.md#start_consumer-3"><code>kafe:start_consumer/3</code></a></td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
 Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#generation_id-1">generation_id/1</a></td><td>
-Return the <tt>generation_id</tt> of the consumer.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
-Return the <tt>member_id</tt> of the consumer.</td></tr><tr><td valign="top"><a href="#pending_commits-1">pending_commits/1</a></td><td>
-Return the list of all pending commits for the given group.</td></tr><tr><td valign="top"><a href="#pending_commits-2">pending_commits/2</a></td><td>
-Return the list of pending commits for the given topics (and partitions) for the given group.</td></tr><tr><td valign="top"><a href="#remove_commit-1">remove_commit/1</a></td><td>
+Return the <tt>generation_id</tt> for the given consumer group.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
+Return the <tt>member_id</tt> for the given consumer group.</td></tr><tr><td valign="top"><a href="#pending_commits-1">pending_commits/1</a></td><td>
+Return the list of all pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#pending_commits-2">pending_commits/2</a></td><td>
+Return the list of pending commits for the given topics (and partitions) for the given consumer group.</td></tr><tr><td valign="top"><a href="#remove_commit-1">remove_commit/1</a></td><td>
 Remove the given commit.</td></tr><tr><td valign="top"><a href="#remove_commits-1">remove_commits/1</a></td><td>
-Remove all pending commits for the given group.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupID, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupID)</tt></a>.</td></tr><tr><td valign="top"><a href="#topics-1">topics/1</a></td><td>
-Return the topics (and partitions) of the consumer.</td></tr></table>
+Remove all pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupID, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupID)</tt></a>.</td></tr><tr><td valign="top"><a href="#topics-1">topics/1</a></td><td>
+Return the topics (and partitions) for the given the consumer group.</td></tr></table>
 
 
 <a name="functions"></a>
@@ -170,7 +170,7 @@ generation_id(GroupPIDOrID::atom() | pid() | binary()) -&gt; integer()
 </code></pre>
 <br />
 
-Return the `generation_id` of the consumer
+Return the `generation_id` for the given consumer group.
 
 <a name="member_id-1"></a>
 
@@ -181,7 +181,7 @@ member_id(GroupPIDOrID::atom() | pid() | binary()) -&gt; binary()
 </code></pre>
 <br />
 
-Return the `member_id` of the consumer
+Return the `member_id` for the given consumer group.
 
 <a name="pending_commits-1"></a>
 
@@ -192,7 +192,7 @@ pending_commits(GroupPIDOrID::atom() | pid() | binary()) -&gt; [<a href="kafe.md
 </code></pre>
 <br />
 
-Return the list of all pending commits for the given group.
+Return the list of all pending commits for the given consumer group.
 
 <a name="pending_commits-2"></a>
 
@@ -203,7 +203,7 @@ pending_commits(GroupPIDOrID::atom() | pid() | binary(), Topics::[binary() | {bi
 </code></pre>
 <br />
 
-Return the list of pending commits for the given topics (and partitions) for the given group.
+Return the list of pending commits for the given topics (and partitions) for the given consumer group.
 
 <a name="remove_commit-1"></a>
 
@@ -225,7 +225,7 @@ remove_commits(GroupPIDOrID::atom() | pid() | binary()) -&gt; ok
 </code></pre>
 <br />
 
-Remove all pending commits for the given group
+Remove all pending commits for the given consumer group.
 
 <a name="start-3"></a>
 
@@ -252,5 +252,5 @@ topics(GroupPIDOrID::atom() | pid() | binary()) -&gt; [{binary(), [integer()]}]
 </code></pre>
 <br />
 
-Return the topics (and partitions) of the consumer
+Return the topics (and partitions) for the given the consumer group.
 

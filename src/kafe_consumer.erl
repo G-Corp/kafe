@@ -150,7 +150,7 @@ commit(GroupCommitIdentifier, Options) ->
   end.
 
 % @doc
-% Remove all pending commits for the given group
+% Remove all pending commits for the given consumer group.
 % @end
 -spec remove_commits(GroupPIDOrID :: atom() | pid() | binary()) -> ok.
 remove_commits(GroupPIDOrID) ->
@@ -169,7 +169,7 @@ remove_commit(GroupCommitIdentifier) ->
   end.
 
 % @doc
-% Return the list of all pending commits for the given group.
+% Return the list of all pending commits for the given consumer group.
 % @end
 -spec pending_commits(GroupPIDOrID :: atom() | pid() | binary()) -> [kafe:group_commit_identifier()].
 pending_commits(GroupPIDOrID) ->
@@ -180,7 +180,7 @@ pending_commits(GroupPIDOrID) ->
   pending_commits(GroupPIDOrID, Topics).
 
 % @doc
-% Return the list of pending commits for the given topics (and partitions) for the given group.
+% Return the list of pending commits for the given topics (and partitions) for the given consumer group.
 % @end
 -spec pending_commits(GroupPIDOrID :: atom() | pid() | binary(), [binary() | {binary(), [integer()]}]) -> [kafe:group_commit_identifier()].
 pending_commits(GroupPIDOrID, Topics) ->
@@ -197,7 +197,7 @@ member_id(GroupID, MemberID) ->
   kafe_consumer_sup:call_srv(GroupID, {member_id, MemberID}).
 
 % @doc
-% Return the <tt>member_id</tt> of the consumer
+% Return the <tt>member_id</tt> for the given consumer group.
 % @end
 -spec member_id(GroupPIDOrID :: atom() | pid() | binary()) -> binary().
 member_id(GroupID) ->
@@ -208,7 +208,7 @@ generation_id(GroupID, GenerationID) ->
   kafe_consumer_sup:call_srv(GroupID, {generation_id, GenerationID}).
 
 % @doc
-% Return the <tt>generation_id</tt> of the consumer
+% Return the <tt>generation_id</tt> for the given consumer group.
 % @end
 -spec generation_id(GroupPIDOrID :: atom() | pid() | binary()) -> integer().
 generation_id(GroupID) ->
@@ -219,7 +219,7 @@ topics(GroupID, Topics) ->
   kafe_consumer_sup:call_srv(GroupID, {topics, Topics}).
 
 % @doc
-% Return the topics (and partitions) of the consumer
+% Return the topics (and partitions) for the given the consumer group.
 % @end
 -spec topics(GroupPIDOrID :: atom() | pid() | binary()) -> [{binary(), [integer()]}].
 topics(GroupID) ->
