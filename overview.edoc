@@ -6,6 +6,10 @@
 @title A Kafka client for Erlang
 @doc
 
+<b>Kafe</b> has been tested with Kafka 0.9 and 0.10
+
+You can also use it with Kafka 0.8 but {@link kafe_consumer} is not compatible with this version.
+
 <h3>Links</h3>
 
 <ul>
@@ -21,10 +25,12 @@
 <tr><td>chunk_pool_size</td><td><tt>integer()</tt></td><td>Size of new connection pool/brocker</td><td><tt>10</tt></td></tr>
 <tr><td>brokers_update_frequency</td><td><tt>integer()</tt></td><td>Frequency (ms) for brokers update</td><td><tt>60000</tt></td></tr>
 <tr><td>client_id</td><td><tt>binary()</tt></td><td>Client ID Name</td><td><tt>&lt;&lt;"kafe"&gt;&gt;</tt></td></tr>
-<tr><td>api_version</td><td><tt>integer()</tt></td><td>API Version</td><td><tt>1</tt></td></tr>
+<tr><td>api_version</td><td><tt>integer()</tt></td><td>API Version</td><td><tt>1<sup>*</sup></tt></td></tr>
 <tr><td>correlation_id</td><td><tt>integer()</tt></td><td>Correlation ID</td><td><tt>0</tt></td></tr>
 <tr><td>socket</td><td><tt>[{sndbuf, integer()}, {recbuf, integer()}, {buffer, integer()}]</tt></td><td>Socker configuration</td><td><tt>[{sndbuf, 4194304}, {recbuf, 4194304}, {buffer, 4194304}]</tt></td></tr>
 </table>
+
+<sup>*</sup> use <tt>0</tt> with Kafka &gt;= 0.8 &lt; 0.9 ; <tt>1</tt> with Kafka &gt;= 0.9 &lt; 0.10 ; <tt>2</tt> with Kafka &gt;= 0.10
 
 Example :
 

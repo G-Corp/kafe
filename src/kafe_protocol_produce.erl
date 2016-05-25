@@ -29,6 +29,24 @@ run(Topic, Message, Options) ->
 %%   * required_acks :: integer() (default: -1)
 %%   * partition :: integer()     (default: 0)
 %%   * timestamp :: integer()     (default: now)
+%%
+%% Message Set:
+%% v0
+%% Message => Crc MagicByte Attributes Key Value
+%%   Crc => int32
+%%   MagicByte => int8
+%%   Attributes => int8
+%%   Key => bytes
+%%   Value => bytes
+%%
+%% v1 (supported since 0.10.0)
+%% Message => Crc MagicByte Attributes Timestamp Key Value
+%%   Crc => int32
+%%   MagicByte => int8
+%%   Attributes => int8
+%%   Timestamp => int64
+%%   Key => bytes
+%%   Value => bytes
 request(Topic, Message, Options, #{api_version := ApiVersion} = State) ->
   Timeout = maps:get(timeout, Options, ?DEFAULT_PRODUCE_SYNC_TIMEOUT),
   RequiredAcks = maps:get(required_acks,
@@ -40,10 +58,10 @@ request(Topic, Message, Options, #{api_version := ApiVersion} = State) ->
   end,
   Partition = maps:get(partition, Options, ?DEFAULT_PRODUCE_PARTITION),
   Msg = if
-          ApiVersion == ?V2 ->
+          ApiVersion >= ?V2 ->
             Timestamp = maps:get(timestamp, Options, get_timestamp()),
             <<
-              ApiVersion:8/signed,
+              1:8/signed,
               0:8/signed,
               Timestamp:64/signed,
               (kafe_protocol:encode_bytes(bucs:to_binary(Key)))/binary,
@@ -51,7 +69,7 @@ request(Topic, Message, Options, #{api_version := ApiVersion} = State) ->
             >>;
           true ->
             <<
-              ApiVersion:8/signed,
+              0:8/signed,
               0:8/signed,
               (kafe_protocol:encode_bytes(bucs:to_binary(Key)))/binary,
               (kafe_protocol:encode_bytes(bucs:to_binary(Value)))/binary
@@ -72,14 +90,30 @@ request(Topic, Message, Options, #{api_version := ApiVersion} = State) ->
     State,
     ApiVersion).
 
-% Produce Request (Version: 1) => acks timeout [topic_data]
-%   acks => INT16
-%   timeout => INT32
-%   topic_data => topic [data]
-%     topic => STRING
-%     data => partition record_set
-%       partition => INT32
-%       record_set => BYTES
+%% Produce Response
+%% v0
+%% ProduceResponse => [TopicName [Partition ErrorCode Offset]]
+%%   TopicName => string
+%%   Partition => int32
+%%   ErrorCode => int16
+%%   Offset => int64
+%%
+%% v1 (supported in 0.9.0 or later)
+%% ProduceResponse => [TopicName [Partition ErrorCode Offset]] ThrottleTime
+%%   TopicName => string
+%%   Partition => int32
+%%   ErrorCode => int16
+%%   Offset => int64
+%%   ThrottleTime => int32
+%%
+%% v2 (supported in 0.10.0 or later)
+%% ProduceResponse => [TopicName [Partition ErrorCode Offset Timestamp]] ThrottleTime
+%%   TopicName => string
+%%   Partition => int32
+%%   ErrorCode => int16
+%%   Offset => int64
+%%   Timestamp => int64
+%%   ThrottleTime => int32
 response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) ->
   {ok, response(NumberOfTopics, Remainder, ApiVersion)}.
 

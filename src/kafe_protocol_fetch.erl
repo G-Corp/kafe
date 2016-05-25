@@ -127,18 +127,34 @@ message(<<Offset:64/signed,
           MessageSize:32/signed,
           Message:MessageSize/binary,
           _Remainder/binary>>) ->
-  <<Crc:32/signed,
-    MagicByte:8/signed,
-    Attibutes:8/signed,
-    MessageRemainder/binary>> = Message,
-   {Key, MessageRemainder1} = get_kv(MessageRemainder),
-   {Value, <<>>} = get_kv(MessageRemainder1),
-   #{offset => Offset,
-     crc => Crc,
-     magic_bytes => MagicByte,
-     attributes => Attibutes,
-     key => Key,
-     value => Value}.
+  case Message of
+    <<Crc:32/signed,
+      0:8/signed,
+      Attibutes:8/signed,
+      MessageRemainder/binary>> ->
+      {Key, MessageRemainder1} = get_kv(MessageRemainder),
+      {Value, <<>>} = get_kv(MessageRemainder1),
+      #{offset => Offset,
+        crc => Crc,
+        magic_bytes => 0,
+        attributes => Attibutes,
+        key => Key,
+        value => Value};
+    <<Crc:32/signed,
+      1:8/signed,
+      Attibutes:8/signed,
+      Timestamp:64/signed,
+      MessageRemainder/binary>> ->
+      {Key, MessageRemainder1} = get_kv(MessageRemainder),
+      {Value, <<>>} = get_kv(MessageRemainder1),
+      #{offset => Offset,
+        crc => Crc,
+        magic_bytes => 1,
+        attributes => Attibutes,
+        timestamp => Timestamp,
+        key => Key,
+        value => Value}
+  end.
 
 get_kv(<<KVSize:32/signed, Remainder/binary>>) when KVSize =:= -1 ->
   {<<>>, Remainder};

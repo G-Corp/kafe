@@ -8,6 +8,10 @@ __Version:__ 1.1.2
 
 __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire.lejeune@finexkap.com)), Gregoire Lejeune ([`greg@g-corp.io`](mailto:greg@g-corp.io)), Gregoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire.lejeune@botsunit.com)).
 
+__Kafe__ has been tested with Kafka 0.9 and 0.10
+
+You can also use it with Kafka 0.8 but [`kafe_consumer`](kafe_consumer.md) is not compatible with this version.
+
 
 ### Links ###
 * [Apache Kafka](http://kafka.apache.org)
@@ -24,11 +28,14 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 <tr><td>chunk_pool_size</td><td><tt>integer()</tt></td><td>Size of new connection pool/brocker</td><td><tt>10</tt></td></tr>
 <tr><td>brokers_update_frequency</td><td><tt>integer()</tt></td><td>Frequency (ms) for brokers update</td><td><tt>60000</tt></td></tr>
 <tr><td>client_id</td><td><tt>binary()</tt></td><td>Client ID Name</td><td><tt><<"kafe">></tt></td></tr>
-<tr><td>api_version</td><td><tt>integer()</tt></td><td>API Version</td><td><tt>1</tt></td></tr>
+<tr><td>api_version</td><td><tt>integer()</tt></td><td>API Version</td><td><tt>1<sup>*</sup></tt></td></tr>
 <tr><td>correlation_id</td><td><tt>integer()</tt></td><td>Correlation ID</td><td><tt>0</tt></td></tr>
 <tr><td>socket</td><td><tt>[{sndbuf, integer()}, {recbuf, integer()}, {buffer, integer()}]</tt></td><td>Socker configuration</td><td><tt>[{sndbuf, 4194304}, {recbuf, 4194304}, {buffer, 4194304}]</tt></td></tr>
 </table>
 
+
+<sup>*</sup>
+ use `0` with Kafka >= 0.8 < 0.9 ; `1` with Kafka >= 0.9 < 0.10 ; `2` with Kafka >= 0.10
 
 Example :
 
