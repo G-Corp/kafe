@@ -9,6 +9,9 @@
 -define(DEFAULT_SOCKET_RECBUF, 4194304).
 -define(DEFAULT_POOL_SIZE, 5).
 -define(DEFAULT_CHUNK_POOL_SIZE, 10).
+-define(DEFAULT_PROTOCOL_TIMEOUT, 60000).
+
+-define(TIMEOUT, doteki:get_env([kafe, protocol_timeout], ?DEFAULT_PROTOCOL_TIMEOUT)).
 
 -define(V0, 0).
 -define(V1, 1).

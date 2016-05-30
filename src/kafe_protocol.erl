@@ -1,6 +1,9 @@
 % @hidden
 -module(kafe_protocol).
 -compile([{parse_transform, lager_transform}]).
+
+-include("../include/kafe.hrl").
+
 -export([
          run/1,
          run/2,
@@ -23,7 +26,7 @@ run(Request) ->
 run(BrokerPID, Request) when is_pid(BrokerPID) ->
   lager:debug("Request with broker ~p", [BrokerPID]),
   try
-    Response = gen_server:call(BrokerPID, Request, 5000),
+    Response = gen_server:call(BrokerPID, Request, ?TIMEOUT),
     _ = kafe:release_broker(BrokerPID),
     Response
   catch

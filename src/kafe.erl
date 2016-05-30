@@ -191,7 +191,7 @@ start_link() ->
 
 % @hidden
 first_broker() ->
-  gen_server:call(?SERVER, first_broker, 5000).
+  gen_server:call(?SERVER, first_broker, ?TIMEOUT).
 
 % @hidden
 release_broker(Broker) ->
@@ -204,11 +204,11 @@ release_broker(Broker) ->
 
 % @hidden
 broker_id_by_topic_and_partition(Topic, Partition) ->
-  gen_server:call(?SERVER, {broker_id_by_topic_and_partition, bucs:to_binary(Topic), Partition}, 5000).
+  gen_server:call(?SERVER, {broker_id_by_topic_and_partition, bucs:to_binary(Topic), Partition}, ?TIMEOUT).
 
 % @hidden
 broker_by_name(BrokerName) ->
-  gen_server:call(?SERVER, {broker_by_name, BrokerName}, 5000).
+  gen_server:call(?SERVER, {broker_by_name, BrokerName}, ?TIMEOUT).
 
 % @hidden
 broker_by_host_and_port(Host, Port) ->
@@ -223,11 +223,11 @@ broker_by_id(BrokerID) ->
 
 % @hidden
 topics() ->
-  gen_server:call(?SERVER, topics, 5000).
+  gen_server:call(?SERVER, topics, ?TIMEOUT).
 
 % @hidden
 partitions(Topic) ->
-  gen_server:call(?SERVER, {partitions, Topic}, 5000).
+  gen_server:call(?SERVER, {partitions, Topic}, ?TIMEOUT).
 
 % @hidden
 max_offset(TopicName) ->
@@ -271,11 +271,11 @@ partition_for_offset(TopicName, Offset) ->
 
 % @hidden
 api_version() ->
-  gen_server:call(?SERVER, api_version, 5000).
+  gen_server:call(?SERVER, api_version, ?TIMEOUT).
 
 % @hidden
 state() ->
-  gen_server:call(?SERVER, state, 5000).
+  gen_server:call(?SERVER, state, ?TIMEOUT).
 
 % @doc
 % Start kafe application
@@ -287,7 +287,7 @@ start() ->
 % Return the list of availables brokers
 % @end
 brokers() ->
-  gen_server:call(?SERVER, brokers, 5000).
+  gen_server:call(?SERVER, brokers, ?TIMEOUT).
 
 % @equiv metadata([])
 metadata() ->
@@ -911,7 +911,7 @@ update_state_with_metadata(State) ->
                                                   {call,
                                                    fun kafe_protocol_metadata:request/2, [[]],
                                                    fun kafe_protocol_metadata:response/2},
-                                                  5000),
+                                                  ?TIMEOUT),
       ok = release_broker(FirstBroker),
       {Brokers1, State3} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, StateAcc}) ->
                                            {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
@@ -964,7 +964,7 @@ remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
                     BrokerID ->
                       case poolgirl:checkout(BrokerID) of
                         {ok, BrokerPID} ->
-                          case gen_server:call(BrokerPID, alive, 5000) of
+                          case gen_server:call(BrokerPID, alive, ?TIMEOUT) of
                             ok ->
                               _ = poolgirl:checkin(BrokerPID),
                               State1;
@@ -1005,7 +1005,7 @@ get_first_broker([]) -> undefined;
 get_first_broker([BrokerID|Rest]) ->
   case poolgirl:checkout(BrokerID) of
     {ok, Broker} ->
-      case gen_server:call(Broker, alive, 5000) of
+      case gen_server:call(Broker, alive, ?TIMEOUT) of
         ok ->
           Broker;
         {error, Reason} ->

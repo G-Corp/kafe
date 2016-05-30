@@ -46,7 +46,7 @@ distclean::
 	@rm -rf test/eunit
 	@rm -f test/*.beam
 
-KAFKA_ADVERTISED_HOST_NAME = $(shell docker network inspect bridge | grep Gateway | awk -F: '{print $$2}' | sed -e 's/^\s*"//' | sed -e 's/".*$$//')
+KAFKA_ADVERTISED_HOST_NAME = $(shell ip addr list docker0 |grep "inet " |cut -d' ' -f6|cut -d/ -f1)
 
 define docker_compose_yml_v2
 version: "2"
