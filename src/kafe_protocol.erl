@@ -23,7 +23,7 @@ run(Request) ->
 run(BrokerPID, Request) when is_pid(BrokerPID) ->
   lager:debug("Request with broker ~p", [BrokerPID]),
   try
-    Response = gen_server:call(BrokerPID, Request, infinity),
+    Response = gen_server:call(BrokerPID, Request, 5000),
     _ = kafe:release_broker(BrokerPID),
     Response
   catch

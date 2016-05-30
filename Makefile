@@ -169,5 +169,5 @@ docker-start: docker-stop
 
 docker-stop: docker-compose.yml
 	@docker-compose kill
-	@docker-compose rm -vf
+	@docker-compose rm --all -vf
 
