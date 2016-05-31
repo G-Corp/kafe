@@ -106,10 +106,18 @@
                                                     leader => integer(),
                                                     replicas => [integer()]}]}]}.
 -type topics() :: [binary() | string() | atom()] | [{binary() | string() | atom(), [{integer(), integer(), integer()}]}].
--type topic_partition_info() :: #{name => binary(), partitions => [#{error_code => error_code(), id => integer(), offsets => [integer()]}]}.
+-type topic_partition_info() :: #{name => binary(),
+                                  partitions => [#{error_code => error_code(), id => integer(), offsets => [integer()]}]}.
 -type message() :: binary() | {binary(), binary()}.
--type produce_options() :: #{timeout => integer(), required_acks => integer(), partition => integer()}.
--type fetch_options() :: #{partition => integer(), offset => integer(), max_bytes => integer(), min_bytes => integer(), max_wait_time => integer()}.
+-type produce_options() :: #{timeout => integer(),
+                             required_acks => integer(),
+                             partition => integer(),
+                             key_to_partition => fun((binary(), term()) -> integer())}.
+-type fetch_options() :: #{partition => integer(),
+                           offset => integer(),
+                           max_bytes => integer(),
+                           min_bytes => integer(),
+                           max_wait_time => integer()}.
 -type message_set() :: #{name => binary(),
                          partitions => [#{partition => integer(),
                                           error_code => error_code(),
@@ -119,7 +127,10 @@
                                                         attributes => integer(),
                                                         key => binary(),
                                                         value => binary()}]}]}.
--type group_coordinator() :: #{error_code => error_code(), coordinator_id => integer(), coordinator_host => binary(),  coordinator_port => port()}.
+-type group_coordinator() :: #{error_code => error_code(),
+                               coordinator_id => integer(),
+                               coordinator_host => binary(),
+                               coordinator_port => port()}.
 -type offset_fetch_options() :: [binary()] | [{binary(), [integer()]}].
 -type offset_fetch_set() :: #{name => binary(),
                               partitions_offset => [#{partition => integer(),
@@ -350,9 +361,13 @@ produce(Topic, Message) ->
 % written to the local log before sending a response. If it is -1 the server will block until the message is committed by all in sync replicas before sending a
 % response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server will never wait for more
 % acknowledgements than there are in-sync replicas). (default: 0)</li>
-% <li><tt>partition :: integer()</tt> : The partition that data is being published to. (default: 0)</li>
-% <li><tt>key_to_partition :: fun((binary(), term()) -&gt; integer())</tt> : Hash function to do partition assignment from the message key. (default: internal)</li>
+% <li><tt>partition :: integer()</tt> : The partition that data is being published to.</li>
+% <li><tt>key_to_partition :: fun((binary(), term()) -&gt; integer())</tt> : Hash function to do partition assignment from the message key.</li>
 % </ul>
+%
+% If the partition is specified (option <tt>partition</tt>) and there is a message' key, the message will be produce on the specified partition. If no partition
+% is specified, and there is a message key, the partition will be calculated using the <tt>key_to_partition</tt> function (or an internal function if this
+% option is not specified). If there is no key and no partition specified, the partition will be choosen using a round robin algorithm.
 %
 % Example:
 % <pre>

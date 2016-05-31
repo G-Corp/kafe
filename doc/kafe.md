@@ -282,7 +282,7 @@ partition_assignment() = #{topic =&gt; binary(), partitions =&gt; [integer()]}
 
 
 <pre><code>
-produce_options() = #{timeout =&gt; integer(), required_acks =&gt; integer(), partition =&gt; integer()}
+produce_options() = #{timeout =&gt; integer(), required_acks =&gt; integer(), partition =&gt; integer(), key_to_partition =&gt; fun((binary(), term()) -&gt; integer())}
 </code></pre>
 
 
@@ -759,10 +759,14 @@ written to the local log before sending a response. If it is -1 the server will 
 response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server will never wait for more
 acknowledgements than there are in-sync replicas). (default: 0)
 
-* `partition :: integer()` : The partition that data is being published to. (default: 0)
+* `partition :: integer()` : The partition that data is being published to.
 
-* `key_to_partition :: fun((binary(), term()) -> integer())` : Hash function to do partition assignment from the message key. (default: internal)
+* `key_to_partition :: fun((binary(), term()) -> integer())` : Hash function to do partition assignment from the message key.
 
+
+If the partition is specified (option `partition`) and there is a message' key, the message will be produce on the specified partition. If no partition
+is specified, and there is a message key, the partition will be calculated using the `key_to_partition` function (or an internal function if this 
+option is not specified). If there is no key and no partition specified, the partition will be choosen using a round robin algorithm.
 
 Example:
 
