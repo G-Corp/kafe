@@ -5,15 +5,26 @@
 
 -export([
          run/3,
-         request/4,
+         request/5,
          response/2
         ]).
 
 run(Topic, Message, Options) ->
-  Partition = maps:get(partition, Options, ?DEFAULT_PRODUCE_PARTITION),
+  Partition = case Message of
+                {Key, _} ->
+                  KeyToPartition = maps:get(key_to_partition, Options,
+                                            fun(T, K) ->
+                                                erlang:crc32(term_to_binary(K))
+                                                rem
+                                                erlang:length(kafe:partitions(T))
+                                            end),
+                  KeyToPartition(Topic, Key);
+                _ ->
+                  maps:get(partition, Options, kafe_rr:next(Topic))
+              end,
   kafe_protocol:run({topic_and_partition, Topic, Partition},
                     {call,
-                     fun ?MODULE:request/4, [bucs:to_binary(Topic), Message, Options],
+                     fun ?MODULE:request/5, [bucs:to_binary(Topic), Partition, Message, Options],
                      fun ?MODULE:response/2}).
 
 %% Produce Request (Version: 0) => acks timeout [topic_data]
@@ -47,16 +58,16 @@ run(Topic, Message, Options) ->
 %%   Timestamp => int64
 %%   Key => bytes
 %%   Value => bytes
-request(Topic, Message, Options, #{api_version := ApiVersion} = State) ->
+request(Topic, Partition, Message, Options, #{api_version := ApiVersion} = State) ->
   Timeout = maps:get(timeout, Options, ?DEFAULT_PRODUCE_SYNC_TIMEOUT),
   RequiredAcks = maps:get(required_acks,
                           Options,
                           ?DEFAULT_PRODUCE_REQUIRED_ACKS),
+
   {Key, Value} = if
     is_tuple(Message) -> Message;
     true -> {<<>>, Message}
   end,
-  Partition = maps:get(partition, Options, ?DEFAULT_PRODUCE_PARTITION),
   Msg = if
           ApiVersion >= ?V2 ->
             Timestamp = maps:get(timestamp, Options, get_timestamp()),

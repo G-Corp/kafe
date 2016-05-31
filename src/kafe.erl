@@ -351,6 +351,7 @@ produce(Topic, Message) ->
 % response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server will never wait for more
 % acknowledgements than there are in-sync replicas). (default: 0)</li>
 % <li><tt>partition :: integer()</tt> : The partition that data is being published to. (default: 0)</li>
+% <li><tt>key_to_partition :: fun((binary(), term()) -&gt; integer())</tt> : Hash function to do partition assignment from the message key. (default: internal)</li>
 % </ul>
 %
 % Example:
@@ -363,11 +364,7 @@ produce(Topic, Message) ->
 % @end
 -spec produce(binary(), message(), produce_options()) -> {ok, [topic_partition_info()]} | {error,  term()}.
 produce(Topic, Message, Options) ->
-  Options1 = case Options of
-               #{partition := _} -> Options;
-               _ -> Options#{partition => kafe_rr:next(Topic)}
-             end,
-  kafe_protocol_produce:run(Topic, Message, Options1).
+  kafe_protocol_produce:run(Topic, Message, Options).
 
 % @equiv fetch(-1, TopicName, #{})
 fetch(TopicName) when is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName) ->

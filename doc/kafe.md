@@ -761,6 +761,8 @@ acknowledgements than there are in-sync replicas). (default: 0)
 
 * `partition :: integer()` : The partition that data is being published to. (default: 0)
 
+* `key_to_partition :: fun((binary(), term()) -> integer())` : Hash function to do partition assignment from the message key. (default: internal)
+
 
 Example:
 
