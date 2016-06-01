@@ -4,7 +4,7 @@
 
 Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 BotsUnit
 
-__Version:__ 1.3.0
+__Version:__ 1.3.1
 
 __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire.lejeune@finexkap.com)), Gregoire Lejeune ([`greg@g-corp.io`](mailto:greg@g-corp.io)), Gregoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire.lejeune@botsunit.com)).
 
@@ -139,6 +139,22 @@ Kafe.stop_consumer(:my_group)
 ...
 
 ```
+
+
+### Build ###
+
+__Kafe__ use [rebar3](http://www.rebar3.org). So, you can use :
+
+* `./rebar3 compile` to compile Kafe.
+
+* `./rebar3 eunit` to run tests.
+
+* `./rebar3 as doc edoc` to build documentation.
+
+* `./rebar3 elixir generate_mix` to generate `mix.exs` file.
+
+* `./rebar3 elixir generate_lib` to generate Elixir bindings.
+
 
 
 ### API Documentation ###

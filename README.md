@@ -4,13 +4,13 @@
 
 Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 BotsUnit
 
-__Version:__ 1.3.0
+__Version:__ 1.3.1
 
 __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire.lejeune@finexkap.com)), Gregoire Lejeune ([`greg@g-corp.io`](mailto:greg@g-corp.io)), Gregoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire.lejeune@botsunit.com)).
 
 __Kafe__ has been tested with Kafka 0.9 and 0.10
 
-You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer.md) is not compatible with this version.
+You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/botsunit/kafe/blob/rebar3/doc/kafe_consumer.md) is not compatible with this version.
 
 
 ### Links ###
@@ -97,10 +97,10 @@ kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
 
 ```
 
-See [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/master/doc/kafe.md#start_consumer-3) for the available `Options`.
+See [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/rebar3/doc/kafe.md#start_consumer-3) for the available `Options`.
 
 In the `consume` function, if you didn't start the consumer with `autocommit` set to `true`, you need to commit manually when you
-have finished to treat the message. To do so, use [`kafe_consumer:commit/1`](https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer.md#commit-1) with the `CommitID` as parameter.
+have finished to treat the message. To do so, use [`kafe_consumer:commit/1`](https://github.com/botsunit/kafe/blob/rebar3/doc/kafe_consumer.md#commit-1) with the `CommitID` as parameter.
 
 When you are done with your consumer, stop it :
 
@@ -141,9 +141,25 @@ Kafe.stop_consumer(:my_group)
 ```
 
 
+### Build ###
+
+__Kafe__ use [rebar3](http://www.rebar3.org). So, you can use :
+
+* `./rebar3 compile` to compile Kafe.
+
+* `./rebar3 eunit` to run tests.
+
+* `./rebar3 as doc edoc` to build documentation.
+
+* `./rebar3 elixir generate_mix` to generate `mix.exs` file.
+
+* `./rebar3 elixir generate_lib` to generate Elixir bindings.
+
+
+
 ### API Documentation ###
 
-See [documentation](https://github.com/botsunit/kafe/blob/master/doc/.)
+See [documentation](https://github.com/botsunit/kafe/blob/rebar3/doc/.)
 
 
 ### Contributing ###
@@ -176,6 +192,6 @@ THIS SOFTWARE IS PROVIDED BY THE AUTHOR `AS IS` AND ANY EXPRESS OR IMPLIED WARRA
 
 
 <table width="100%" border="0" summary="list of modules">
-<tr><td><a href="https://github.com/botsunit/kafe/blob/master/doc/kafe.md" class="module">kafe</a></td></tr>
-<tr><td><a href="https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer.md" class="module">kafe_consumer</a></td></tr></table>
+<tr><td><a href="https://github.com/botsunit/kafe/blob/rebar3/doc/kafe.md" class="module">kafe</a></td></tr>
+<tr><td><a href="https://github.com/botsunit/kafe/blob/rebar3/doc/kafe_consumer.md" class="module">kafe_consumer</a></td></tr></table>
 

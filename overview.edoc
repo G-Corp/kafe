@@ -121,6 +121,18 @@ Kafe.stop_consumer(:my_group)
 ...
 </pre>
 
+<h3>Build</h3>
+
+<b>Kafe</b> use <a href="http://www.rebar3.org">rebar3</a>. So, you can use :
+
+<ul>
+<li><tt>./rebar3 compile</tt> to compile Kafe.</li>
+<li><tt>./rebar3 eunit</tt> to run tests.</li>
+<li><tt>./rebar3 as doc edoc</tt> to build documentation.</li>
+<li><tt>./rebar3 elixir generate_mix</tt> to generate <tt>mix.exs</tt> file.</li>
+<li><tt>./rebar3 elixir generate_lib</tt> to generate Elixir bindings.</li>
+</ul>
+
 <h3>API Documentation</h3>
 
 See <a href=".">documentation</a>
