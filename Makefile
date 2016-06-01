@@ -9,7 +9,7 @@ tests:
 doc:
 	@$(REBAR) as doc edoc
 
-release: compile tests
+dist: compile tests
 	@$(REBAR) elixir generate_mix
 	@$(REBAR) elixir generate_lib
 
