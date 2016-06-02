@@ -10,10 +10,12 @@ tests:
 doc:
 	@$(REBAR) as doc edoc
 
-dist: compile tests
+elixir:
 	@$(REBAR) elixir generate_mix
 	@$(REBAR) elixir generate_lib
 
+dist: compile tests elixir doc
+
 distclean:
-	@rm -rf _build rebar.lock mix.lock
+	@rm -rf _build rebar.lock mix.lock test/eunit
 
