@@ -23,10 +23,10 @@ defmodule Kafe.Mixfile do
   defp deps do
     [
       {:lager, "~> 3.2.0"},
-      {:bucs, git: "https://github.com/botsunit/bucs.git", tag: "0.0.1"},
-      {:doteki, git: "https://github.com/botsunit/doteki.git", tag: "0.0.1"},
-      {:poolgirl, git: "https://github.com/botsunit/poolgirl.git", tag: "0.0.1"},
-      {:bristow, git: "https://github.com/botsunit/bristow.git", tag: "0.0.1"}    
+      {:bucs, git: "https://github.com/botsunit/bucs.git", branch: "master"},
+      {:doteki, git: "https://github.com/botsunit/doteki.git", branch: "master"},
+      {:poolgirl, git: "https://github.com/botsunit/poolgirl.git", branch: "master"},
+      {:bristow, git: "https://github.com/botsunit/bristow.git", branch: "master"}    
     ]
   end
 end
