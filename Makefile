@@ -19,7 +19,7 @@ elixir:
 dist: compile tests elixir doc
 
 distclean:
-	$(verbose) rm -rf _build rebar.lock mix.lock test/eunit
+	$(verbose) rm -rf _build rebar.lock mix.lock test/eunit deps
 
 KAFKA_ADVERTISED_HOST_NAME = $(shell ip addr list docker0 |grep "inet " |cut -d' ' -f6|cut -d/ -f1)
 
