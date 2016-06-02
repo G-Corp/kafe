@@ -11,7 +11,7 @@
 
 run(Topic, Message, Options) ->
   Partition = case Message of
-                {Key, _} ->
+                {Key, _} when erlang:size(Key) > 0 ->
                   KeyToPartition = maps:get(key_to_partition, Options,
                                             fun(T, K) ->
                                                 erlang:crc32(term_to_binary(K))
