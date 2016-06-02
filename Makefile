@@ -1,3 +1,4 @@
+.PHONY: doc
 REBAR = ./rebar3
 
 compile:
