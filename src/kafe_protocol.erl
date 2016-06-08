@@ -24,7 +24,6 @@ run(Request) ->
   end.
 
 run(BrokerPID, Request) when is_pid(BrokerPID) ->
-  lager:debug("Request with broker ~p", [BrokerPID]),
   try
     Response = gen_server:call(BrokerPID, Request, ?TIMEOUT),
     _ = kafe:release_broker(BrokerPID),
@@ -35,7 +34,6 @@ run(BrokerPID, Request) when is_pid(BrokerPID) ->
       {error, Error}
   end;
 run(BrokerName, Request) when is_list(BrokerName) ->
-  lager:debug("Request with broker ~p", [BrokerName]),
   case kafe:broker_by_name(BrokerName) of
     undefined ->
       {error, no_broker_found};
@@ -43,7 +41,6 @@ run(BrokerName, Request) when is_list(BrokerName) ->
       run(BrokerPID, Request)
   end;
 run(BrokerID, Request) when is_atom(BrokerID) ->
-  lager:debug("Request with broker ~p", [BrokerID]),
   case kafe:broker_by_id(BrokerID) of
     undefined ->
       {error, no_broker_found};
