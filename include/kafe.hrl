@@ -78,4 +78,5 @@
 -define(DEFAULT_CONSUMER_PROCESSING, at_most_once).
 -define(DEFAULT_CONSUMER_ON_START_FETCHING, undefined).
 -define(DEFAULT_CONSUMER_ON_STOP_FETCHING, undefined).
+-define(DEFAULT_CONSUMER_ON_ASSIGNMENT_CHANGE, undefined).
 

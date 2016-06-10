@@ -14,7 +14,7 @@ defmodule Kafe.Mixfile do
 
   def application do
     [
-       applications: [:kernel, :stdlib, :syntax_tools, :compiler, :poolgirl, :goldrush, :lager],
+       applications: [:syntax_tools, :compiler, :poolgirl, :goldrush, :lager],
        env: [],
        mod: {:kafe_app, []}
     ]

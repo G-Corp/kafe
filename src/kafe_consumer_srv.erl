@@ -43,7 +43,8 @@
           processing = ?DEFAULT_CONSUMER_PROCESSING,
           fetch = false,
           on_start_fetching = ?DEFAULT_CONSUMER_ON_START_FETCHING,
-          on_stop_fetching = ?DEFAULT_CONSUMER_ON_STOP_FETCHING
+          on_stop_fetching = ?DEFAULT_CONSUMER_ON_STOP_FETCHING,
+          on_assignment_change = ?DEFAULT_CONSUMER_ON_ASSIGNMENT_CHANGE
          }).
 
 %% API.
@@ -68,6 +69,7 @@ init([GroupID, Options]) ->
   Processing = maps:get(processing, Options, ?DEFAULT_CONSUMER_PROCESSING),
   OnStartFetching = maps:get(on_start_fetching, Options, ?DEFAULT_CONSUMER_ON_START_FETCHING),
   OnStopFetching = maps:get(on_stop_fetching, Options, ?DEFAULT_CONSUMER_ON_STOP_FETCHING),
+  OnAssignmentChange = maps:get(on_assignment_change, Options, ?DEFAULT_CONSUMER_ON_ASSIGNMENT_CHANGE),
   {ok, #state{
           group_id = bucs:to_binary(GroupID),
           callback = maps:get(callback, Options),
@@ -81,7 +83,8 @@ init([GroupID, Options]) ->
           processing = Processing,
           fetch = false,
           on_start_fetching = OnStartFetching,
-          on_stop_fetching = OnStopFetching
+          on_stop_fetching = OnStopFetching,
+          on_assignment_change = OnAssignmentChange
          }}.
 
 % @hidden
@@ -102,7 +105,7 @@ handle_call({topics, Topics}, _From, #state{topics = CurrentTopics} = State) ->
     Topics == CurrentTopics ->
       {reply, ok, State};
     true ->
-      {reply, ok, start_fetchers(Topics, State#state{topics = Topics})}
+      {reply, ok, update_fetchers(Topics, State#state{topics = Topics})}
   end;
 handle_call({commit, Topic, Partition, Offset, Options}, _From, #state{allow_unordered_commit = true,
                                                                        commits = Commits,
@@ -232,53 +235,29 @@ code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
 % @hidden
-start_fetchers(Topics, #state{fetchers = Fetchers} = State) ->
-  State1 = stop_fetchers(
-             [TP || {TP, _, _} <- Fetchers] -- lists:foldl(fun({Topic, Partitions}, Acc) ->
-                                                               lists:zip(
-                                                                 lists:duplicate(length(Partitions), Topic),
-                                                                 Partitions) ++ Acc
-                                                           end, [], Topics),
-             State),
-  start_fetchers_for_topic(Topics, State1).
-
-start_fetchers_for_topic([], State) ->
-  State;
-start_fetchers_for_topic([{Topic, Partitions}|Rest], State) ->
-  start_fetchers_for_topic(Rest,
-                           start_fetchers_for_topic_and_partition(Partitions, Topic, State)).
-
-start_fetchers_for_topic_and_partition([], _, State) ->
-  State;
-start_fetchers_for_topic_and_partition([Partition|Partitions], Topic, #state{fetchers = Fetchers,
-                                                                             fetch_interval = FetchInterval,
-                                                                             group_id = GroupID,
-                                                                             generation_id = GenerationID,
-                                                                             member_id = MemberID,
-                                                                             fetch_size = FetchSize,
-                                                                             autocommit = Autocommit,
-                                                                             min_bytes = MinBytes,
-                                                                             max_bytes = MaxBytes,
-                                                                             max_wait_time = MaxWaitTime,
-                                                                             callback = Callback,
-                                                                             processing = Processing} = State) ->
-  case lists:keyfind({Topic, Partition}, 1, Fetchers) of
-    false ->
-      case kafe_consumer_fetcher_sup:start_child(Topic, Partition, self(), FetchInterval,
-                                                 GroupID, GenerationID, MemberID,
-                                                 FetchSize, Autocommit,
-                                                 MinBytes, MaxBytes, MaxWaitTime,
-                                                 Callback, Processing) of
-        {ok, Pid} ->
-          MRef = erlang:monitor(process, Pid),
-          start_fetchers_for_topic_and_partition(Partitions, Topic, State#state{fetchers = [{{Topic, Partition}, Pid, MRef}|Fetchers]});
-        {error, Error} ->
-          lager:error("Faild to start fetcher for ~p#~p : ~p", [Topic, Partition, Error]),
-          start_fetchers_for_topic_and_partition(Partitions, Topic, State)
-      end;
-    _ ->
-      start_fetchers_for_topic_and_partition(Partitions, Topic, State)
-  end.
+update_fetchers(Topics, #state{fetchers = Fetchers,
+                               group_id = GroupID,
+                               on_assignment_change = OnAssignmentChange} = State) ->
+  CurrentFetchers = [TP || {TP, _, _} <- Fetchers],
+  NewFetchers = lists:foldl(fun({Topic, Partitions}, Acc) ->
+                                lists:zip(
+                                  lists:duplicate(length(Partitions), Topic),
+                                  Partitions) ++ Acc
+                            end, [], Topics),
+  FetchersToStop = CurrentFetchers -- NewFetchers,
+  FetchersToSart = NewFetchers -- CurrentFetchers,
+  lager:info("CurrentFetchers = ~p", [CurrentFetchers]),
+  lager:info("NewFetchers     = ~p", [NewFetchers]),
+  lager:info("Stop            = ~p", [FetchersToStop]),
+  lager:info("Start           = ~p", [FetchersToSart]),
+  case OnAssignmentChange of
+    Fun when is_function(Fun, 3) ->
+      _ = erlang:spawn(fun() -> erlang:apply(Fun, [GroupID, FetchersToStop, FetchersToSart]) end);
+    undefined ->
+      ok
+  end,
+  State1 = stop_fetchers(FetchersToStop, State),
+  start_fetchers(FetchersToSart, State1).
 
 stop_fetchers([], State) ->
   State;
@@ -292,6 +271,33 @@ stop_fetchers([TP|Rest], #state{fetchers = Fetchers, commits = Commits} = State)
                                       commits = maps:remove(CommitStoreKey, Commits)});
     false ->
       stop_fetchers(Rest, State)
+  end.
+
+start_fetchers([], State) ->
+  State;
+start_fetchers([{Topic, Partition}|Rest], #state{fetchers = Fetchers,
+                                                 fetch_interval = FetchInterval,
+                                                 group_id = GroupID,
+                                                 generation_id = GenerationID,
+                                                 member_id = MemberID,
+                                                 fetch_size = FetchSize,
+                                                 autocommit = Autocommit,
+                                                 min_bytes = MinBytes,
+                                                 max_bytes = MaxBytes,
+                                                 max_wait_time = MaxWaitTime,
+                                                 callback = Callback,
+                                                 processing = Processing} = State) ->
+  case kafe_consumer_fetcher_sup:start_child(Topic, Partition, self(), FetchInterval,
+                                             GroupID, GenerationID, MemberID,
+                                             FetchSize, Autocommit,
+                                             MinBytes, MaxBytes, MaxWaitTime,
+                                             Callback, Processing) of
+    {ok, Pid} ->
+      MRef = erlang:monitor(process, Pid),
+      start_fetchers(Rest, State#state{fetchers = [{{Topic, Partition}, Pid, MRef}|Fetchers]});
+    {error, Error} ->
+      lager:error("Faild to start fetcher for ~p#~p : ~p", [Topic, Partition, Error]),
+      start_fetchers(Rest, State)
   end.
 
 commit([], Result, _, _, _, _, _) ->

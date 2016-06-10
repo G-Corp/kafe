@@ -838,6 +838,10 @@ no effect when `autocommit` is set to false.  (default: at_most_once).
 
 * `on_stop_fetching :: fun((GroupID :: binary()) -> any())` : Function called when the fetcher stop fetching. (default: undefined).
 
+* `on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any())` : Function called when the
+partitions' assignments change. The first parameter is the consumer group ID, the second is the list of {topic, partition} that were unassigned, the third
+parameter is the list of {topic, partition} that were reassigned. (default: undefined).
+
 
 <a name="stop_consumer-1"></a>
 

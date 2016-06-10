@@ -21,6 +21,9 @@ dist: compile tests elixir doc
 distclean:
 	$(verbose) rm -rf _build rebar.lock mix.lock test/eunit deps
 
+dev: compile
+	$(verbose) erl -pa _build/default/lib/*/ebin _build/default/lib/*/include -config config/kafe.config
+
 KAFKA_ADVERTISED_HOST_NAME = $(shell ip addr list docker0 |grep "inet " |cut -d' ' -f6|cut -d/ -f1)
 
 define docker_compose_yml_v1

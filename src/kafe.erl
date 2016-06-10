@@ -729,6 +729,9 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % no effect when <tt>autocommit</tt> is set to false.  (default: at_most_once).</li>
 % <li><tt>on_start_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher start/restart fetching. (default: undefined).</li>
 % <li><tt>on_stop_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher stop fetching. (default: undefined).</li>
+% <li><tt>on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any())</tt> : Function called when the
+% partitions' assignments change. The first parameter is the consumer group ID, the second is the list of {topic, partition} that were unassigned, the third
+% parameter is the list of {topic, partition} that were reassigned. (default: undefined).</li>
 % </ul>
 % @end
 -spec start_consumer(GroupID :: binary(),
