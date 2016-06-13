@@ -195,7 +195,7 @@ handle_call(start_fetch, _From, #state{fetch = false, group_id = GroupID, on_sta
   case OnStartFetching of
     Fun when is_function(Fun, 1) ->
       _ = erlang:spawn(fun() -> erlang:apply(Fun, [GroupID]) end);
-    undefined ->
+    _ ->
       ok
   end,
   {reply, ok, State#state{fetch = true}};
@@ -205,7 +205,7 @@ handle_call(stop_fetch, _From, #state{fetch = true, group_id = GroupID, on_stop_
   case OnStopFetching of
     Fun when is_function(Fun, 1) ->
       _ = erlang:spawn(fun() -> erlang:apply(Fun, [GroupID]) end);
-    undefined ->
+    _ ->
       ok
   end,
   {reply, ok, State#state{fetch = false}};
@@ -246,14 +246,14 @@ update_fetchers(Topics, #state{fetchers = Fetchers,
                             end, [], Topics),
   FetchersToStop = CurrentFetchers -- NewFetchers,
   FetchersToSart = NewFetchers -- CurrentFetchers,
-  lager:info("CurrentFetchers = ~p", [CurrentFetchers]),
-  lager:info("NewFetchers     = ~p", [NewFetchers]),
-  lager:info("Stop            = ~p", [FetchersToStop]),
-  lager:info("Start           = ~p", [FetchersToSart]),
+  lager:debug("CurrentFetchers = ~p", [CurrentFetchers]),
+  lager:debug("NewFetchers     = ~p", [NewFetchers]),
+  lager:debug("Stop            = ~p", [FetchersToStop]),
+  lager:debug("Start           = ~p", [FetchersToSart]),
   case OnAssignmentChange of
     Fun when is_function(Fun, 3) ->
       _ = erlang:spawn(fun() -> erlang:apply(Fun, [GroupID, FetchersToStop, FetchersToSart]) end);
-    undefined ->
+    _ ->
       ok
   end,
   State1 = stop_fetchers(FetchersToStop, State),
