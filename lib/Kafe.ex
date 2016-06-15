@@ -72,6 +72,9 @@ defmodule Kafe do
   def unquote(:"produce")(arg1, arg2, arg3) do
     :erlang.apply(:"kafe", :"produce", [arg1, arg2, arg3])
   end
+  def unquote(:"default_key_to_partition")(arg1, arg2) do
+    :erlang.apply(:"kafe", :"default_key_to_partition", [arg1, arg2])
+  end
   def unquote(:"fetch")(arg1) do
     :erlang.apply(:"kafe", :"fetch", [arg1])
   end
