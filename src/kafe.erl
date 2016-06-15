@@ -28,6 +28,7 @@
          offset/2,
          produce/2,
          produce/3,
+         default_key_to_partition/2,
          fetch/1,
          fetch/2,
          fetch/3,
@@ -362,7 +363,8 @@ produce(Topic, Message) ->
 % response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server will never wait for more
 % acknowledgements than there are in-sync replicas). (default: 0)</li>
 % <li><tt>partition :: integer()</tt> : The partition that data is being published to.</li>
-% <li><tt>key_to_partition :: fun((binary(), term()) -&gt; integer())</tt> : Hash function to do partition assignment from the message key.</li>
+% <li><tt>key_to_partition :: fun((binary(), term()) -&gt; integer())</tt> : Hash function to do partition assignment from the message key. (default:
+% kafe:default_key_to_partition/2)</li>
 % </ul>
 %
 % If the partition is specified (option <tt>partition</tt>) and there is a message' key, the message will be produce on the specified partition. If no partition
@@ -380,6 +382,15 @@ produce(Topic, Message) ->
 -spec produce(binary(), message(), produce_options()) -> {ok, [topic_partition_info()]} | {error,  term()}.
 produce(Topic, Message, Options) ->
   kafe_protocol_produce:run(Topic, Message, Options).
+
+% @doc
+% Default fonction used to do partition assignment from the message key.
+% @end
+-spec default_key_to_partition(Topic :: binary(), Key :: term()) -> integer().
+default_key_to_partition(Topic, Key) ->
+  erlang:crc32(term_to_binary(Key))
+  rem
+  erlang:length(kafe:partitions(Topic)).
 
 % @equiv fetch(-1, TopicName, #{})
 fetch(TopicName) when is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName) ->

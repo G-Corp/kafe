@@ -12,13 +12,8 @@
 run(Topic, Message, Options) ->
   Partition = case Message of
                 {Key, _} when erlang:size(Key) > 0 ->
-                  KeyToPartition = maps:get(key_to_partition, Options,
-                                            fun(T, K) ->
-                                                erlang:crc32(term_to_binary(K))
-                                                rem
-                                                erlang:length(kafe:partitions(T))
-                                            end),
-                  KeyToPartition(Topic, Key);
+                  KeyToPartition = maps:get(key_to_partition, Options, fun kafe:default_key_to_partition/2),
+                  erlang:apply(KeyToPartition, [Topic, Key]);
                 _ ->
                   maps:get(partition, Options, kafe_rr:next(Topic))
               end,
