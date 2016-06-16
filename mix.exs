@@ -4,7 +4,7 @@ defmodule Kafe.Mixfile do
   def project do
     [
       app: :kafe,
-      version: "1.3.1",
+      version: "1.4.0",
       elixir: "~> 1.2",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
@@ -23,10 +23,10 @@ defmodule Kafe.Mixfile do
   defp deps do
     [
       {:lager, "~> 3.2.0"},
-      {:bucs, git: "https://github.com/botsunit/bucs.git", branch: "master"},
-      {:doteki, git: "https://github.com/botsunit/doteki.git", branch: "master"},
-      {:poolgirl, git: "https://github.com/botsunit/poolgirl.git", branch: "master"},
-      {:bristow, git: "https://github.com/botsunit/bristow.git", branch: "master"}    
+      {:bucs, git: "https://github.com/botsunit/bucs.git", tag: "0.0.2"},
+      {:doteki, git: "https://github.com/botsunit/doteki.git", tag: "0.1.0"},
+      {:poolgirl, git: "https://github.com/botsunit/poolgirl.git", tag: "0.0.2"},
+      {:bristow, git: "https://github.com/botsunit/bristow.git", tag: "0.0.2"}    
     ]
   end
 end
