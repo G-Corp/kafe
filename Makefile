@@ -1,10 +1,17 @@
 include bu.mk
 
 .PHONY: doc docker-compose.yml
-REBAR = ./rebar3
 
-compile:
+compile-erl:
 	$(verbose) $(REBAR) compile
+
+compile-ex: elixir
+	$(verbose) $(MIX) deps.get
+	$(verbose) $(MIX) compile
+
+elixir:
+	$(verbose) $(REBAR) elixir generate_mix
+	$(verbose) $(REBAR) elixir generate_lib
 
 tests:
 	$(verbose) $(REBAR) eunit
@@ -12,14 +19,23 @@ tests:
 doc:
 	$(verbose) $(REBAR) as doc edoc
 
-elixir:
-	$(verbose) $(REBAR) elixir generate_mix
-	$(verbose) $(REBAR) elixir generate_lib
+dist: dist-ex dist-erl doc
 
-dist: compile tests elixir doc
+release: dist-ex dist-erl
+	$(verbose) $(REBAR) hex publish
+
+dist-erl: distclean-erl compile-erl tests
+
+distclean-erl: distclean
+	$(verbose) rm -f rebar.lock
+
+dist-ex: distclean-ex compile-ex
+
+distclean-ex: distclean
+	$(verbose) rm -f mix.lock
 
 distclean:
-	$(verbose) rm -rf _build rebar.lock mix.lock test/eunit deps
+	$(verbose) rm -rf _build test/eunit deps ebin
 
 dev: compile
 	$(verbose) erl -pa _build/default/lib/*/ebin _build/default/lib/*/include -config config/kafe.config

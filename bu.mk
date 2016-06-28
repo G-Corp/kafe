@@ -46,3 +46,18 @@ else
 WS = $(tab)
 endif
 endif
+
+# rebar3
+
+FIND_REBAR = \
+                REBAR_BIN=; \
+                for x in ./rebar3 rebar3; do \
+                if type "$${x%% *}" >/dev/null 2>/dev/null; then REBAR_BIN=$$x; break; fi; \
+                done; \
+                if [ -z "$$REBAR_BIN" ]; then echo 1>&2 "Unable to find rebar3"; exit 2; fi
+REBAR = $(FIND_REBAR); $$REBAR_BIN
+
+# mix
+
+MIX = mix
+
