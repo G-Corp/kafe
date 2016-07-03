@@ -1,6 +1,6 @@
 
 
-# A Kafka client for Erlang #
+# A Kafka client for Erlang and Elixir #
 
 Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 BotsUnit
 

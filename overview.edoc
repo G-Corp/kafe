@@ -3,7 +3,7 @@
 @author Gregoire Lejeune <gregoire.lejeune@botsunit.com>
 @copyright 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 BotsUnit
 @version 1.5.1
-@title A Kafka client for Erlang
+@title A Kafka client for Erlang and Elixir
 @doc
 
 [![Hex.pm version](https://img.shields.io/hexpm/v/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
