@@ -176,7 +176,7 @@ perform_fetch([Offset|Offsets], Acc,
                                   offset := Offset,
                                   value := Value},
                      partition := Partition}]}]}} ->
-          CommitRef = gen_server:call(Srv, {store_for_commit, Topic, Partition, Offset}),
+          CommitRef = gen_server:call(Srv, {store_for_commit, Topic, Partition, Offset}, infinity),
           case commit(CommitRef, Autocommit, Processing, at_most_once) of
             {error, Reason} ->
               lager:error("[~p] Commit error for offset ~p of ~p#~p : ~p", [Processing, Offset, Topic, Partition, Reason]),

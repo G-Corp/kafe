@@ -144,7 +144,7 @@ commit(GroupCommitIdentifier) ->
 commit(GroupCommitIdentifier, Options) ->
   case decode_group_commit_identifier(GroupCommitIdentifier) of
     {Pid, Topic, Partition, Offset} ->
-      gen_server:call(Pid, {commit, Topic, Partition, Offset, Options});
+      gen_server:call(Pid, {commit, Topic, Partition, Offset, Options}, infinity);
     _ ->
       {error, invalid_group_commit_identifier}
   end.
