@@ -19,22 +19,22 @@ tests:
 doc:
 	$(verbose) $(REBAR) as doc edoc
 
-dist: dist-ex dist-erl doc
+dist: dist-erl dist-ex doc
 
 release: dist-ex dist-erl
 	$(verbose) $(REBAR) hex publish
 
-dist-erl: distclean-erl compile-erl tests
+dist-erl: compile-erl tests
 
-distclean-erl: distclean
+distclean-erl:
 	$(verbose) rm -f rebar.lock
 
-dist-ex: distclean-ex compile-ex
+dist-ex: compile-ex
 
-distclean-ex: distclean
+distclean-ex:
 	$(verbose) rm -f mix.lock
 
-distclean:
+distclean: distclean-ex distclean-erl
 	$(verbose) rm -rf _build test/eunit deps ebin
 
 dev: compile

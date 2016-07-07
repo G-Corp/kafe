@@ -22,11 +22,11 @@ defmodule Kafe.Mixfile do
 
   defp deps do
     [
-      {:lager, "~> 3.2.0"},
-      {:bucs, "~> 0.1.0"},
-      {:doteki, "~> 0.1.0"},
-      {:poolgirl, "~> 0.1.0"},
-      {:bristow, "~> 0.1.0"}    
+      {:lager, "~> 3.2"},
+      {:bucs, "~> 0.1"},
+      {:doteki, "~> 0.1"},
+      {:poolgirl, "~> 0.1"},
+      {:bristow, "~> 0.1"}    
     ]
   end
 end
