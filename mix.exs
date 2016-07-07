@@ -24,7 +24,7 @@ defmodule Kafe.Mixfile do
     [
       {:lager, "~> 3.2.0"},
       {:bucs, "~> 0.1.0"},
-      {:doteki, "~> 0.1.1"},
+      {:doteki, "~> 0.1.0"},
       {:poolgirl, "~> 0.1.0"},
       {:bristow, "~> 0.1.0"}    
     ]
