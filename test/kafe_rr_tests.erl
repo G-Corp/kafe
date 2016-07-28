@@ -7,9 +7,9 @@ kafe_rr_test_() ->
    fun() ->
        meck:new(kafe),
        meck:expect(kafe, partitions,
-                   fun(<<"t">>) -> [0,1,2];
-                      (<<"t1">>) -> [0,1,2];
-                      (<<"t2">>) -> [0,1,2,3];
+                   fun(<<"t">>) -> [0, 1, 2];
+                      (<<"t1">>) -> [0, 1, 2];
+                      (<<"t2">>) -> [0, 1, 2, 3];
                       (<<"m">>) -> []
                    end),
        kafe_rr:start_link()

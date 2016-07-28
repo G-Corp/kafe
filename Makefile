@@ -19,7 +19,10 @@ tests:
 doc:
 	$(verbose) $(REBAR) as doc edoc
 
-dist: dist-erl dist-ex doc
+lint:
+	$(verbose) $(REBAR) lint
+
+dist: dist-erl dist-ex doc lint
 
 release: dist-ex dist-erl
 	$(verbose) $(REBAR) hex publish

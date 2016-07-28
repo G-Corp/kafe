@@ -20,7 +20,7 @@
 
 -spec start_link() -> {ok, pid()}.
 start_link() ->
-	gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+  gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 stop() ->
   gen_server:call(?SERVER, stop).
@@ -31,7 +31,7 @@ next(Topic) when is_binary(Topic) ->
 %% gen_server.
 
 init([]) ->
-	{ok, #{}}.
+  {ok, #{}}.
 
 handle_call({next, Topic}, _From, State) ->
   Partitions = case State of
@@ -48,16 +48,17 @@ handle_call({next, Topic}, _From, State) ->
 handle_call(stop, _From, State) ->
   {stop, normal, shutdown_ok, State};
 handle_call(_Request, _From, State) ->
-	{reply, ignored, State}.
+  {reply, ignored, State}.
 
 handle_cast(_Msg, State) ->
-	{noreply, State}.
+  {noreply, State}.
 
 handle_info(_Info, State) ->
-	{noreply, State}.
+  {noreply, State}.
 
 terminate(_Reason, _State) ->
-	ok.
+  ok.
 
 code_change(_OldVsn, State, _Extra) ->
-	{ok, State}.
+  {ok, State}.
+

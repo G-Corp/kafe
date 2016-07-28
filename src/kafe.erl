@@ -315,7 +315,8 @@ metadata() ->
 %
 % This example return all metadata for <tt>topic1</tt> and <tt>topic2</tt>
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest">Kafka protocol documentation</a>.
 % @end
 -spec metadata([binary()|string()|atom()]) -> {ok, metadata()} | {error, term()}.
 metadata(Topics) when is_list(Topics) ->
@@ -337,7 +338,8 @@ offset(Topics) when is_list(Topics) ->
 % Offset = kafe:offet(-1, [&lt;&lt;"topic1"&gt;&gt;, {&lt;&lt;"topic2"&gt;&gt;, [{0, -1, 1}, {2, -1, 1}]}]).
 % </pre>
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetRequest">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetRequest">Kafka protocol documentation</a>.
 % @end
 -spec offset(integer(), topics()) -> {ok, [topic_partition_info()]} | {error, term()}.
 offset(ReplicatID, Topics) when is_integer(ReplicatID), is_list(Topics) ->
@@ -377,7 +379,8 @@ produce(Topic, Message) ->
 % Response1 = kafe:product(&lt;&lt;"topic"&gt;&gt;, {&lt;&lt;"key"&gt;&gt;, &lt;&lt;"Another simple message"&gt;&gt;}).
 % </pre>
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI">Kafka protocol documentation</a>.
 % @end
 -spec produce(binary(), message(), produce_options()) -> {ok, [topic_partition_info()]} | {error,  term()}.
 produce(Topic, Message, Options) ->
@@ -431,7 +434,8 @@ fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_
 % Response1 = kafe:fetch(&lt;&lt;"topic"&gt;&gt;, #{offset =&gt; 2, partition =&gt; 3}).
 % </pre>
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI">Kafka protocol documentation</a>.
 % @end
 -spec fetch(integer(), binary(), fetch_options()) -> {ok, [message_set()]} | {error, term()}.
 fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), (is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName)), is_map(Options) ->
@@ -457,7 +461,8 @@ list_groups() ->
 % @doc
 % Find groups managed by a broker.
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ListGroupsRequest">Kafka protocol documentation</a>
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ListGroupsRequest">Kafka protocol documentation</a>
 % @end
 -spec list_groups(Broker :: broker_id()) -> {ok, groups()} | {error, term()}.
 list_groups(Broker) when is_atom(Broker) ->
@@ -466,7 +471,8 @@ list_groups(Broker) when is_atom(Broker) ->
 % @doc
 % Group coordinator Request
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest">Kafka protocol documentation</a>.
 %
 % For compatibility, this function as an alias : <tt>consumer_metadata</tt>.
 % @end
@@ -492,7 +498,8 @@ join_group(GroupId) ->
 % <li><tt>protocols :: [protocol()]</tt> : List of protocols.</li>
 % </ul>
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest">Kafka protocol documentation</a>.
 % @end
 -spec join_group(binary(), join_group_options()) -> {error, term()} | {ok, group_join()}.
 join_group(GroupId, Options) ->
@@ -539,9 +546,10 @@ default_protocol(Name, Version, Topics, UserData) when is_binary(Name),
 %                                                                      partitions =&gt; [0, 1, 2]}]}}]).
 % </pre>
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-SyncGroupRequest">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-SyncGroupRequest">Kafka protocol documentation</a>.
 % @end
--spec sync_group(binary(), integer(), binary(), [group_assignment()]) -> {error,term()} | {ok, sync_group()}.
+-spec sync_group(binary(), integer(), binary(), [group_assignment()]) -> {error, term()} | {ok, sync_group()}.
 sync_group(GroupId, GenerationId, MemberId, Assignments) ->
   kafe_protocol_sync_group:run(GroupId, GenerationId, MemberId, Assignments).
 
@@ -549,7 +557,8 @@ sync_group(GroupId, GenerationId, MemberId, Assignments) ->
 % Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group. If not heartbeat has been received by the
 % coordinator with the configured session timeout, the member will be kicked out of the group.
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-HeartbeatRequest">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-HeartbeatRequest">Kafka protocol documentation</a>.
 % @end
 -spec heartbeat(binary(), integer(), binary()) -> {error, term()} | {ok, response_code()}.
 heartbeat(GroupId, GenerationId, MemberId) ->
@@ -559,7 +568,8 @@ heartbeat(GroupId, GenerationId, MemberId) ->
 % To explicitly leave a group, the client can send a leave group request. This is preferred over letting the session timeout expire since it allows the group to
 % rebalance faster, which for the consumer means that less time will elapse before partitions can be reassigned to an active member.
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-LeaveGroupRequest">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-LeaveGroupRequest">Kafka protocol documentation</a>.
 % @end
 -spec leave_group(binary(), binary()) -> {error, term()} | {ok, response_code()}.
 leave_group(GroupId, MemberId) ->
@@ -568,7 +578,8 @@ leave_group(GroupId, MemberId) ->
 % @doc
 % Return the description of the given consumer group.
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-DescribeGroupsRequest">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-DescribeGroupsRequest">Kafka protocol documentation</a>.
 % @end
 -spec describe_group(binary()) -> {error, term()} | {ok, describe_group()}.
 describe_group(GroupId) when is_binary(GroupId) ->
@@ -577,7 +588,8 @@ describe_group(GroupId) when is_binary(GroupId) ->
 % @doc
 % Offset commit v0
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
 -spec offset_commit(binary(), offset_commit_option()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, Topics) ->
@@ -587,7 +599,8 @@ offset_commit(ConsumerGroup, Topics) ->
 % @doc
 % Offset commit v1
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
 -spec offset_commit(binary(), integer(), binary(), offset_commit_option_v1()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
@@ -599,7 +612,8 @@ offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
 % @doc
 % Offset commit v2
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
 -spec offset_commit(binary(), integer(), binary(), integer(), offset_commit_option()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics) ->
@@ -617,7 +631,8 @@ offset_fetch(ConsumerGroup) ->
 % @doc
 % Offset fetch
 %
-% For more informations, see the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetFetchRequest">Kafka protocol documentation</a>.
+% For more informations, see the
+% <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetFetchRequest">Kafka protocol documentation</a>.
 % @end
 -spec offset_fetch(binary(), offset_fetch_options()) -> {ok, [offset_fetch_set()]} | {error, term()}.
 offset_fetch(ConsumerGroup, Options) when is_binary(ConsumerGroup), is_list(Options) ->
@@ -650,7 +665,7 @@ offsets({TopicName, PartitionsList}, ConsumerGroup, Nth) ->
                                                 Acc
                                             end, {[], []}, Partitions),
       case offset_fetch(ConsumerGroup, [{TopicName, PartitionsID}]) of
-        {ok,[#{name := TopicName, partitions_offset := PartitionsOffset}]} ->
+        {ok, [#{name := TopicName, partitions_offset := PartitionsOffset}]} ->
           CurrentOffsets = lists:foldl(fun
                                          (#{offset := Offset1,
                                             partition := PartitionID1},

@@ -3,7 +3,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 kafe_test_() ->
-  {setup, fun setup/0, fun teardown/1, 
+  {setup, fun setup/0, fun teardown/1,
    [
     ?_test(t_protocol())
    ]

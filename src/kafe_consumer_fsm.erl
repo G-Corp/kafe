@@ -52,7 +52,7 @@
 % @hidden
 -spec start_link(atom(), map()) -> {ok, pid()}.
 start_link(GroupId, Options) when is_map(Options) ->
-	gen_fsm:start_link(?MODULE, [GroupId, Options], []).
+  gen_fsm:start_link(?MODULE, [GroupId, Options], []).
 
 %% gen_fsm.
 
@@ -145,9 +145,9 @@ stable(timeout, #state{group_id = GroupId,
                        member_id = MemberId,
                        generation_id = GenerationId} = State) ->
   case kafe:heartbeat(GroupId, GenerationId, MemberId) of
-    {ok,#{error_code := none}} ->
+    {ok, #{error_code := none}} ->
       next_state(State);
-    {ok,#{error_code := Error}} ->
+    {ok, #{error_code := Error}} ->
       lager:info("Heartbeat error: ~p", [Error]),
       next_state(dead, State);
     {error, Reason} ->
@@ -157,23 +157,23 @@ stable(timeout, #state{group_id = GroupId,
 
 % @hidden
 handle_event(_Event, StateName, State) ->
-	{next_state, StateName, State}.
+  {next_state, StateName, State}.
 
 % @hidden
 handle_sync_event(_Event, _From, StateName, State) ->
-	{reply, ignored, StateName, State}.
+  {reply, ignored, StateName, State}.
 
 % @hidden
 handle_info(_Info, StateName, State) ->
-	{next_state, StateName, State}.
+  {next_state, StateName, State}.
 
 % @hidden
 terminate(_Reason, _StateName, _State) ->
-	ok.
+  ok.
 
 % @hidden
 code_change(_OldVsn, StateName, State, _Extra) ->
-	{ok, StateName, State}.
+  {ok, StateName, State}.
 
 next_state(#state{group_id = GroupId,
                   group_id_atom = GroupIdAtom,

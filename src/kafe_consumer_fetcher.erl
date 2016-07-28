@@ -40,7 +40,7 @@ start_link(Topic, Partition, Srv, FetchInterval,
            FetchSize, Autocommit,
            MinBytes, MaxBytes, MaxWaitTime,
            Callback, Processing) ->
-	gen_server:start_link(?MODULE, [
+  gen_server:start_link(?MODULE, [
                                   Topic
                                   , Partition
                                   , Srv
@@ -95,22 +95,22 @@ init([Topic, Partition, Srv, FetchInterval,
   end.
 
 handle_call(_Request, _From, State) ->
-	{reply, ignored, State}.
+  {reply, ignored, State}.
 
 handle_cast(_Msg, State) ->
-	{noreply, State}.
+  {noreply, State}.
 
 handle_info(fetch, State) ->
   {noreply, fetch(State)};
 handle_info(_Info, State) ->
-	{noreply, State}.
+  {noreply, State}.
 
 terminate(_Reason, _State) ->
   lager:info("Stop fetcher ~p", [_State]),
-	ok.
+  ok.
 
 code_change(_OldVsn, State, _Extra) ->
-	{ok, State}.
+  {ok, State}.
 
 fetch(#state{fetch_interval = FetchInterval,
              topic = Topic,

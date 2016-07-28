@@ -413,7 +413,8 @@ describe_group(GroupId::binary()) -&gt; {error, term()} | {ok, <a href="#type-de
 
 Return the description of the given consumer group.
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-DescribeGroupsRequest).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-DescribeGroupsRequest).
 
 <a name="fetch-1"></a>
 
@@ -473,7 +474,8 @@ Example:
  Response1 = kafe:fetch(<<"topic">>, #{offset => 2, partition => 3}).
 ```
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI).
 
 <a name="group_coordinator-1"></a>
 
@@ -487,7 +489,8 @@ group_coordinator(ConsumerGroup::binary()) -&gt; {ok, <a href="#type-group_coord
 
 Group coordinator Request
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ConsumerMetadataRequest).
 
 For compatibility, this function as an alias : `consumer_metadata`.
 
@@ -504,7 +507,8 @@ heartbeat(GroupId::binary(), GenerationId::integer(), MemberId::binary()) -&gt; 
 Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group. If not heartbeat has been received by the 
 coordinator with the configured session timeout, the member will be kicked out of the group.
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-HeartbeatRequest).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-HeartbeatRequest).
 
 <a name="join_group-1"></a>
 
@@ -538,7 +542,8 @@ empty (i.e. <<>>, default), but a rejoining member should use the same memberId 
 * `protocols :: [protocol()]` : List of protocols.
 
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest).
 
 <a name="leave_group-2"></a>
 
@@ -553,7 +558,8 @@ leave_group(GroupId::binary(), MemberId::binary()) -&gt; {error, term()} | {ok, 
 To explicitly leave a group, the client can send a leave group request. This is preferred over letting the session timeout expire since it allows the group to 
 rebalance faster, which for the consumer means that less time will elapse before partitions can be reassigned to an active member.
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-LeaveGroupRequest).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-LeaveGroupRequest).
 
 <a name="list_groups-0"></a>
 
@@ -578,7 +584,8 @@ list_groups(Broker::<a href="#type-broker_id">broker_id()</a>) -&gt; {ok, <a hre
 
 Find groups managed by a broker.
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ListGroupsRequest)
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ListGroupsRequest)
 
 <a name="metadata-0"></a>
 
@@ -609,7 +616,8 @@ Example:
 
 This example return all metadata for `topic1` and `topic2`
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest).
 
 <a name="offset-0"></a>
 
@@ -646,7 +654,8 @@ Example:
  Offset = kafe:offet(-1, [<<"topic1">>, {<<"topic2">>, [{0, -1, 1}, {2, -1, 1}]}]).
 ```
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetRequest).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetRequest).
 
 <a name="offset_commit-2"></a>
 
@@ -660,7 +669,8 @@ offset_commit(ConsumerGroup::binary(), Topics::<a href="#type-offset_commit_opti
 
 Offset commit v0
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
 
 <a name="offset_commit-4"></a>
 
@@ -674,7 +684,8 @@ offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), Con
 
 Offset commit v1
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
 
 <a name="offset_commit-5"></a>
 
@@ -688,7 +699,8 @@ offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), Con
 
 Offset commit v2
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest).
 
 <a name="offset_fetch-1"></a>
 
@@ -713,7 +725,8 @@ offset_fetch(ConsumerGroup::binary(), Options::<a href="#type-offset_fetch_optio
 
 Offset fetch
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetFetchRequest).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetFetchRequest).
 
 <a name="offsets-2"></a>
 
@@ -789,7 +802,8 @@ Example:
  Response1 = kafe:product(<<"topic">>, {<<"key">>, <<"Another simple message">>}).
 ```
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI).
 
 <a name="start-0"></a>
 
@@ -901,5 +915,6 @@ Example:
                                                                       partitions => [0, 1, 2]}]}}]).
 ```
 
-For more informations, see the [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-SyncGroupRequest).
+For more informations, see the
+[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-SyncGroupRequest).
 

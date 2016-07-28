@@ -207,6 +207,6 @@ partitions(
                 timestamp => Timestamp} | Acc], ApiVersion).
 
 get_timestamp() ->
-  {Mega,Sec,Micro} = erlang:timestamp(),
+  {Mega, Sec, Micro} = erlang:timestamp(),
   (Mega*1000000+Sec)*1000000+Micro.
 
