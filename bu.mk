@@ -13,6 +13,10 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+.PHONY: doc
+
+all: compile-erl
+
 # Verbosity.
 
 V ?= 0
@@ -20,6 +24,28 @@ V ?= 0
 verbose_0 = @
 verbose_2 = set -x;
 verbose = $(verbose_$(V))
+
+# Utils
+
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+current_dir := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
+
+# Common
+
+CP = cp
+CP_R = cp -r
+RM = rm
+RM_RF = rm -rf
+RM_F = rm -f
+MKDIR_P = mkdir -p
+
+# Config
+
+ifneq ("$(wildcard config/$(current_dir).config)","")
+  ERL_CONFIG="-config config/$(current_dir).config"
+else
+  ERL_CONFIG=
+endif
 
 # Core functions.
 
@@ -60,4 +86,70 @@ REBAR = $(FIND_REBAR); $$REBAR_BIN
 # mix
 
 MIX = mix
+
+# Default tasks
+ifeq ($(HAS_ELIXIR), 1)
+
+compile-ex: elixir clean
+	$(verbose) $(MIX) deps.get
+	$(verbose) $(MIX) compile
+
+elixir:
+	$(verbose) $(REBAR) elixir generate_mix
+	$(verbose) $(REBAR) elixir generate_lib
+
+distclean-ex: clean-ex
+	$(verbose) $(RM_F) mix.lock
+
+clean-ex:
+	$(verbose) $(RM_RF) _build deps
+
+dist-ex: clean compile-ex
+
+COMPILE=compile-erl compile-ex
+CLEAN=clean-erl clean-ex
+DISTCLEAN=distclean-erl distclean-ex
+DIST=dist-erl dist-ex
+else
+COMPILE=compile-erl
+CLEAN=clean-erl
+DISTCLEAN=distclean-erl
+DIST=dist-erl
+endif
+
+ifdef NO_LINT
+LINT=
+else
+lint:
+	$(verbose) $(REBAR) lint
+
+LINT=lint
+endif
+
+compile-erl:
+	$(verbose) $(REBAR) update
+	$(verbose) $(REBAR) compile
+
+tests:
+	$(verbose) $(REBAR) eunit
+
+doc:
+	$(verbose) $(REBAR) as doc edoc
+
+dist: $(DIST)
+
+clean: $(CLEAN)
+
+distclean: $(DISTCLEAN)
+
+dev: compile-erl
+	$(verbose) erl -pa _build/default/lib/*/ebin _build/default/lib/*/include $(ERL_CONFIG)
+
+dist-erl: clean compile-erl tests $(LINT) doc
+
+clean-erl:
+	$(verbose) $(RM_RF) _build test/eunit
+
+distclean-erl: clean-erl
+	$(verbose) $(RM_F) rebar.lock
 

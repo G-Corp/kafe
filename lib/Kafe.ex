@@ -3,48 +3,6 @@
 # Using rebar3_elixir (https://github.com/botsunit/rebar3_elixir)
 # MODIFY IT AT YOUR OWN RISK AND ONLY IF YOU KNOW WHAT YOU ARE DOING!
 defmodule Kafe do
-  def unquote(:"start_link")() do
-    :erlang.apply(:"kafe", :"start_link", [])
-  end
-  def unquote(:"first_broker")() do
-    :erlang.apply(:"kafe", :"first_broker", [])
-  end
-  def unquote(:"release_broker")(arg1) do
-    :erlang.apply(:"kafe", :"release_broker", [arg1])
-  end
-  def unquote(:"broker_id_by_topic_and_partition")(arg1, arg2) do
-    :erlang.apply(:"kafe", :"broker_id_by_topic_and_partition", [arg1, arg2])
-  end
-  def unquote(:"broker_by_name")(arg1) do
-    :erlang.apply(:"kafe", :"broker_by_name", [arg1])
-  end
-  def unquote(:"broker_by_host_and_port")(arg1, arg2) do
-    :erlang.apply(:"kafe", :"broker_by_host_and_port", [arg1, arg2])
-  end
-  def unquote(:"broker_by_id")(arg1) do
-    :erlang.apply(:"kafe", :"broker_by_id", [arg1])
-  end
-  def unquote(:"topics")() do
-    :erlang.apply(:"kafe", :"topics", [])
-  end
-  def unquote(:"partitions")(arg1) do
-    :erlang.apply(:"kafe", :"partitions", [arg1])
-  end
-  def unquote(:"max_offset")(arg1) do
-    :erlang.apply(:"kafe", :"max_offset", [arg1])
-  end
-  def unquote(:"max_offset")(arg1, arg2) do
-    :erlang.apply(:"kafe", :"max_offset", [arg1, arg2])
-  end
-  def unquote(:"partition_for_offset")(arg1, arg2) do
-    :erlang.apply(:"kafe", :"partition_for_offset", [arg1, arg2])
-  end
-  def unquote(:"api_version")() do
-    :erlang.apply(:"kafe", :"api_version", [])
-  end
-  def unquote(:"state")() do
-    :erlang.apply(:"kafe", :"state", [])
-  end
   def unquote(:"start")() do
     :erlang.apply(:"kafe", :"start", [])
   end
@@ -143,23 +101,5 @@ defmodule Kafe do
   end
   def unquote(:"stop_consumer")(arg1) do
     :erlang.apply(:"kafe", :"stop_consumer", [arg1])
-  end
-  def unquote(:"init")(arg1) do
-    :erlang.apply(:"kafe", :"init", [arg1])
-  end
-  def unquote(:"handle_call")(arg1, arg2, arg3) do
-    :erlang.apply(:"kafe", :"handle_call", [arg1, arg2, arg3])
-  end
-  def unquote(:"handle_cast")(arg1, arg2) do
-    :erlang.apply(:"kafe", :"handle_cast", [arg1, arg2])
-  end
-  def unquote(:"handle_info")(arg1, arg2) do
-    :erlang.apply(:"kafe", :"handle_info", [arg1, arg2])
-  end
-  def unquote(:"terminate")(arg1, arg2) do
-    :erlang.apply(:"kafe", :"terminate", [arg1, arg2])
-  end
-  def unquote(:"code_change")(arg1, arg2, arg3) do
-    :erlang.apply(:"kafe", :"code_change", [arg1, arg2, arg3])
   end
 end

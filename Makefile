@@ -1,47 +1,11 @@
+HAS_ELIXIR=1
+
 include bu.mk
 
-.PHONY: doc docker-compose.yml
+.PHONY: docker-compose.yml
 
-compile-erl:
-	$(verbose) $(REBAR) compile
-
-compile-ex: elixir
-	$(verbose) $(MIX) deps.get
-	$(verbose) $(MIX) compile
-
-elixir:
-	$(verbose) $(REBAR) elixir generate_mix
-	$(verbose) $(REBAR) elixir generate_lib
-
-tests:
-	$(verbose) $(REBAR) eunit
-
-doc:
-	$(verbose) $(REBAR) as doc edoc
-
-lint:
-	$(verbose) $(REBAR) lint
-
-dist: dist-erl dist-ex doc lint
-
-release: dist-ex dist-erl
+release: dist
 	$(verbose) $(REBAR) hex publish
-
-dist-erl: compile-erl tests
-
-distclean-erl:
-	$(verbose) rm -f rebar.lock
-
-dist-ex: compile-ex
-
-distclean-ex:
-	$(verbose) rm -f mix.lock
-
-distclean: distclean-ex distclean-erl
-	$(verbose) rm -rf _build test/eunit deps ebin
-
-dev: compile
-	$(verbose) erl -pa _build/default/lib/*/ebin _build/default/lib/*/include -config config/kafe.config
 
 KAFKA_ADVERTISED_HOST_NAME = $(shell ip addr list docker0 |grep "inet " |cut -d' ' -f6|cut -d/ -f1)
 
