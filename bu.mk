@@ -92,6 +92,7 @@ ifeq ($(HAS_ELIXIR), 1)
 
 compile-ex: elixir clean
 	$(verbose) $(MIX) deps.get
+	$(verbose) $(MIX) deps.compile
 	$(verbose) $(MIX) compile
 
 elixir:
@@ -152,4 +153,26 @@ clean-erl:
 
 distclean-erl: clean-erl
 	$(verbose) $(RM_F) rebar.lock
+
+# Elixir
+
+local.hex:
+	$(MIX) local.hex --force
+
+local.rebar:
+	$(MIX) local.rebar --force
+
+# Update
+
+BU_MK_REPO ?= https://github.com/botsunit/bu.mk
+BU_MK_COMMIT ?=
+BU_MK_BUILD_DIR ?= .bu.mk.build
+
+bu-mk:
+	git clone $(BU_MK_REPO) $(BU_MK_BUILD_DIR)
+ifdef BU_MK_COMMIT
+	cd $(BU_MK_BUILD_DIR) && git checkout $(BU_MK_COMMIT)
+endif
+	$(CP) $(BU_MK_BUILD_DIR)/bu.mk ./bu.mk
+	$(RM_RF) $(BU_MK_BUILD_DIR)
 
