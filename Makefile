@@ -4,7 +4,7 @@ include bu.mk
 
 .PHONY: docker-compose.yml
 
-release: dist
+release: dist lint tag
 	$(verbose) $(REBAR) hex publish
 
 KAFKA_ADVERTISED_HOST_NAME = $(shell ip addr list docker0 |grep "inet " |cut -d' ' -f6|cut -d/ -f1)
