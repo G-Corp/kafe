@@ -207,7 +207,7 @@ perform_fetch([Offset|Offsets], Acc,
                [#{name := Topic,
                   partitions :=
                   [#{error_code := OffsetOutOfRange,
-                     partition := 0}]}]}} ->
+                     partition := Partition}]}]}} ->
           lager:debug("Offset #~p topic ~p:~p : out of range", [Offset, Topic, Partition]),
           perform_fetch(Offsets, Acc, Topic, Partition, Autocommit, Processing, Srv, Callback,
                         MinBytes, MaxBytes, MaxWaitTime);
