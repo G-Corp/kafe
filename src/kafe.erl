@@ -873,6 +873,7 @@ init_connexions(State) ->
 
 % @hidden
 get_connection([], State) ->
+  lager:debug("No more brockers..."),
   State;
 get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                                       brokers := Brokers,

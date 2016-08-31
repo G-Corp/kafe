@@ -99,7 +99,7 @@
          , generation_id/2
          , topics/2
          , server_pid/1
-         , encode_group_commit_identifier/4
+         , encode_group_commit_identifier/7
          , decode_group_commit_identifier/1
         ]).
 
@@ -143,8 +143,8 @@ commit(GroupCommitIdentifier) ->
 -spec commit(GroupCommitIdentifier :: kafe:group_commit_identifier(), Options :: map()) -> ok | {error, term()} | delayed.
 commit(GroupCommitIdentifier, Options) ->
   case decode_group_commit_identifier(GroupCommitIdentifier) of
-    {Pid, Topic, Partition, Offset} ->
-      gen_server:call(Pid, {commit, Topic, Partition, Offset, Options}, infinity);
+    {Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID} ->
+      gen_server:call(Pid, {commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID, Options}, infinity);
     _ ->
       {error, invalid_group_commit_identifier}
   end.
@@ -162,8 +162,8 @@ remove_commits(GroupPIDOrID) ->
 -spec remove_commit(GroupCommitIdentifier :: kafe:group_commit_identifier()) -> ok | {error, term()}.
 remove_commit(GroupCommitIdentifier) ->
   case decode_group_commit_identifier(GroupCommitIdentifier) of
-    {Pid, Topic, Partition, Offset} ->
-      gen_server:call(Pid, {remove_commit, Topic, Partition, Offset});
+    {Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID} ->
+      gen_server:call(Pid, {remove_commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID});
     _ ->
       {error, invalid_group_commit_identifier}
   end.
@@ -256,8 +256,8 @@ init([GroupID, Options]) ->
     }}.
 
 % @hidden
-encode_group_commit_identifier(Pid, Topic, Partition, Offset) ->
-  base64:encode(erlang:term_to_binary({Pid, Topic, Partition, Offset}, [compressed])).
+encode_group_commit_identifier(Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID) ->
+  base64:encode(erlang:term_to_binary({Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID}, [compressed])).
 
 % @hidden
 decode_group_commit_identifier(GroupCommitIdentifier) ->

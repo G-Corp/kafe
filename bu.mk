@@ -42,9 +42,7 @@ MKDIR_P = mkdir -p
 # Config
 
 ifneq ("$(wildcard config/$(current_dir).config)","")
-  ERL_CONFIG="-config config/$(current_dir).config"
-else
-  ERL_CONFIG=
+  ERL_CONFIG="config/$(current_dir).config"
 endif
 
 # Core functions.
@@ -172,7 +170,12 @@ clean: $(CLEAN) ## Clean
 distclean: $(DISTCLEAN) ## Clean the distribution
 
 dev: compile-erl
-	$(verbose) erl -pa _build/default/lib/*/ebin _build/default/lib/*/include $(ERL_CONFIG)
+ifdef ERL_CONFIG
+	$(verbose) echo "Start with configuration $(ERL_CONFIG)"
+	$(verbose) erl -pa _build/default/lib/*/ebin _build/default/lib/*/include -config ${ERL_CONFIG}
+else
+	$(verbose) erl -pa _build/default/lib/*/ebin _build/default/lib/*/include
+endif
 
 dist-erl: clean compile-erl tests $(LINT) doc
 

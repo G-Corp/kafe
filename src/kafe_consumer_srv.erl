@@ -107,23 +107,20 @@ handle_call({topics, Topics}, _From, #state{topics = CurrentTopics} = State) ->
     true ->
       {reply, ok, update_fetchers(Topics, State#state{topics = Topics})}
   end;
-handle_call({commit, Topic, Partition, Offset, Options}, _From, #state{allow_unordered_commit = true,
-                                                                       commits = Commits,
-                                                                       group_id = GroupID,
-                                                                       generation_id = GenerationID,
-                                                                       member_id = MemberID} = State) ->
+handle_call({commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID, Options}, _From, #state{allow_unordered_commit = true,
+                                                                                                        commits = Commits} = State) ->
   Retry = maps:get(retry, Options, ?DEFAULT_CONSUMER_COMMIT_RETRY),
   Delay = maps:get(delay, Options, ?DEFAULT_CONSUMER_COMMIT_DELAY),
   CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
   CommitsList = maps:get(CommitStoreKey, Commits, []),
-  case lists:keyfind({Topic, Partition, Offset}, 1, CommitsList) of
-    {{Topic, Partition, Offset}, _} ->
+  case lists:keyfind({Topic, Partition, Offset, GroupID, GenerationID, MemberID}, 1, CommitsList) of
+    {{Topic, Partition, Offset, GroupID, GenerationID, MemberID} = Commit, _} ->
       case commit(
-             lists:keyreplace({Topic, Partition, Offset}, 1, CommitsList, {{Topic, Partition, Offset}, true}),
-             ok, GroupID, GenerationID, MemberID, Retry, Delay) of
+             lists:keyreplace(Commit, 1, CommitsList, {Commit, true}),
+             ok, Retry, Delay) of
         {ok, CommitsList1} ->
-          case lists:keyfind({Topic, Partition, Offset}, 1, CommitsList1) of
-            {{Topic, Partition, Offset}, true} ->
+          case lists:keyfind({Topic, Partition, Offset, GroupID, GenerationID, MemberID}, 1, CommitsList1) of
+            {{Topic, Partition, Offset, GroupID, GenerationID, MemberID}, true} ->
               {reply, delayed, State#state{commits = maps:put(CommitStoreKey, CommitsList1, Commits)}};
             false ->
               {reply, ok, State#state{commits = maps:put(CommitStoreKey, CommitsList1, Commits)}}
@@ -134,17 +131,14 @@ handle_call({commit, Topic, Partition, Offset, Options}, _From, #state{allow_uno
     false ->
       {reply, {error, invalid_commit_ref}, State}
   end;
-handle_call({commit, Topic, Partition, Offset, Options}, _From, #state{allow_unordered_commit = false,
-                                                                       commits = Commits,
-                                                                       group_id = GroupID,
-                                                                       generation_id = GenerationID,
-                                                                       member_id = MemberID} = State) ->
+handle_call({commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID, Options}, _From, #state{allow_unordered_commit = false,
+                                                                                                        commits = Commits} = State) ->
   Retry = maps:get(retry, Options, ?DEFAULT_CONSUMER_COMMIT_RETRY),
   Delay = maps:get(delay, Options, ?DEFAULT_CONSUMER_COMMIT_DELAY),
   NoError = kafe_error:code(0),
   CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
   case maps:get(CommitStoreKey, Commits, []) of
-    [{{Topic, Partition, Offset}, _}|CommitsList] ->
+    [{{Topic, Partition, Offset, GroupID, GenerationID, MemberID}, _}|CommitsList] ->
       lager:debug("COMMIT Offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]),
       case do_commit(GroupID, GenerationID, MemberID,
                      Topic, Partition, Offset,
@@ -163,20 +157,23 @@ handle_call({commit, Topic, Partition, Offset, Options}, _From, #state{allow_uno
     _ ->
       {reply, {error, missing_previous_commit}, State}
   end;
-handle_call({store_for_commit, Topic, Partition, Offset}, _From, #state{commits = Commits} = State) ->
+handle_call({store_for_commit, Topic, Partition, Offset}, _From, #state{commits = Commits,
+                                                                        group_id = GroupID,
+                                                                        generation_id = GenerationID,
+                                                                        member_id = MemberID} = State) ->
   CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
   CommitsList = lists:append(maps:get(CommitStoreKey, Commits, []),
-                             [{{Topic, Partition, Offset}, false}]),
+                             [{{Topic, Partition, Offset, GroupID, GenerationID, MemberID}, false}]),
   lager:debug("STORE FOR COMMIT Offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]),
   {reply,
-   kafe_consumer:encode_group_commit_identifier(self(), Topic, Partition, Offset),
+   kafe_consumer:encode_group_commit_identifier(self(), Topic, Partition, Offset, GroupID, GenerationID, MemberID),
    State#state{commits = maps:put(CommitStoreKey, CommitsList, Commits)}};
 handle_call(remove_commits, _From, State) ->
   {reply, ok, State#state{commits = #{}}};
-handle_call({remove_commit, Topic, Partition, Offset}, _From, #state{commits = Commits} = State) ->
+handle_call({remove_commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID}, _From, #state{commits = Commits} = State) ->
   CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
   case maps:get(CommitStoreKey, Commits, []) of
-    [{{Topic, Partition, Offset}, _}|Rest] ->
+    [{{Topic, Partition, Offset, GroupID, GenerationID, MemberID}, _}|Rest] ->
       {reply, ok, State#state{commits = maps:put(CommitStoreKey, Rest, Commits)}};
     _ ->
       {reply, {error, not_head_commit}, State}
@@ -185,8 +182,8 @@ handle_call({pending_commits, Topics}, _From, #state{commits = Commits} = State)
   Pendings = lists:foldl(fun(TP, Acc) ->
                              lists:append(
                                Acc,
-                               [kafe_consumer:encode_group_commit_identifier(self(), T, P, O)
-                                || {{T, P, O}, _} <- maps:get(erlang:term_to_binary(TP), Commits, [])])
+                               [kafe_consumer:encode_group_commit_identifier(self(), T, P, O, Gr, Gn, M)
+                                || {{T, P, O, Gr, Gn, M}, _} <- maps:get(erlang:term_to_binary(TP), Commits, [])])
                          end, [], Topics),
   {reply, Pendings, State};
 handle_call(start_fetch, _From, #state{fetch = true} = State) ->
@@ -300,23 +297,23 @@ start_fetchers([{Topic, Partition}|Rest], #state{fetchers = Fetchers,
       start_fetchers(Rest, State)
   end.
 
-commit([], Result, _, _, _, _, _) ->
+commit([], Result, _, _) ->
   {Result, []};
-commit([{_, false}|_] = Rest, Result, _, _, _, _, _) ->
+commit([{_, false}|_] = Rest, Result, _, _) ->
   {Result, Rest};
-commit([{{T, P, O}, true}|Rest] = All, ok, GroupID, GenerationID, MemberID, Retry, Delay) ->
-  lager:debug("COMMIT Offset ~p for Topic ~p, partition ~p", [O, T, P]),
+commit([{{Topic, Partition, Offset, GroupID, GenerationID, MemberID}, true}|Rest] = All, ok, Retry, Delay) ->
+  lager:debug("COMMIT Offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]),
   NoError = kafe_error:code(0),
   case do_commit(GroupID, GenerationID, MemberID,
-                 T, P, O,
+                 Topic, Partition, Offset,
                  Retry, Delay, {error, invalid_retry}) of
-    {ok, [#{name := T,
+    {ok, [#{name := Topic,
             partitions := [#{error_code := NoError,
-                             partition := P}]}]} ->
-      commit(Rest, ok, GroupID, GenerationID, MemberID, Retry, Delay);
-    {ok, [#{name := T,
+                             partition := Partition}]}]} ->
+      commit(Rest, ok, Retry, Delay);
+    {ok, [#{name := Topic,
             partitions := [#{error_code := Error,
-                             partition := P}]}]} ->
+                             partition := Partition}]}]} ->
       {{error, Error}, All};
     Error ->
       {Error, All}
@@ -351,21 +348,55 @@ commit_test() ->
                  member_id = <<"memberID">>},
   {reply, CommitID1, State1} = handle_call({store_for_commit, <<"topic1">>, 0, 0}, from, State0),
   ?assertEqual(
-     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 0),
+     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>),
      CommitID1),
   {reply, CommitID2, State2} = handle_call({store_for_commit, <<"topic2">>, 0, 0}, from, State1),
   ?assertEqual(
-     kafe_consumer:encode_group_commit_identifier(self(), <<"topic2">>, 0, 0),
+     kafe_consumer:encode_group_commit_identifier(self(), <<"topic2">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>),
      CommitID2),
   {reply, Commits0, State3} = handle_call({pending_commits, [{<<"topic1">>, 0}, {<<"topic2">>, 0}]}, from, State2),
   ?assertEqual(
-     [kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 0),
-      kafe_consumer:encode_group_commit_identifier(self(), <<"topic2">>, 0, 0)],
+     [kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>),
+      kafe_consumer:encode_group_commit_identifier(self(), <<"topic2">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>)],
      Commits0),
-  {reply, ok, State4} = handle_call({commit, <<"topic1">>, 0, 0, #{}}, from, State3),
+  {reply, ok, State4} = handle_call({commit, <<"topic1">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>, #{}}, from, State3),
   {reply, Commits1, _} = handle_call({pending_commits, [{<<"topic1">>, 0}, {<<"topic2">>, 0}]}, from, State4),
   ?assertEqual(
-     [kafe_consumer:encode_group_commit_identifier(self(), <<"topic2">>, 0, 0)],
+     [kafe_consumer:encode_group_commit_identifier(self(), <<"topic2">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>)],
+     Commits1),
+  meck:unload(kafe).
+
+commit_generation_change_test() ->
+  meck:new(kafe),
+  meck:expect(kafe, offset_commit, fun(_, _, _, _, [{T, [{P, _, _}]}]) ->
+                                       {ok, [#{name => T,
+                                               partitions => [#{error_code => none,
+                                                                partition => P}]}]}
+                                   end),
+  State0 = #state{allow_unordered_commit = false,
+                 group_id = <<"FakeGroup">>,
+                 generation_id = 1,
+                 member_id = <<"memberID">>},
+  {reply, CommitID1, State1} = handle_call({store_for_commit, <<"topic1">>, 0, 0}, from, State0),
+  ?assertEqual(
+     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>),
+     CommitID1),
+
+  State2 = State1#state{generation_id = 2},
+  {reply, CommitID2, State3} = handle_call({store_for_commit, <<"topic2">>, 0, 0}, from, State2),
+  ?assertEqual(
+     kafe_consumer:encode_group_commit_identifier(self(), <<"topic2">>, 0, 0, <<"FakeGroup">>, 2, <<"memberID">>),
+     CommitID2),
+
+  {reply, Commits0, State4} = handle_call({pending_commits, [{<<"topic1">>, 0}, {<<"topic2">>, 0}]}, from, State3),
+  ?assertEqual(
+     [kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>),
+      kafe_consumer:encode_group_commit_identifier(self(), <<"topic2">>, 0, 0, <<"FakeGroup">>, 2, <<"memberID">>)],
+     Commits0),
+  {reply, ok, State5} = handle_call({commit, <<"topic1">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>, #{}}, from, State4),
+  {reply, Commits1, _} = handle_call({pending_commits, [{<<"topic1">>, 0}, {<<"topic2">>, 0}]}, from, State5),
+  ?assertEqual(
+     [kafe_consumer:encode_group_commit_identifier(self(), <<"topic2">>, 0, 0, <<"FakeGroup">>, 2, <<"memberID">>)],
      Commits1),
   meck:unload(kafe).
 
@@ -382,18 +413,18 @@ delayed_commit_test() ->
                  member_id = <<"memberID">>},
   {reply, CommitID1, State1} = handle_call({store_for_commit, <<"topic1">>, 0, 0}, from, State0),
   ?assertEqual(
-     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 0),
+     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>),
      CommitID1),
   {reply, CommitID2, State2} = handle_call({store_for_commit, <<"topic1">>, 0, 1}, from, State1),
   ?assertEqual(
-     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 1),
+     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 1, <<"FakeGroup">>, 1, <<"memberID">>),
      CommitID2),
   {reply, Commits, State3} = handle_call({pending_commits, [{<<"topic1">>, 0}]}, from, State2),
   ?assertEqual(
      [CommitID1, CommitID2],
      Commits),
-  {reply, delayed, State4} = handle_call({commit, <<"topic1">>, 0, 1, #{}}, from, State3),
-  {reply, ok, State5} = handle_call({commit, <<"topic1">>, 0, 0, #{}}, from, State4),
+  {reply, delayed, State4} = handle_call({commit, <<"topic1">>, 0, 1, <<"FakeGroup">>, 1, <<"memberID">>, #{}}, from, State3),
+  {reply, ok, State5} = handle_call({commit, <<"topic1">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>, #{}}, from, State4),
   ?assertMatch({reply, [], _},
                handle_call({pending_commits, [{<<"topic1">>, 0}]}, from, State5)),
   meck:unload(kafe).
@@ -411,19 +442,19 @@ remove_commit_test() ->
                  member_id = <<"memberID">>},
   {reply, CommitID1, State1} = handle_call({store_for_commit, <<"topic1">>, 0, 0}, from, State0),
   ?assertEqual(
-     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 0),
+     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>),
      CommitID1),
   {reply, CommitID2, State2} = handle_call({store_for_commit, <<"topic1">>, 0, 1}, from, State1),
   ?assertEqual(
-     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 1),
+     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 1, <<"FakeGroup">>, 1, <<"memberID">>),
      CommitID2),
   {reply, Commits0, State3} = handle_call({pending_commits, [{<<"topic1">>, 0}]}, from, State2),
   ?assertEqual(
      [CommitID1, CommitID2],
      Commits0),
   ?assertEqual({reply, {error, not_head_commit}, State3},
-               handle_call({remove_commit, <<"topic1">>, 0, 1}, from, State3)),
-  {reply, ok, State4} = handle_call({remove_commit, <<"topic1">>, 0, 0}, from, State3),
+               handle_call({remove_commit, <<"topic1">>, 0, 1, <<"FakeGroup">>, 1, <<"memberID">>}, from, State3)),
+  {reply, ok, State4} = handle_call({remove_commit, <<"topic1">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>}, from, State3),
   {reply, Commits1, State4} = handle_call({pending_commits, [{<<"topic1">>, 0}]}, from, State4),
   ?assertEqual(
      [CommitID2],
@@ -443,18 +474,18 @@ invalid_commit_test() ->
                  member_id = <<"memberID">>},
   {reply, CommitID1, State1} = handle_call({store_for_commit, <<"topic1">>, 0, 0}, from, State0),
   ?assertEqual(
-     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 0),
+     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>),
      CommitID1),
   {reply, CommitID2, State2} = handle_call({store_for_commit, <<"topic1">>, 0, 1}, from, State1),
   ?assertEqual(
-     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 1),
+     kafe_consumer:encode_group_commit_identifier(self(), <<"topic1">>, 0, 1, <<"FakeGroup">>, 1, <<"memberID">>),
      CommitID2),
   {reply, Commits, State3} = handle_call({pending_commits, [{<<"topic1">>, 0}]}, from, State2),
   ?assertEqual(
      [CommitID1, CommitID2],
      Commits),
   ?assertMatch({reply, {error, missing_previous_commit}, _},
-               handle_call({commit, <<"topic1">>, 0, 1, #{}}, from, State3)),
+               handle_call({commit, <<"topic1">>, 0, 1, <<"FakeGroup">>, 1, <<"memberID">>, #{}}, from, State3)),
   {reply, ok, State4} = handle_call(remove_commits, from, State3),
   ?assertMatch({reply, [], _},
                handle_call({pending_commits, [{<<"topic1">>, 0}]}, from, State4)),
