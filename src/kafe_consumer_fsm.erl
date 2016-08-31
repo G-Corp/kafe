@@ -90,6 +90,7 @@ dead(timeout, #state{group_id_atom = GroupIdAtom,
                      member_id = MemberId,
                      topics = Topics,
                      session_timeout = SessionTimeout} = State) ->
+  lager:debug("Group ~p : join_group...", [GroupId]),
   ProtocolTopics = lists:map(fun({Topic, _}) -> Topic;
                                 (Topic) -> Topic
                              end, Topics),
@@ -128,6 +129,7 @@ awaiting_sync(timeout, #state{group_id = GroupId,
                               leader_id = LeaderId,
                               members = Members,
                               topics = Topics} = State) ->
+  lager:debug("Group ~p : awaiting_sync...", [GroupId]),
   GroupAssignment = group_assignment(LeaderId, MemberId, Topics, Members),
   case kafe:sync_group(GroupId, GenerationId, MemberId, GroupAssignment) of
     {ok, #{error_code := none}} ->
@@ -144,6 +146,7 @@ awaiting_sync(timeout, #state{group_id = GroupId,
 stable(timeout, #state{group_id = GroupId,
                        member_id = MemberId,
                        generation_id = GenerationId} = State) ->
+  lager:debug("Group ~p : heartbeat...", [GroupId]),
   case kafe:heartbeat(GroupId, GenerationId, MemberId) of
     {ok, #{error_code := none}} ->
       next_state(State);

@@ -90,7 +90,7 @@ init([Topic, Partition, Srv, FetchInterval,
               processing = Processing
              }};
     _ ->
-      lager:debug("Faild to fetch offset for ~p:~p in group ~p", [Topic, Partition, GroupID]),
+      lager:debug("Failed to fetch offset for ~p:~p in group ~p", [Topic, Partition, GroupID]),
       {stop, fetch_offset_faild}
   end.
 
@@ -137,7 +137,7 @@ fetch(#state{fetch_interval = FetchInterval,
                                             Autocommit, Processing, Srv, Callback,
                                             MinBytes, MaxBytes, MaxWaitTime) of
                            [] ->
-                             OffsetFetch;
+                             lists:max(Offsets);
                            Fetched ->
                              lists:max(Fetched)
                          end;
@@ -163,6 +163,7 @@ perform_fetch([Offset|Offsets], Acc,
   case gen_server:call(Srv, can_fetch) of
     true ->
       NoError = kafe_error:code(0),
+      OffsetOutOfRange = kafe_error:code(1),
       case kafe:fetch(-1, Topic, #{partition => Partition,
                                    offset => Offset,
                                    max_bytes => MaxBytes,
@@ -202,8 +203,16 @@ perform_fetch([Offset|Offsets], Acc,
                   Acc
               end
           end;
+        {ok, #{topics :=
+               [#{name := Topic,
+                  partitions :=
+                  [#{error_code := OffsetOutOfRange,
+                     partition := 0}]}]}} ->
+          lager:debug("Offset #~p topic ~p:~p : out of range", [Offset, Topic, Partition]),
+          perform_fetch(Offsets, Acc, Topic, Partition, Autocommit, Processing, Srv, Callback,
+                        MinBytes, MaxBytes, MaxWaitTime);
         Error ->
-          lager:error("Faild to fetch message #~p topic ~p:~p : ~p", [Offset, Topic, Partition, Error]),
+          lager:error("Failed to fetch message #~p topic ~p:~p : ~p", [Offset, Topic, Partition, Error]),
           Acc
       end;
     false ->
