@@ -223,7 +223,8 @@ handle_info(_Info, State) ->
   {noreply, State}.
 
 % @hidden
-terminate(_Reason, #state{fetchers = Fetchers} = State) ->
+terminate(Reason, #state{fetchers = Fetchers} = State) ->
+  lager:debug("Will stop fetchers : ~p~nStacktrace:~s", [Reason, lager:pr_stacktrace(erlang:get_stacktrace())]),
   _ = stop_fetchers([TP || {TP, _, _} <- Fetchers], State),
   ok.
 

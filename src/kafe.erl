@@ -71,6 +71,7 @@
          max_offset/2,
          partition_for_offset/2,
          api_version/0,
+         stop_brokers/0,
          state/0
         ]).
 
@@ -240,6 +241,10 @@ topics() ->
 % @hidden
 partitions(Topic) ->
   gen_server:call(?SERVER, {partitions, Topic}, ?TIMEOUT).
+
+% @hidden
+stop_brokers() ->
+  gen_server:call(?SERVER, stop_brokers, ?TIMEOUT).
 
 % @hidden
 max_offset(TopicName) ->
@@ -838,6 +843,9 @@ handle_call(api_version, _From, #{api_version := Version} = State) ->
   {reply, Version, State};
 handle_call(state, _From, State) ->
   {reply, State, State};
+handle_call(stop_brokers, _From, #{brokers := Brokers} = State) ->
+  _ = poolgirl:remove_pools(maps:values(Brokers)),
+  {reply, ok, State};
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 

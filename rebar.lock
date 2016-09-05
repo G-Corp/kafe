@@ -5,5 +5,5 @@
  {<<"lager">>,{pkg,<<"lager">>,<<"3.2.1">>},0},
  {<<"poolgirl">>,
   {git,"https://github.com/botsunit/poolgirl.git",
-       {ref,"90a9488bb544e292e8966babdee5d8f9971ab7ae"}},
+       {ref,"0ded1186cdefb717a28189077f2fd168e70304b7"}},
   0}].

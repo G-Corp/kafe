@@ -187,7 +187,11 @@ perform_fetch([Offset|Offsets], Acc,
               case try
                      erlang:apply(Callback, [CommitRef, Topic, Partition, Offset, Key, Value])
                    catch
-                     _:_ -> {error, callback_exception}
+                     Class:Reason0 ->
+                       lager:error(
+                         "Callback for message #~p of ~p#~p crash:~s",
+                         [Offset, Topic, Partition, lager:pr_stacktrace(erlang:get_stacktrace(), {Class, Reason0})]),
+                       callback_exception
                    end of
                 ok ->
                   case commit(CommitRef, Autocommit, Processing, at_least_once) of
@@ -198,8 +202,10 @@ perform_fetch([Offset|Offsets], Acc,
                       perform_fetch(Offsets, [Offset|Acc], Topic, Partition, Autocommit, Processing, Srv, Callback,
                                     MinBytes, MaxBytes, MaxWaitTime)
                   end;
+                callback_exception ->
+                  Acc;
                 {error, Error} ->
-                  lager:error("Callback for message #~p or ~p#~p return error : ~p", [Offset, Topic, Partition, Error]),
+                  lager:error("Callback for message #~p of ~p#~p return error : ~p", [Offset, Topic, Partition, Error]),
                   Acc
               end
           end;
