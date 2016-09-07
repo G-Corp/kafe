@@ -11,6 +11,7 @@
                     poolgirl,
                     goldrush,
                     lager,
+                    bucs,
                     doteki
                    ]}
   , {mod, {kafe_app, []}}
