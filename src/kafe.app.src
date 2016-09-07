@@ -10,7 +10,9 @@
                     compiler,
                     poolgirl,
                     goldrush,
-                    lager
+                    lager,
+                    bucs,
+                    doteki
                    ]}
   , {mod, {kafe_app, []}}
   , {env, []}
