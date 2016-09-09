@@ -1,6 +1,6 @@
 %{"bristow": {:hex, :bristow, "0.1.1", "1f9c1d6f0368e23e34b67908f5578beb3faed9668de8f86bfe4e4047d1f59a86", [:rebar3, :mix, :make], []},
   "bucs": {:hex, :bucs, "0.1.8", "8293d4aa64777fe7e3dc3a9e573a86dbfcbd434d6ce685a9f445f8560cacbb04", [:rebar3, :mix, :make], []},
-  "doteki": {:hex, :doteki, "0.1.11", "8b6c7ab6c4f1cadb263ac11f67a4ec8e574a8af815b687354f34358c46f13024", [:rebar3, :mix, :make], [{:bucs, "~> 0.1.8", [hex: :bucs, optional: false]}]},
+  "doteki": {:hex, :doteki, "0.1.12", "22ed3219aa7ec67114522afe965c2fe546d92baa34d7859b3df153143c39dd9f", [:rebar3, :mix, :make], [{:bucs, "~> 0.1.8", [hex: :bucs, optional: false]}]},
   "goldrush": {:hex, :goldrush, "0.1.8", "2024ba375ceea47e27ea70e14d2c483b2d8610101b4e852ef7f89163cdb6e649", [:rebar3], []},
   "lager": {:hex, :lager, "3.2.1", "eef4e18b39e4195d37606d9088ea05bf1b745986cf8ec84f01d332456fe88d17", [:rebar3], [{:goldrush, "0.1.8", [hex: :goldrush, optional: false]}]},
   "poolgirl": {:git, "https://github.com/botsunit/poolgirl.git", "d0a1872e346f5866ecf90620b074f458540208e5", [branch: "master"]}}
