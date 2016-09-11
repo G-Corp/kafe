@@ -25,8 +25,8 @@ defmodule Kafe.Mixfile do
     [
       {:lager, "~> 3.2.0"},
       {:bucs, "~> 0.1.8"},
-      {:doteki, "~> 0.1.11"},
-      {:poolgirl, git: "https://github.com/botsunit/poolgirl.git", branch: "master"},
+      {:doteki, "~> 0.1.12"},
+      {:poolgirl, "~> 0.1.3"},
       {:bristow, "~> 0.1.1"}    
     ]
   end

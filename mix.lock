@@ -3,4 +3,4 @@
   "doteki": {:hex, :doteki, "0.1.12", "22ed3219aa7ec67114522afe965c2fe546d92baa34d7859b3df153143c39dd9f", [:rebar3, :mix, :make], [{:bucs, "~> 0.1.8", [hex: :bucs, optional: false]}]},
   "goldrush": {:hex, :goldrush, "0.1.8", "2024ba375ceea47e27ea70e14d2c483b2d8610101b4e852ef7f89163cdb6e649", [:rebar3], []},
   "lager": {:hex, :lager, "3.2.1", "eef4e18b39e4195d37606d9088ea05bf1b745986cf8ec84f01d332456fe88d17", [:rebar3], [{:goldrush, "0.1.8", [hex: :goldrush, optional: false]}]},
-  "poolgirl": {:git, "https://github.com/botsunit/poolgirl.git", "d0a1872e346f5866ecf90620b074f458540208e5", [branch: "master"]}}
+  "poolgirl": {:hex, :poolgirl, "0.1.3", "23bb81f59f98739fa90fa81fc775303cd777f2b0a65b794af23fd6f7da96933c", [:rebar3, :mix, :make], [{:doteki, "~> 0.1.12", [hex: :doteki, optional: false]}]}}
