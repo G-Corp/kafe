@@ -71,7 +71,6 @@
          max_offset/2,
          partition_for_offset/2,
          api_version/0,
-         stop_brokers/0,
          state/0
         ]).
 
@@ -241,10 +240,6 @@ topics() ->
 % @hidden
 partitions(Topic) ->
   gen_server:call(?SERVER, {partitions, Topic}, ?TIMEOUT).
-
-% @hidden
-stop_brokers() ->
-  gen_server:call(?SERVER, stop_brokers, ?TIMEOUT).
 
 % @hidden
 max_offset(TopicName) ->
@@ -787,6 +782,7 @@ stop_consumer(GroupPIDOrID) ->
 
 % @hidden
 init(_) ->
+  process_flag(trap_exit, true),
   ApiVersion = doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION),
   CorrelationID = doteki:get_env([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
   ClientID = doteki:get_env([kafe, client_id], ?DEFAULT_CLIENT_ID),
@@ -805,7 +801,7 @@ init(_) ->
             pool_size => PoolSize,
             chunk_pool_size => ChunkPoolSize},
   State1 = update_state_with_metadata(init_connexions(State)),
-  erlang:send_after(BrokersUpdateFreq, self(), update_brokers),
+  _ = erlang:send_after(BrokersUpdateFreq, self(), update_brokers),
   {ok, State1}.
 
 % @hidden
@@ -843,9 +839,6 @@ handle_call(api_version, _From, #{api_version := Version} = State) ->
   {reply, Version, State};
 handle_call(state, _From, State) ->
   {reply, State, State};
-handle_call(stop_brokers, _From, #{brokers := Brokers} = State) ->
-  _ = poolgirl:remove_pools(maps:values(Brokers)),
-  {reply, ok, State};
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
@@ -857,14 +850,15 @@ handle_cast(_Msg, State) ->
 handle_info(update_brokers, #{brokers_update_frequency := Frequency} = State) ->
   lager:debug("Update brokers list..."),
   State1 = update_state_with_metadata(remove_dead_brokers(State)),
-  erlang:send_after(Frequency, self(), update_brokers),
+  _ = erlang:send_after(Frequency, self(), update_brokers),
   {noreply, State1};
 % @hidden
 handle_info(_Info, State) ->
   {noreply, State}.
 
 % @hidden
-terminate(_Reason, _State) ->
+terminate(_Reason, #{brokers := Brokers} ) ->
+  _ = poolgirl:remove_pools(maps:values(Brokers)),
   ok.
 
 % @hidden

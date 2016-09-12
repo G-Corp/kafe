@@ -1,6 +1,5 @@
 % @hidden
 -module(kafe_sup).
-
 -behaviour(supervisor).
 
 -export([start_link/0]).

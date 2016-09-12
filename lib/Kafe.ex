@@ -3,9 +3,6 @@
 # Using rebar3_elixir (https://github.com/botsunit/rebar3_elixir)
 # MODIFY IT AT YOUR OWN RISK AND ONLY IF YOU KNOW WHAT YOU ARE DOING!
 defmodule Kafe do
-  def unquote(:"stop_brokers")() do
-    :erlang.apply(:"kafe", :"stop_brokers", [])
-  end
   def unquote(:"start")() do
     :erlang.apply(:"kafe", :"start", [])
   end
