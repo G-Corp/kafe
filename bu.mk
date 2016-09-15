@@ -41,6 +41,7 @@ MKDIR_P = mkdir -p
 
 # Config
 
+NODE_HOST ?= 127.0.0.1
 ifneq ("$(wildcard config/$(current_dir).config)","")
   ERL_CONFIG="config/$(current_dir).config"
 endif
@@ -172,9 +173,9 @@ distclean: $(DISTCLEAN) ## Clean the distribution
 dev: compile-erl
 ifdef ERL_CONFIG
 	$(verbose) echo "Start with configuration $(ERL_CONFIG)"
-	$(verbose) erl -pa _build/default/lib/*/ebin _build/default/lib/*/include -config ${ERL_CONFIG}
+	$(verbose) erl -pa _build/default/lib/*/ebin _build/default/lib/*/include -config ${ERL_CONFIG} -name ${current_dir}@${NODE_HOST} -setcookie ${current_dir}
 else
-	$(verbose) erl -pa _build/default/lib/*/ebin _build/default/lib/*/include
+	$(verbose) erl -pa _build/default/lib/*/ebin _build/default/lib/*/include -name ${current_dir}@${NODE_HOST} -setcookie ${current_dir}
 endif
 
 dist-erl: clean compile-erl tests $(LINT) doc

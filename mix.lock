@@ -1,6 +1,6 @@
 %{"bristow": {:hex, :bristow, "0.1.1", "1f9c1d6f0368e23e34b67908f5578beb3faed9668de8f86bfe4e4047d1f59a86", [:rebar3, :mix, :make], []},
-  "bucs": {:hex, :bucs, "0.1.8", "8293d4aa64777fe7e3dc3a9e573a86dbfcbd434d6ce685a9f445f8560cacbb04", [:rebar3, :mix, :make], []},
-  "doteki": {:hex, :doteki, "0.1.12", "22ed3219aa7ec67114522afe965c2fe546d92baa34d7859b3df153143c39dd9f", [:rebar3, :mix, :make], [{:bucs, "~> 0.1.8", [hex: :bucs, optional: false]}]},
+  "bucs": {:hex, :bucs, "0.1.9", "810fdfeb83adf127e6303fbb1e8139bd575699dee8204f46f162908b5f343cf5", [:rebar3, :mix, :make], []},
+  "doteki": {:hex, :doteki, "0.1.13", "c78ba7b2373371d5319896f462d437456e7c9de75ed79aa433bac8532235057f", [:rebar3, :mix, :make], [{:bucs, "~> 0.1.9", [hex: :bucs, optional: false]}]},
   "goldrush": {:hex, :goldrush, "0.1.8", "2024ba375ceea47e27ea70e14d2c483b2d8610101b4e852ef7f89163cdb6e649", [:rebar3], []},
   "lager": {:hex, :lager, "3.2.1", "eef4e18b39e4195d37606d9088ea05bf1b745986cf8ec84f01d332456fe88d17", [:rebar3], [{:goldrush, "0.1.8", [hex: :goldrush, optional: false]}]},
-  "poolgirl": {:hex, :poolgirl, "0.1.3", "23bb81f59f98739fa90fa81fc775303cd777f2b0a65b794af23fd6f7da96933c", [:rebar3, :mix, :make], [{:doteki, "~> 0.1.12", [hex: :doteki, optional: false]}]}}
+  "poolgirl": {:hex, :poolgirl, "0.1.4", "e60128df254b2d495e83c91079e4984564627240238dcbcf9a3e61fad68db600", [:rebar3, :mix, :make], [{:doteki, "~> 0.1.13", [hex: :doteki, optional: false]}]}}
