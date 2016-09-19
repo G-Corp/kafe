@@ -14,7 +14,14 @@ start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 stop_child(Pid) when is_pid(Pid) ->
-  supervisor:terminate_child(?MODULE, Pid).
+  try
+    supervisor:terminate_child(?MODULE, Pid)
+  catch
+    C:E ->
+      lager:error("Can't terminate kafe_consumer_fetcher #~p: ~p:~p", [Pid, C, E]),
+      {error, E}
+  end.
+
 
 start_child(Topic, Partition, Srv, FetchInterval,
             GroupID, GenerationID, MemberID,

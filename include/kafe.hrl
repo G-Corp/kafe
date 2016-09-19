@@ -80,3 +80,12 @@
 -define(DEFAULT_CONSUMER_ON_STOP_FETCHING, undefined).
 -define(DEFAULT_CONSUMER_ON_ASSIGNMENT_CHANGE, undefined).
 
+-define(TRY(M, F, A, D),
+        try
+          erlang:apply(M, F, A)
+        catch
+          C:E ->
+            error_logger:error_msg("Error while calling ~p:~p(~p): ~p:~p", [M, F, A, C, E]),
+            D
+        end).
+

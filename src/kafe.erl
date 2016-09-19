@@ -203,7 +203,7 @@ start_link() ->
 
 % @hidden
 first_broker() ->
-  gen_server:call(?SERVER, first_broker, ?TIMEOUT).
+  ?TRY(gen_server, call, [?SERVER, first_broker, ?TIMEOUT], {error, kafe_timeout}).
 
 % @hidden
 release_broker(Broker) ->
@@ -216,11 +216,11 @@ release_broker(Broker) ->
 
 % @hidden
 broker_id_by_topic_and_partition(Topic, Partition) ->
-  gen_server:call(?SERVER, {broker_id_by_topic_and_partition, bucs:to_binary(Topic), Partition}, ?TIMEOUT).
+  ?TRY(gen_server, call, [?SERVER, {broker_id_by_topic_and_partition, bucs:to_binary(Topic), Partition}, ?TIMEOUT], {error, kafe_timeout}).
 
 % @hidden
 broker_by_name(BrokerName) ->
-  gen_server:call(?SERVER, {broker_by_name, BrokerName}, ?TIMEOUT).
+  ?TRY(gen_server, call, [?SERVER, {broker_by_name, BrokerName}, ?TIMEOUT], {error, kafe_timeout}).
 
 % @hidden
 broker_by_host_and_port(Host, Port) ->
@@ -235,11 +235,11 @@ broker_by_id(BrokerID) ->
 
 % @hidden
 topics() ->
-  gen_server:call(?SERVER, topics, ?TIMEOUT).
+  ?TRY(gen_server, call, [?SERVER, topics, ?TIMEOUT], {error, kafe_timeout}).
 
 % @hidden
 partitions(Topic) ->
-  gen_server:call(?SERVER, {partitions, Topic}, ?TIMEOUT).
+  ?TRY(gen_server, call, [?SERVER, {partitions, Topic}, ?TIMEOUT], {error, kafe_timeout}).
 
 % @hidden
 max_offset(TopicName) ->
@@ -283,11 +283,11 @@ partition_for_offset(TopicName, Offset) ->
 
 % @hidden
 api_version() ->
-  gen_server:call(?SERVER, api_version, ?TIMEOUT).
+  ?TRY(gen_server, call, [?SERVER, api_version, ?TIMEOUT], {error, kafe_timeout}).
 
 % @hidden
 state() ->
-  gen_server:call(?SERVER, state, ?TIMEOUT).
+  ?TRY(gen_server, call, [?SERVER, state, ?TIMEOUT], {error, kafe_timeout}).
 
 % @doc
 % Start kafe application
@@ -299,7 +299,7 @@ start() ->
 % Return the list of availables brokers
 % @end
 brokers() ->
-  gen_server:call(?SERVER, brokers, ?TIMEOUT).
+  ?TRY(gen_server, call, [?SERVER, brokers, ?TIMEOUT], {error, kafe_timeout}).
 
 % @equiv metadata([])
 metadata() ->
@@ -1008,7 +1008,7 @@ remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
                     BrokerID ->
                       case poolgirl:checkout(BrokerID) of
                         {ok, BrokerPID} ->
-                          case gen_server:call(BrokerPID, alive, ?TIMEOUT) of
+                          case ?TRY(gen_server, call, [BrokerPID, alive, ?TIMEOUT], {error, kafe_timeout}) of
                             ok ->
                               _ = poolgirl:checkin(BrokerPID),
                               State1;
@@ -1049,7 +1049,7 @@ get_first_broker([]) -> undefined;
 get_first_broker([BrokerID|Rest]) ->
   case poolgirl:checkout(BrokerID) of
     {ok, Broker} ->
-      case gen_server:call(Broker, alive, ?TIMEOUT) of
+      case ?TRY(gen_server, call, [Broker, alive, ?TIMEOUT], {error, kafe_timeout}) of
         ok ->
           Broker;
         {error, Reason} ->

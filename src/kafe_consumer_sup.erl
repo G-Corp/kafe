@@ -1,7 +1,8 @@
 % @hidden
 -module(kafe_consumer_sup).
-
 -behaviour(supervisor).
+
+-include("../include/kafe.hrl").
 
 -export([
          start_link/0
@@ -49,7 +50,7 @@ stop_child(GroupID) ->
 call_srv(GroupID, Request) ->
   case server_pid(GroupID) of
     undefined -> {error, server_not_found};
-    PID -> gen_server:call(PID, Request)
+    PID -> ?TRY(gen_server, call, [PID, Request], {error, server_not_found})
   end.
 
 init([]) ->

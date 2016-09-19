@@ -25,7 +25,7 @@ run(Request) ->
 
 run(BrokerPID, Request) when is_pid(BrokerPID) ->
   try
-    Response = gen_server:call(BrokerPID, Request, ?TIMEOUT),
+    Response = ?TRY(gen_server, call, [BrokerPID, Request, ?TIMEOUT], {error, kafe_timeout}),
     _ = kafe:release_broker(BrokerPID),
     Response
   catch
