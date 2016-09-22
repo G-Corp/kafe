@@ -347,7 +347,7 @@ Create a default protocol as defined in the <a href="https://cwiki.apache.org/co
 Return the description of the given consumer group.</td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
 Fetch messages.</td></tr><tr><td valign="top"><a href="#group_coordinator-1">group_coordinator/1</a></td><td> 
 Group coordinator Request.</td></tr><tr><td valign="top"><a href="#heartbeat-3">heartbeat/3</a></td><td> 
-Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group.</td></tr><tr><td valign="top"><a href="#join_group-1">join_group/1</a></td><td>Equivalent to <a href="#join_group-2"><tt>join_group(GroupId, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#join_group-2">join_group/2</a></td><td> 
+Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group.</td></tr><tr><td valign="top"><a href="#join_group-1">join_group/1</a></td><td>Equivalent to <a href="#join_group-2"><tt>join_group(GroupID, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#join_group-2">join_group/2</a></td><td> 
 Join Group.</td></tr><tr><td valign="top"><a href="#leave_group-2">leave_group/2</a></td><td> 
 To explicitly leave a group, the client can send a leave group request.</td></tr><tr><td valign="top"><a href="#list_groups-0">list_groups/0</a></td><td>
 Find groups managed by all brokers.</td></tr><tr><td valign="top"><a href="#list_groups-1">list_groups/1</a></td><td> 
@@ -406,7 +406,7 @@ Create a default protocol as defined in the [Kafka Protocol Guide](https://cwiki
 ### describe_group/1 ###
 
 <pre><code>
-describe_group(GroupId::binary()) -&gt; {error, term()} | {ok, <a href="#type-describe_group">describe_group()</a>}
+describe_group(GroupID::binary()) -&gt; {error, term()} | {ok, <a href="#type-describe_group">describe_group()</a>}
 </code></pre>
 <br />
 
@@ -499,7 +499,7 @@ For compatibility, this function as an alias : `consumer_metadata`.
 ### heartbeat/3 ###
 
 <pre><code>
-heartbeat(GroupId::binary(), GenerationId::integer(), MemberId::binary()) -&gt; {error, term()} | {ok, <a href="#type-response_code">response_code()</a>}
+heartbeat(GroupID::binary(), GenerationID::integer(), MemberID::binary()) -&gt; {error, term()} | {ok, <a href="#type-response_code">response_code()</a>}
 </code></pre>
 <br />
 
@@ -514,16 +514,16 @@ For more informations, see the
 
 ### join_group/1 ###
 
-`join_group(GroupId) -> any()`
+`join_group(GroupID) -> any()`
 
-Equivalent to [`join_group(GroupId, #{})`](#join_group-2).
+Equivalent to [`join_group(GroupID, #{})`](#join_group-2).
 
 <a name="join_group-2"></a>
 
 ### join_group/2 ###
 
 <pre><code>
-join_group(GroupId::binary(), Options::<a href="#type-join_group_options">join_group_options()</a>) -&gt; {error, term()} | {ok, <a href="#type-group_join">group_join()</a>}
+join_group(GroupID::binary(), Options::<a href="#type-join_group_options">join_group_options()</a>) -&gt; {error, term()} | {ok, <a href="#type-group_join">group_join()</a>}
 </code></pre>
 <br />
 
@@ -534,8 +534,8 @@ Options:
 
 * `session_timeout :: integer()` : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)
 
-* `member_id :: binary()` : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberId must be
-empty (i.e. <<>>, default), but a rejoining member should use the same memberId from the previous generation.
+* `member_id :: binary()` : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberID must be
+empty (i.e. <<>>, default), but a rejoining member should use the same memberID from the previous generation.
 
 * `protocol_type :: binary()` : Unique name for class of protocols implemented by group (default <<"consumer">>).
 
@@ -550,7 +550,7 @@ For more informations, see the
 ### leave_group/2 ###
 
 <pre><code>
-leave_group(GroupId::binary(), MemberId::binary()) -&gt; {error, term()} | {ok, <a href="#type-response_code">response_code()</a>}
+leave_group(GroupID::binary(), MemberID::binary()) -&gt; {error, term()} | {ok, <a href="#type-response_code">response_code()</a>}
 </code></pre>
 <br />
 
@@ -677,7 +677,7 @@ For more informations, see the
 ### offset_commit/4 ###
 
 <pre><code>
-offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), ConsumerId::binary(), Topics::<a href="#type-offset_commit_option_v1">offset_commit_option_v1()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
+offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationID::integer(), ConsumerID::binary(), Topics::<a href="#type-offset_commit_option_v1">offset_commit_option_v1()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -692,7 +692,7 @@ For more informations, see the
 ### offset_commit/5 ###
 
 <pre><code>
-offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationId::integer(), ConsumerId::binary(), RetentionTime::integer(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
+offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationID::integer(), ConsumerID::binary(), RetentionTime::integer(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -829,8 +829,8 @@ Options:
 
 * `session_timeout :: integer()` : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)
 
-* `member_id :: binary()` : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberId must be
-empty (i.e. <<>>, default), but a rejoining member should use the same memberId from the previous generation.
+* `member_id :: binary()` : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberID must be
+empty (i.e. <<>>, default), but a rejoining member should use the same memberID from the previous generation.
 
 * `topics :: [binary() | {binary(), [integer()]}]` : List or topics (and partitions).
 
@@ -886,7 +886,7 @@ Stop the given consumer
 ### sync_group/4 ###
 
 <pre><code>
-sync_group(GroupId::binary(), GenerationId::integer(), MemberId::binary(), Assignments::[<a href="#type-group_assignment">group_assignment()</a>]) -&gt; {error, term()} | {ok, <a href="#type-sync_group">sync_group()</a>}
+sync_group(GroupID::binary(), GenerationID::integer(), MemberID::binary(), Assignments::[<a href="#type-group_assignment">group_assignment()</a>]) -&gt; {error, term()} | {ok, <a href="#type-sync_group">sync_group()</a>}
 </code></pre>
 <br />
 

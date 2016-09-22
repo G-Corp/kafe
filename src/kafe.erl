@@ -203,7 +203,7 @@ start_link() ->
 
 % @hidden
 first_broker() ->
-  ?TRY(gen_server, call, [?SERVER, first_broker, ?TIMEOUT], {error, kafe_timeout}).
+  gen_server:call(?SERVER, first_broker, ?TIMEOUT).
 
 % @hidden
 release_broker(Broker) ->
@@ -216,11 +216,11 @@ release_broker(Broker) ->
 
 % @hidden
 broker_id_by_topic_and_partition(Topic, Partition) ->
-  ?TRY(gen_server, call, [?SERVER, {broker_id_by_topic_and_partition, bucs:to_binary(Topic), Partition}, ?TIMEOUT], {error, kafe_timeout}).
+  gen_server:call(?SERVER, {broker_id_by_topic_and_partition, bucs:to_binary(Topic), Partition}, ?TIMEOUT).
 
 % @hidden
 broker_by_name(BrokerName) ->
-  ?TRY(gen_server, call, [?SERVER, {broker_by_name, BrokerName}, ?TIMEOUT], {error, kafe_timeout}).
+  gen_server:call(?SERVER, {broker_by_name, BrokerName}, ?TIMEOUT).
 
 % @hidden
 broker_by_host_and_port(Host, Port) ->
@@ -235,11 +235,11 @@ broker_by_id(BrokerID) ->
 
 % @hidden
 topics() ->
-  ?TRY(gen_server, call, [?SERVER, topics, ?TIMEOUT], {error, kafe_timeout}).
+  gen_server:call(?SERVER, topics, ?TIMEOUT).
 
 % @hidden
 partitions(Topic) ->
-  ?TRY(gen_server, call, [?SERVER, {partitions, Topic}, ?TIMEOUT], {error, kafe_timeout}).
+  gen_server:call(?SERVER, {partitions, Topic}, ?TIMEOUT).
 
 % @hidden
 max_offset(TopicName) ->
@@ -283,11 +283,11 @@ partition_for_offset(TopicName, Offset) ->
 
 % @hidden
 api_version() ->
-  ?TRY(gen_server, call, [?SERVER, api_version, ?TIMEOUT], {error, kafe_timeout}).
+  gen_server:call(?SERVER, api_version, ?TIMEOUT).
 
 % @hidden
 state() ->
-  ?TRY(gen_server, call, [?SERVER, state, ?TIMEOUT], {error, kafe_timeout}).
+  gen_server:call(?SERVER, state, ?TIMEOUT).
 
 % @doc
 % Start kafe application
@@ -299,7 +299,7 @@ start() ->
 % Return the list of availables brokers
 % @end
 brokers() ->
-  ?TRY(gen_server, call, [?SERVER, brokers, ?TIMEOUT], {error, kafe_timeout}).
+  gen_server:call(?SERVER, brokers, ?TIMEOUT).
 
 % @equiv metadata([])
 metadata() ->
@@ -391,9 +391,7 @@ produce(Topic, Message, Options) ->
 % @end
 -spec default_key_to_partition(Topic :: binary(), Key :: term()) -> integer().
 default_key_to_partition(Topic, Key) ->
-  erlang:crc32(term_to_binary(Key))
-  rem
-  erlang:length(kafe:partitions(Topic)).
+  erlang:crc32(term_to_binary(Key)) rem erlang:length(kafe:partitions(Topic)).
 
 % @equiv fetch(-1, TopicName, #{})
 fetch(TopicName) when is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName) ->
@@ -482,9 +480,9 @@ group_coordinator(ConsumerGroup) ->
 
 -alias consumer_metadata.
 
-% @equiv join_group(GroupId, #{})
-join_group(GroupId) ->
-  join_group(GroupId, #{}).
+% @equiv join_group(GroupID, #{})
+join_group(GroupID) ->
+  join_group(GroupID, #{}).
 
 % @doc
 % Join Group
@@ -492,8 +490,8 @@ join_group(GroupId) ->
 % Options:
 % <ul>
 % <li><tt>session_timeout :: integer()</tt> : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)</li>
-% <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberId must be
-% empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberId from the previous generation.</li>
+% <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberID must be
+% empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberID from the previous generation.</li>
 % <li><tt>protocol_type :: binary()</tt> : Unique name for class of protocols implemented by group (default &lt;&lt;"consumer"&gt;&gt;).</li>
 % <li><tt>protocols :: [protocol()]</tt> : List of protocols.</li>
 % </ul>
@@ -502,8 +500,8 @@ join_group(GroupId) ->
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest">Kafka protocol documentation</a>.
 % @end
 -spec join_group(binary(), join_group_options()) -> {error, term()} | {ok, group_join()}.
-join_group(GroupId, Options) ->
-  kafe_protocol_join_group:run(GroupId, Options).
+join_group(GroupID, Options) ->
+  kafe_protocol_join_group:run(GroupID, Options).
 
 % @doc
 % Create a default protocol as defined in the <a
@@ -550,8 +548,8 @@ default_protocol(Name, Version, Topics, UserData) when is_binary(Name),
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-SyncGroupRequest">Kafka protocol documentation</a>.
 % @end
 -spec sync_group(binary(), integer(), binary(), [group_assignment()]) -> {error, term()} | {ok, sync_group()}.
-sync_group(GroupId, GenerationId, MemberId, Assignments) ->
-  kafe_protocol_sync_group:run(GroupId, GenerationId, MemberId, Assignments).
+sync_group(GroupID, GenerationID, MemberID, Assignments) ->
+  kafe_protocol_sync_group:run(GroupID, GenerationID, MemberID, Assignments).
 
 % @doc
 % Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group. If not heartbeat has been received by the
@@ -561,8 +559,8 @@ sync_group(GroupId, GenerationId, MemberId, Assignments) ->
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-HeartbeatRequest">Kafka protocol documentation</a>.
 % @end
 -spec heartbeat(binary(), integer(), binary()) -> {error, term()} | {ok, response_code()}.
-heartbeat(GroupId, GenerationId, MemberId) ->
-  kafe_protocol_heartbeat:run(GroupId, GenerationId, MemberId).
+heartbeat(GroupID, GenerationID, MemberID) ->
+  kafe_protocol_heartbeat:run(GroupID, GenerationID, MemberID).
 
 % @doc
 % To explicitly leave a group, the client can send a leave group request. This is preferred over letting the session timeout expire since it allows the group to
@@ -572,8 +570,8 @@ heartbeat(GroupId, GenerationId, MemberId) ->
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-LeaveGroupRequest">Kafka protocol documentation</a>.
 % @end
 -spec leave_group(binary(), binary()) -> {error, term()} | {ok, response_code()}.
-leave_group(GroupId, MemberId) ->
-  kafe_protocol_leave_group:run(GroupId, MemberId).
+leave_group(GroupID, MemberID) ->
+  kafe_protocol_leave_group:run(GroupID, MemberID).
 
 % @doc
 % Return the description of the given consumer group.
@@ -582,8 +580,8 @@ leave_group(GroupId, MemberId) ->
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-DescribeGroupsRequest">Kafka protocol documentation</a>.
 % @end
 -spec describe_group(binary()) -> {error, term()} | {ok, describe_group()}.
-describe_group(GroupId) when is_binary(GroupId) ->
-  kafe_protocol_describe_group:run(GroupId).
+describe_group(GroupID) when is_binary(GroupID) ->
+  kafe_protocol_describe_group:run(GroupID).
 
 % @doc
 % Offset commit v0
@@ -593,8 +591,7 @@ describe_group(GroupId) when is_binary(GroupId) ->
 % @end
 -spec offset_commit(binary(), offset_commit_option()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, Topics) ->
-  kafe_protocol_consumer_offset_commit:run_v0(ConsumerGroup,
-                                              Topics).
+  kafe_protocol_consumer_offset_commit:run_v0(ConsumerGroup, Topics).
 
 % @doc
 % Offset commit v1
@@ -603,10 +600,10 @@ offset_commit(ConsumerGroup, Topics) ->
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
 -spec offset_commit(binary(), integer(), binary(), offset_commit_option_v1()) -> {ok, [offset_commit_set()]} | {error, term()}.
-offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
+offset_commit(ConsumerGroup, ConsumerGroupGenerationID, ConsumerID, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v1(ConsumerGroup,
-                                              ConsumerGroupGenerationId,
-                                              ConsumerId,
+                                              ConsumerGroupGenerationID,
+                                              ConsumerID,
                                               Topics).
 
 % @doc
@@ -616,10 +613,10 @@ offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
 -spec offset_commit(binary(), integer(), binary(), integer(), offset_commit_option()) -> {ok, [offset_commit_set()]} | {error, term()}.
-offset_commit(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics) ->
+offset_commit(ConsumerGroup, ConsumerGroupGenerationID, ConsumerID, RetentionTime, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v2(ConsumerGroup,
-                                              ConsumerGroupGenerationId,
-                                              ConsumerId,
+                                              ConsumerGroupGenerationID,
+                                              ConsumerID,
                                               RetentionTime,
                                               Topics).
 
@@ -731,8 +728,8 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % Options:
 % <ul>
 % <li><tt>session_timeout :: integer()</tt> : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)</li>
-% <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberId must be
-% empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberId from the previous generation.</li>
+% <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberID must be
+% empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberID from the previous generation.</li>
 % <li><tt>topics :: [binary() | {binary(), [integer()]}]</tt> : List or topics (and partitions).</li>
 % <li><tt>fetch_interval :: integer()</tt> : Fetch interval in ms (default : 1000)</li>
 % <li><tt>fetch_size :: integer()</tt> : Maximum number of offset to fetch(default : 1)</li>
@@ -805,8 +802,6 @@ init(_) ->
   {ok, State1}.
 
 % @hidden
-handle_call(brokers, _From, #{brokers := Brokers} = State) ->
-  {reply, maps:values(Brokers), State};
 handle_call(first_broker, _From, State) ->
   {reply, get_first_broker(State), State};
 handle_call({broker_id_by_topic_and_partition, Topic, Partition}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
@@ -839,6 +834,10 @@ handle_call(api_version, _From, #{api_version := Version} = State) ->
   {reply, Version, State};
 handle_call(state, _From, State) ->
   {reply, State, State};
+% Public
+handle_call(brokers, _From, #{brokers := Brokers} = State) ->
+  {reply, maps:values(Brokers), State};
+% RIP
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
@@ -1008,7 +1007,7 @@ remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
                     BrokerID ->
                       case poolgirl:checkout(BrokerID) of
                         {ok, BrokerPID} ->
-                          case ?TRY(gen_server, call, [BrokerPID, alive, ?TIMEOUT], {error, kafe_timeout}) of
+                          case gen_server:call(BrokerPID, alive, ?TIMEOUT) of
                             ok ->
                               _ = poolgirl:checkin(BrokerPID),
                               State1;
@@ -1049,7 +1048,7 @@ get_first_broker([]) -> undefined;
 get_first_broker([BrokerID|Rest]) ->
   case poolgirl:checkout(BrokerID) of
     {ok, Broker} ->
-      case ?TRY(gen_server, call, [Broker, alive, ?TIMEOUT], {error, kafe_timeout}) of
+      case gen_server:call(Broker, alive, ?TIMEOUT) of
         ok ->
           Broker;
         {error, Reason} ->

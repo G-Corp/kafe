@@ -3,4 +3,7 @@
  {<<"doteki">>,{pkg,<<"doteki">>,<<"0.1.13">>},0},
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.8">>},1},
  {<<"lager">>,{pkg,<<"lager">>,<<"3.2.1">>},0},
- {<<"poolgirl">>,{pkg,<<"poolgirl">>,<<"0.1.4">>},0}].
+ {<<"poolgirl">>,
+  {git,"https://github.com/botsunit/poolgirl.git",
+       {ref,"0fa24c3363ead552c92c8c699811fcca73736364"}},
+  0}].

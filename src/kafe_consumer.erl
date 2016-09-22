@@ -145,7 +145,7 @@ commit(GroupCommitIdentifier) ->
 commit(GroupCommitIdentifier, Options) ->
   case decode_group_commit_identifier(GroupCommitIdentifier) of
     {Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID} ->
-      ?TRY(gen_server, call, [Pid, {commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID, Options}], {error, kafe_timeout});
+      gen_server:call(Pid, {commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID, Options});
     _ ->
       {error, invalid_group_commit_identifier}
   end.
@@ -164,7 +164,7 @@ remove_commits(GroupPIDOrID) ->
 remove_commit(GroupCommitIdentifier) ->
   case decode_group_commit_identifier(GroupCommitIdentifier) of
     {Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID} ->
-      ?TRY(gen_server, call, [Pid, {remove_commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID}], {error, kafe_timeout});
+      gen_server:call(Pid, {remove_commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID});
     _ ->
       {error, invalid_group_commit_identifier}
   end.

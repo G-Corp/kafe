@@ -211,13 +211,13 @@ group_state(State, Next) when is_binary(Next) ->
 group_state(_State, preparing_rebalance) ->
   {stable, ?PREPARING_REBALANCE(_State)}; % never append ?
 group_state(#state{group_id_atom = GroupIdAtom} = _State, dead) ->
-  _ = ?TRY(gen_server, call, [kafe_consumer:server_pid(GroupIdAtom), stop_fetch], error),
+  _ = gen_server:call(kafe_consumer:server_pid(GroupIdAtom), stop_fetch),
   {dead, ?DEAD_TIMEOUT(_State)};
 group_state(#state{group_id_atom = GroupIdAtom} = _State, awaiting_sync) ->
-  _ = ?TRY(gen_server, call, [kafe_consumer:server_pid(GroupIdAtom), stop_fetch], error),
+  _ = gen_server:call(kafe_consumer:server_pid(GroupIdAtom), stop_fetch),
   {awaiting_sync, ?AWAITING_SYNC_TIMEOUT(_State)};
 group_state(#state{group_id_atom = GroupIdAtom} = State, stable) ->
-  _ = ?TRY(gen_server, call, [kafe_consumer:server_pid(GroupIdAtom), start_fetch], error),
+  _ = gen_server:call(kafe_consumer:server_pid(GroupIdAtom), start_fetch),
   {stable, ?STABLE_TIMEOUT(State)}.
 
 state_by_name(<<"PreparingRebalance">>) -> preparing_rebalance;

@@ -50,7 +50,7 @@ stop_child(GroupID) ->
 call_srv(GroupID, Request) ->
   case server_pid(GroupID) of
     undefined -> {error, server_not_found};
-    PID -> ?TRY(gen_server, call, [PID, Request], {error, server_not_found})
+    PID -> gen_server:call(PID, Request)
   end.
 
 init([]) ->

@@ -160,7 +160,7 @@ perform_fetch([], Acc, _, _, _, _, _, _, _, _, _) ->
 perform_fetch([Offset|Offsets], Acc,
               Topic, Partition, Autocommit, Processing, Srv, Callback,
               MinBytes, MaxBytes, MaxWaitTime) ->
-  case ?TRY(gen_server, call, [Srv, can_fetch], false) of
+  case gen_server:call(Srv, can_fetch) of
     true ->
       NoError = kafe_error:code(0),
       OffsetOutOfRange = kafe_error:code(1),
