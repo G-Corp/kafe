@@ -17,43 +17,41 @@ start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 start_child(GroupID, Options) ->
-  case supervisor:start_child(?MODULE, [GroupID, Options]) of
-    {ok, Child, _} -> {ok, Child};
-    Other -> Other
-  end.
-
-consumer_pid(GroupID) when is_binary(GroupID) ->
-  consumer_pid(bucs:to_atom(GroupID));
-consumer_pid(GroupID) when is_atom(GroupID) ->
-  global:whereis_name(GroupID);
-consumer_pid(GroupID) when is_pid(GroupID) ->
-  GroupID.
-
-server_pid(GroupID) ->
-  case consumer_pid(GroupID) of
-    undefined -> undefined;
-    ConsumerPID ->
-      case lists:keyfind(kafe_consumer_srv, 1, supervisor:which_children(ConsumerPID)) of
-        {kafe_consumer_srv, SrvPID, worker, [kafe_consumer_srv]} ->
-          SrvPID;
-        false ->
-          undefined
+  case kafe_cst:lookup_srvpid(GroupID) of
+    {ok, PID} ->
+      {ok, PID};
+    _ ->
+      case supervisor:start_child(?MODULE, [GroupID, Options]) of
+        {ok, Child, _} -> {ok, Child};
+        Other -> Other
       end
   end.
 
+stop_child(GroupPID) when is_pid(GroupPID) ->
+  supervisor:terminate_child(?MODULE, GroupPID);
 stop_child(GroupID) ->
-  case consumer_pid(GroupID) of
-    undefined -> undefined;
-    PID -> supervisor:terminate_child(?MODULE, PID)
+  case kafe_cst:lookup_suppid(GroupID) of
+    {ok, PID} ->
+      stop_child(PID);
+    _ ->
+      {error, detached}
   end.
 
+call_srv(GroupPID, Request) when is_pid(GroupPID) ->
+  gen_server:call(GroupPID, Request);
 call_srv(GroupID, Request) ->
-  case server_pid(GroupID) of
-    undefined -> {error, server_not_found};
-    PID -> gen_server:call(PID, Request)
+  case kafe_cst:lookup_srvpid(GroupID) of
+    {ok, PID} ->
+      call_srv(PID, Request);
+    _ ->
+      {error, server_not_found}
   end.
+
+server_pid(GroupID) ->
+  kafe_cst:lookup_srvpid(GroupID).
 
 init([]) ->
+  kafe_cst:new(),
   {ok, {
      #{strategy => simple_one_for_one,
        intensity => 0,

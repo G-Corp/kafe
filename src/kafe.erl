@@ -764,14 +764,14 @@ delete_offset_for_partition(PartitionID, Offsets) ->
                                       Offset :: integer(),
                                       Key :: binary(),
                                       Value :: binary()) -> ok | {error, term()}),
-                                   Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
+                     Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
 start_consumer(GroupID, Callback, Options) when is_function(Callback, 6) ->
   kafe_consumer_sup:start_child(GroupID, Options#{callback => Callback}).
 
 % @doc
 % Stop the given consumer
 % @end
--spec stop_consumer(GroupPIDOrID :: binary() | atom() | pid()) -> ok | {error, not_found | simple_one_for_one} | undefined.
+-spec stop_consumer(GroupPIDOrID :: binary() | atom() | pid()) -> ok | {error, not_found | simple_one_for_one | detached}.
 stop_consumer(GroupPIDOrID) ->
   kafe_consumer_sup:stop_child(GroupPIDOrID).
 

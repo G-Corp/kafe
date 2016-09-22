@@ -99,7 +99,6 @@
          , member_id/2
          , generation_id/2
          , topics/2
-         , server_pid/1
          , encode_group_commit_identifier/7
          , decode_group_commit_identifier/1
         ]).
@@ -227,15 +226,12 @@ topics(GroupID) ->
   kafe_consumer_sup:call_srv(GroupID, topics).
 
 % @hidden
-server_pid(GroupID) ->
-  kafe_consumer_sup:server_pid(GroupID).
-
-% @hidden
 start_link(GroupID, Options) ->
   supervisor:start_link({global, bucs:to_atom(GroupID)}, ?MODULE, [GroupID, Options]).
 
 % @hidden
 init([GroupID, Options]) ->
+  _ = kafe_cst:attach_sup(GroupID),
   {ok, {
      #{strategy => one_for_one,
        intensity => 1,

@@ -875,7 +875,7 @@ parameter is the list of {topic, partition} that were reassigned. (default: unde
 ### stop_consumer/1 ###
 
 <pre><code>
-stop_consumer(GroupPIDOrID::binary() | atom() | pid()) -&gt; ok | {error, not_found | simple_one_for_one} | undefined
+stop_consumer(GroupPIDOrID::binary() | atom() | pid()) -&gt; ok | {error, not_found | simple_one_for_one | detached}
 </code></pre>
 <br />
 

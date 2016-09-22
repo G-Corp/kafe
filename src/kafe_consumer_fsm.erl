@@ -51,17 +51,17 @@
 
 % @hidden
 -spec start_link(atom(), map()) -> {ok, pid()}.
-start_link(GroupId, Options) when is_map(Options) ->
-  gen_fsm:start_link(?MODULE, [GroupId, Options], []).
+start_link(GroupID, Options) when is_map(Options) ->
+  gen_fsm:start_link(?MODULE, [GroupID, Options], []).
 
 %% gen_fsm.
 
 % @hidden
-init([GroupId, Options]) ->
-  lager:info("Start consumer ~p", [GroupId]),
+init([GroupID, Options]) ->
+  lager:info("Start consumer ~p", [GroupID]),
   _ = erlang:process_flag(trap_exit, true),
   SessionTimeout = maps:get(session_timeout, Options, ?DEFAULT_JOIN_GROUP_SESSION_TIMEOUT),
-  MemberId = maps:get(member_id, Options, ?DEFAULT_JOIN_GROUP_MEMBER_ID),
+  MemberID = maps:get(member_id, Options, ?DEFAULT_JOIN_GROUP_MEMBER_ID),
   Topics = lists:map(fun
                        ({_, _} = T) -> T;
                        (T) -> {T, kafe:partitions(T)}
@@ -70,10 +70,10 @@ init([GroupId, Options]) ->
                                                  {Topic, Partitions}
                                              end, ?DEFAULT_GROUP_PARTITION_ASSIGNMENT))),
   State = #state{
-             group_id_atom = bucs:to_atom(GroupId),
-             group_id = bucs:to_binary(GroupId),
+             group_id_atom = bucs:to_atom(GroupID),
+             group_id = bucs:to_binary(GroupID),
              % client_id
-             member_id = MemberId,
+             member_id = MemberID,
              % leader_id
              % generation_id
              topics = Topics,
@@ -85,17 +85,17 @@ init([GroupId, Options]) ->
   {ok, dead, State, ?DEAD_TIMEOUT(State)}.
 
 % @hidden
-dead(timeout, #state{group_id_atom = GroupIdAtom,
-                     group_id = GroupId,
-                     member_id = MemberId,
+dead(timeout, #state{group_id_atom = GroupIDAtom,
+                     group_id = GroupID,
+                     member_id = MemberID,
                      topics = Topics,
                      session_timeout = SessionTimeout} = State) ->
-  lager:debug("Group ~p : join_group...", [GroupId]),
+  lager:debug("Group ~p : join_group...", [GroupID]),
   ProtocolTopics = lists:map(fun({Topic, _}) -> Topic;
                                 (Topic) -> Topic
                              end, Topics),
-  case kafe:join_group(GroupId, #{session_timeout => SessionTimeout,
-                                  member_id => MemberId,
+  case kafe:join_group(GroupID, #{session_timeout => SessionTimeout,
+                                  member_id => MemberID,
                                   protocol_type => ?DEFAULT_JOIN_GROUP_PROTOCOL_TYPE,
                                   protocols => [kafe:default_protocol(
                                                   ?DEFAULT_GROUP_PROTOCOL_NAME,
@@ -103,15 +103,15 @@ dead(timeout, #state{group_id_atom = GroupIdAtom,
                                                   ProtocolTopics,
                                                   ?DEFAULT_GROUP_USER_DATA)]}) of
     {ok, #{error_code := none,
-           generation_id := GenerationId,
-           leader_id := LeaderId,
-           member_id := NewMemberId,
+           generation_id := GenerationID,
+           leader_id := LeaderID,
+           member_id := NewMemberID,
            protocol_group := ProtocolGroup}} ->
-      _ = kafe_consumer:member_id(GroupIdAtom, NewMemberId),
-      _ = kafe_consumer:generation_id(GroupIdAtom, GenerationId),
-      next_state(State#state{generation_id = GenerationId,
-                             leader_id = LeaderId,
-                             member_id = NewMemberId,
+      _ = kafe_consumer:member_id(GroupIDAtom, NewMemberID),
+      _ = kafe_consumer:generation_id(GroupIDAtom, GenerationID),
+      next_state(State#state{generation_id = GenerationID,
+                             leader_id = LeaderID,
+                             member_id = NewMemberID,
                              protocol_group = ProtocolGroup});
     {ok, #{error_code := unknown_member_id}} ->
       next_state(dead, State#state{member_id = <<>>});
@@ -123,15 +123,15 @@ dead(timeout, #state{group_id_atom = GroupIdAtom,
   end.
 
 % @hidden
-awaiting_sync(timeout, #state{group_id = GroupId,
-                              generation_id = GenerationId,
-                              member_id = MemberId,
-                              leader_id = LeaderId,
+awaiting_sync(timeout, #state{group_id = GroupID,
+                              generation_id = GenerationID,
+                              member_id = MemberID,
+                              leader_id = LeaderID,
                               members = Members,
                               topics = Topics} = State) ->
-  lager:debug("Group ~p : awaiting_sync...", [GroupId]),
-  GroupAssignment = group_assignment(LeaderId, MemberId, Topics, Members),
-  case kafe:sync_group(GroupId, GenerationId, MemberId, GroupAssignment) of
+  lager:debug("Group ~p : awaiting_sync...", [GroupID]),
+  GroupAssignment = group_assignment(LeaderID, MemberID, Topics, Members),
+  case kafe:sync_group(GroupID, GenerationID, MemberID, GroupAssignment) of
     {ok, #{error_code := none}} ->
       next_state(State);
     {ok, #{error_code := Error}} ->
@@ -143,11 +143,11 @@ awaiting_sync(timeout, #state{group_id = GroupId,
   end.
 
 % @hidden
-stable(timeout, #state{group_id = GroupId,
-                       member_id = MemberId,
-                       generation_id = GenerationId} = State) ->
-  lager:debug("Group ~p : heartbeat...", [GroupId]),
-  case kafe:heartbeat(GroupId, GenerationId, MemberId) of
+stable(timeout, #state{group_id = GroupID,
+                       member_id = MemberID,
+                       generation_id = GenerationID} = State) ->
+  lager:debug("Group ~p : heartbeat...", [GroupID]),
+  case kafe:heartbeat(GroupID, GenerationID, MemberID) of
     {ok, #{error_code := none}} ->
       next_state(State);
     {ok, #{error_code := Error}} ->
@@ -178,25 +178,25 @@ terminate(_Reason, _StateName, _State) ->
 code_change(_OldVsn, StateName, State, _Extra) ->
   {ok, StateName, State}.
 
-next_state(#state{group_id = GroupId,
-                  group_id_atom = GroupIdAtom,
-                  member_id = MemberId} = State) ->
-  case kafe:describe_group(GroupId) of
+next_state(#state{group_id = GroupID,
+                  group_id_atom = GroupIDAtom,
+                  member_id = MemberID} = State) ->
+  case kafe:describe_group(GroupID) of
     {ok, [#{error_code := none,
             state := GroupState,
             members := Members}]} ->
       case [T || #{member_assignment := #{partition_assignment := T,
                                           version := V},
-                   member_id := M} <- Members, M == MemberId, V =/= -1] of
+                   member_id := M} <- Members, M == MemberID, V =/= -1] of
         [] ->
           ok;
         [Topics] ->
-          kafe_consumer:topics(GroupIdAtom, [{T, P} || #{partitions := P, topic := T} <- Topics])
+          kafe_consumer:topics(GroupIDAtom, [{T, P} || #{partitions := P, topic := T} <- Topics])
       end,
       {NextState, Timeout} = group_state(State, GroupState),
       {next_state, NextState, State#state{members = Members}, Timeout};
     {ok, [#{error_code := Error}]} ->
-      lager:info("Can't get group ~p description : ~p", [GroupId, Error]),
+      lager:info("Can't get group ~p description : ~p", [GroupID, Error]),
       next_state(dead, State);
     {error, _} ->
       next_state(dead, State)
@@ -210,14 +210,29 @@ group_state(State, Next) when is_binary(Next) ->
   group_state(State, state_by_name(Next));
 group_state(_State, preparing_rebalance) ->
   {stable, ?PREPARING_REBALANCE(_State)}; % never append ?
-group_state(#state{group_id_atom = GroupIdAtom} = _State, dead) ->
-  _ = gen_server:call(kafe_consumer:server_pid(GroupIdAtom), stop_fetch),
+group_state(#state{group_id = GroupID} = _State, dead) ->
+  case kafe_consumer_sup:server_pid(GroupID) of
+    {ok, PID} ->
+      _ = gen_server:call(PID, stop_fetch);
+    _ ->
+      erlang:exit(group_is_dead)
+  end,
   {dead, ?DEAD_TIMEOUT(_State)};
-group_state(#state{group_id_atom = GroupIdAtom} = _State, awaiting_sync) ->
-  _ = gen_server:call(kafe_consumer:server_pid(GroupIdAtom), stop_fetch),
+group_state(#state{group_id = GroupID} = _State, awaiting_sync) ->
+  case kafe_consumer_sup:server_pid(GroupID) of
+    {ok, PID} ->
+      _ = gen_server:call(PID, stop_fetch);
+    _ ->
+      erlang:exit(group_is_dead)
+  end,
   {awaiting_sync, ?AWAITING_SYNC_TIMEOUT(_State)};
-group_state(#state{group_id_atom = GroupIdAtom} = State, stable) ->
-  _ = gen_server:call(kafe_consumer:server_pid(GroupIdAtom), start_fetch),
+group_state(#state{group_id = GroupID} = State, stable) ->
+  case kafe_consumer_sup:server_pid(GroupID) of
+    {ok, PID} ->
+      _ = gen_server:call(PID, start_fetch);
+    _ ->
+      erlang:exit(group_is_dead)
+  end,
   {stable, ?STABLE_TIMEOUT(State)}.
 
 state_by_name(<<"PreparingRebalance">>) -> preparing_rebalance;
@@ -225,7 +240,7 @@ state_by_name(<<"Dead">>) -> dead;
 state_by_name(<<"AwaitingSync">>) -> awaiting_sync;
 state_by_name(<<"Stable">>) -> stable.
 
-group_assignment(MemberId, MemberId, Topics, Members) ->
+group_assignment(MemberID, MemberID, Topics, Members) ->
   MemberIDs = [M || #{member_id := M} <- Members],
   [#{member_id => Member,
      member_assignment => #{

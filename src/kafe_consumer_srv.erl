@@ -59,6 +59,7 @@ start_link(GroupID, Options) ->
 % @hidden
 init([GroupID, Options]) ->
   _ = erlang:process_flag(trap_exit, true),
+  _ = kafe_cst:attach_srv(GroupID),
   FetchInterval = maps:get(fetch_interval, Options, ?DEFAULT_CONSUMER_FETCH_INTERVAL),
   FetchSize = maps:get(fetch_size, Options, ?DEFAULT_CONSUMER_FETCH_SIZE),
   MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
@@ -224,6 +225,7 @@ handle_info(_Info, State) ->
 
 % @hidden
 terminate(Reason, #state{fetchers = Fetchers} = State) ->
+  _ = kafe_cst:detach(),
   lager:debug("Will stop fetchers : ~p~nStacktrace:~s", [Reason, lager:pr_stacktrace(erlang:get_stacktrace())]),
   _ = stop_fetchers([TP || {TP, _, _} <- Fetchers], State),
   ok.
