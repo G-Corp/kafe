@@ -15,12 +15,17 @@ start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 stop_child(Pid) when is_pid(Pid) ->
-  try
-    supervisor:terminate_child(?MODULE, Pid)
-  catch
-    C:E ->
-      lager:error("Can't terminate kafe_consumer_fetcher #~p: ~p:~p", [Pid, C, E]),
-      {error, E}
+  case erlang:is_process_alive(Pid) of
+    true ->
+      try
+        supervisor:terminate_child(?MODULE, Pid)
+      catch
+        C:E ->
+          lager:error("Can't terminate kafe_consumer_fetcher #~p: ~p:~p", [Pid, C, E]),
+          {error, E}
+      end;
+    false ->
+      {error, not_found}
   end.
 
 

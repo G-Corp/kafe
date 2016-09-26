@@ -225,9 +225,9 @@ handle_info(_Info, State) ->
 
 % @hidden
 terminate(Reason, #state{fetchers = Fetchers} = State) ->
-  _ = kafe_cst:detach(),
   lager:debug("Will stop fetchers : ~p~nStacktrace:~s", [Reason, lager:pr_stacktrace(erlang:get_stacktrace())]),
   _ = stop_fetchers([TP || {TP, _, _} <- Fetchers], State),
+  _ = kafe_cst:detach(),
   ok.
 
 % @hidden
@@ -266,7 +266,12 @@ stop_fetchers([TP|Rest], #state{fetchers = Fetchers, commits = Commits} = State)
     {TP, Pid, MRef} ->
       CommitStoreKey = erlang:term_to_binary(TP),
       _ = erlang:demonitor(MRef),
-      _ = kafe_consumer_fetcher_sup:stop_child(Pid),
+      try
+        kafe_consumer_fetcher_sup:stop_child(Pid)
+      catch
+        C:E ->
+          lager:error("Can't terminate kafe_consumer_fetcher #~p: ~p:~p", [Pid, C, E])
+      end,
       stop_fetchers(Rest, State#state{fetchers = lists:keydelete(TP, 1, Fetchers),
                                       commits = maps:remove(CommitStoreKey, Commits)});
     false ->
