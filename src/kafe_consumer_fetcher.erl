@@ -6,7 +6,7 @@
 -include("../include/kafe.hrl").
 
 %% API.
--export([start_link/14]).
+-export([start_link/13]).
 
 %% gen_server.
 -export([init/1]).
@@ -26,7 +26,6 @@
           group_id = undefined,
           generation_id = undefined,
           member_id = undefined,
-          fetch_size = ?DEFAULT_CONSUMER_FETCH_SIZE,
           autocommit = ?DEFAULT_CONSUMER_AUTOCOMMIT,
           min_bytes = ?DEFAULT_FETCH_MIN_BYTES,
           max_bytes = ?DEFAULT_FETCH_MAX_BYTES,
@@ -37,9 +36,8 @@
 
 start_link(Topic, Partition, Srv, FetchInterval,
            GroupID, GenerationID, MemberID,
-           FetchSize, Autocommit,
-           MinBytes, MaxBytes, MaxWaitTime,
-           Callback, Processing) ->
+           Autocommit, MinBytes, MaxBytes,
+           MaxWaitTime, Callback, Processing) ->
   gen_server:start_link(?MODULE, [
                                   Topic
                                   , Partition
@@ -48,7 +46,6 @@ start_link(Topic, Partition, Srv, FetchInterval,
                                   , GroupID
                                   , GenerationID
                                   , MemberID
-                                  , FetchSize
                                   , Autocommit
                                   , MinBytes
                                   , MaxBytes
@@ -61,9 +58,8 @@ start_link(Topic, Partition, Srv, FetchInterval,
 
 init([Topic, Partition, Srv, FetchInterval,
       GroupID, GenerationID, MemberID,
-      FetchSize, Autocommit,
-      MinBytes, MaxBytes, MaxWaitTime, Callback,
-      Processing]) ->
+      Autocommit, MinBytes, MaxBytes, MaxWaitTime,
+      Callback, Processing]) ->
   NoError = kafe_error:code(0),
   case kafe:offset_fetch(GroupID, [{Topic, [Partition]}]) of
     {ok, [#{name := Topic,
@@ -81,7 +77,6 @@ init([Topic, Partition, Srv, FetchInterval,
               group_id = GroupID,
               generation_id = GenerationID,
               member_id = MemberID,
-              fetch_size = FetchSize,
               autocommit = Autocommit,
               min_bytes = MinBytes,
               max_bytes = MaxBytes,
@@ -116,113 +111,118 @@ fetch(#state{fetch_interval = FetchInterval,
              topic = Topic,
              partition = Partition,
              server = Srv,
-             offset = OffsetFetch,
-             fetch_size = FetchSize,
+             offset = Offset,
              autocommit = Autocommit,
              processing = Processing,
              min_bytes = MinBytes,
              max_bytes = MaxBytes,
              max_wait_time = MaxWaitTime,
              callback = Callback} = State) ->
-  OffsetFetch1 = case kafe:offset([{Topic, [{Partition, -1, 1}]}]) of
-                   {ok, [#{name := Topic,
-                           partitions := [#{error_code := none,
-                                            id := Partition,
-                                            offsets := [Offset]}]}]} ->
-                     if
-                       OffsetFetch + 1 =< Offset - 1 ->
-                         Offsets = lists:sublist(lists:seq(OffsetFetch + 1, Offset - 1), FetchSize),
-                         lager:debug("~p#~p Fetch ~p", [Topic, Partition, Offsets]),
-                         case perform_fetch(Offsets, [], Topic, Partition,
-                                            Autocommit, Processing, Srv, Callback,
-                                            MinBytes, MaxBytes, MaxWaitTime) of
-                           [] ->
-                             lists:max(Offsets);
-                           Fetched ->
-                             lists:max(Fetched)
-                         end;
-                       true ->
-                         OffsetFetch
-                     end;
-                   {ok, [#{name := Topic,
-                           partitions := [#{error_code := Error}]}]} ->
-                     lager:error("Get offset for ~p#~p error : ~p", [Topic, Partition, Error]),
-                     OffsetFetch;
-                   {error, Error} ->
-                     lager:error("Get offset for ~p#~p error : ~p", [Topic, Partition, Error]),
-                     OffsetFetch
-                 end,
+  OffsetFetch = case gen_server:call(Srv, can_fetch) of
+                  true ->
+                    case kafe:offset([{Topic, [{Partition, -1, 1}]}]) of
+                      {ok, [#{name := Topic,
+                              partitions := [#{error_code := none,
+                                               id := Partition,
+                                               offsets := [MaxOffset]}]}]} ->
+                        case (Offset + 1 =< MaxOffset - 1) of
+                          true ->
+                            NoError = kafe_error:code(0),
+                            OffsetOutOfRange = kafe_error:code(1),
+                            case kafe:fetch(-1, Topic, #{partition => Partition,
+                                                         offset => Offset + 1,
+                                                         max_bytes => MaxBytes,
+                                                         min_bytes => MinBytes,
+                                                         max_wait_time => MaxWaitTime}) of
+                              {ok, #{topics :=
+                                     [#{name := Topic,
+                                        partitions :=
+                                        [#{error_code := ErrorCode,
+                                           high_watermaker_offset := NewOffset,
+                                           messages := Messages,
+                                           partition := Partition}]}]}} when ErrorCode == NoError ->
+                                perform_fetch(Messages, Topic, Partition, Autocommit, Processing, Srv, Callback, NewOffset, Offset);
+                              {ok, #{topics :=
+                                     [#{name := Topic,
+                                        partitions :=
+                                        [#{error_code := ErrorCode,
+                                           high_watermaker_offset := NewOffset,
+                                           partition := Partition}]}]}} when ErrorCode == OffsetOutOfRange ->
+                                % TODO verify
+                                NewOffset - 1;
+                              {ok, #{topics :=
+                                     [#{name := Topic,
+                                        partitions :=
+                                        [#{error_code := ErrorCode,
+                                           partition := Partition}]}]}} ->
+                                lager:debug("Offset #~p topic ~s:~p error: ~s", [Offset + 1, Topic, Partition, kafe_error:message(ErrorCode)]),
+                                Offset;
+                              Error ->
+                                lager:error("Failed to fetch message #~p topic ~p:~p : ~p", [Offset + 1, Topic, Partition, Error]),
+                                Offset
+                            end;
+                          false ->
+                            Offset
+                        end;
+                      {ok, [#{name := Topic,
+                              partitions := [#{error_code := Error}]}]} ->
+                        lager:error("Get offset for ~p#~p error : ~p", [Topic, Partition, kafe_error:message(Error)]),
+                        Offset;
+                      {error, Error} ->
+                        lager:error("Get offset for ~p#~p error : ~p", [Topic, Partition, Error]),
+                        Offset
+                    end;
+                  false ->
+                    Offset
+                end,
   State#state{timer = erlang:send_after(FetchInterval, self(), fetch),
-              offset = OffsetFetch1}.
+              offset = OffsetFetch}.
 
-perform_fetch([], Acc, _, _, _, _, _, _, _, _, _) ->
-  Acc;
-perform_fetch([Offset|Offsets], Acc,
-              Topic, Partition, Autocommit, Processing, Srv, Callback,
-              MinBytes, MaxBytes, MaxWaitTime) ->
-  case gen_server:call(Srv, can_fetch) of
-    true ->
-      NoError = kafe_error:code(0),
-      OffsetOutOfRange = kafe_error:code(1),
-      case kafe:fetch(-1, Topic, #{partition => Partition,
-                                   offset => Offset,
-                                   max_bytes => MaxBytes,
-                                   min_bytes => MinBytes,
-                                   max_wait_time => MaxWaitTime}) of
-        {ok, #{topics :=
-               [#{name := Topic,
-                  partitions :=
-                  [#{error_code := NoError,
-                     message := #{key := Key,
-                                  offset := Offset,
-                                  value := Value},
-                     partition := Partition}]}]}} ->
-          CommitRef = gen_server:call(Srv, {store_for_commit, Topic, Partition, Offset}, infinity),
-          case commit(CommitRef, Autocommit, Processing, at_most_once) of
+perform_fetch([], _, _, _, _, _, _, NewOffset, LastOffset) ->
+  case NewOffset - 1 of
+    LastOffset ->
+      LastOffset;
+    ExpectedOffset ->
+      lager:info("Last expected offset (~p) for fetch does not match : ~p", [ExpectedOffset, LastOffset]),
+      LastOffset
+  end;
+perform_fetch([#{offset := Offset,
+                 key := Key,
+                 value := Value}|Messages],
+              Topic, Partition,
+              Autocommit, Processing,
+              Srv, Callback,
+              NewOffset, LastOffset) ->
+  CommitRef = gen_server:call(Srv, {store_for_commit, Topic, Partition, Offset}, infinity),
+  case commit(CommitRef, Autocommit, Processing, at_most_once) of
+    {error, Reason} ->
+      lager:error("[~p] Commit error for offset ~p of ~p#~p : ~p", [Processing, Offset, Topic, Partition, Reason]),
+      LastOffset;
+    _ ->
+      lager:debug("Perform message offset ~p for ~p#~p with commit ref ~p", [Offset, Topic, Partition, CommitRef]),
+      case try
+             erlang:apply(Callback, [CommitRef, Topic, Partition, Offset, Key, Value])
+           catch
+             Class:Reason0 ->
+               lager:error(
+                 "Callback for message #~p of ~p#~p crash:~s",
+                 [Offset, Topic, Partition, lager:pr_stacktrace(erlang:get_stacktrace(), {Class, Reason0})]),
+               callback_exception
+           end of
+        ok ->
+          case commit(CommitRef, Autocommit, Processing, at_least_once) of
             {error, Reason} ->
               lager:error("[~p] Commit error for offset ~p of ~p#~p : ~p", [Processing, Offset, Topic, Partition, Reason]),
-              Acc;
+              LastOffset;
             _ ->
-              lager:debug("Fetch offset ~p for ~p#~p with commit ref ~p", [Offset, Topic, Partition, CommitRef]),
-              case try
-                     erlang:apply(Callback, [CommitRef, Topic, Partition, Offset, Key, Value])
-                   catch
-                     Class:Reason0 ->
-                       lager:error(
-                         "Callback for message #~p of ~p#~p crash:~s",
-                         [Offset, Topic, Partition, lager:pr_stacktrace(erlang:get_stacktrace(), {Class, Reason0})]),
-                       callback_exception
-                   end of
-                ok ->
-                  case commit(CommitRef, Autocommit, Processing, at_least_once) of
-                    {error, Reason} ->
-                      lager:error("[~p] Commit error for offset ~p of ~p#~p : ~p", [Processing, Offset, Topic, Partition, Reason]),
-                      Acc;
-                    _ ->
-                      perform_fetch(Offsets, [Offset|Acc], Topic, Partition, Autocommit, Processing, Srv, Callback,
-                                    MinBytes, MaxBytes, MaxWaitTime)
-                  end;
-                callback_exception ->
-                  Acc;
-                {error, Error} ->
-                  lager:error("Callback for message #~p of ~p#~p return error : ~p", [Offset, Topic, Partition, Error]),
-                  Acc
-              end
+              perform_fetch(Messages, Topic, Partition, Autocommit, Processing, Srv, Callback, NewOffset, Offset)
           end;
-        {ok, #{topics :=
-               [#{name := Topic,
-                  partitions :=
-                  [#{error_code := OffsetOutOfRange,
-                     partition := Partition}]}]}} ->
-          lager:debug("Offset #~p topic ~p:~p : out of range", [Offset, Topic, Partition]),
-          perform_fetch(Offsets, Acc, Topic, Partition, Autocommit, Processing, Srv, Callback,
-                        MinBytes, MaxBytes, MaxWaitTime);
-        Error ->
-          lager:error("Failed to fetch message #~p topic ~p:~p : ~p", [Offset, Topic, Partition, Error]),
-          Acc
-      end;
-    false ->
-      Acc
+        callback_exception ->
+          LastOffset;
+        {error, Error} ->
+          lager:error("Callback for message #~p of ~p#~p return error : ~p", [Offset, Topic, Partition, Error]),
+          LastOffset
+      end
   end.
 
 commit(CommitRef, true, Processing, Processing) when Processing == at_least_once;

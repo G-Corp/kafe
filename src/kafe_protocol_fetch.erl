@@ -73,11 +73,11 @@ request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) ->
 %   HighwaterMarkOffset => int64
 %   MessageSetSize => int32
 %   ThrottleTime => int32
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) when NumberOfTopics > 0 andalso ApiVersion == ?V0 ->
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) when NumberOfTopics > 0, ApiVersion == ?V0 ->
   response(NumberOfTopics, Remainder, []);
 response(<<ThrottleTime:32/signed, NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) when ApiVersion == ?V1;
                                                                                                   ApiVersion == ?V2 ->
-  case response(NumberOfTopics, Remainder) of
+  case response(NumberOfTopics, Remainder, []) of
     {ok, Response} ->
       {ok, #{topics => Response,
              throttle_time => ThrottleTime}};

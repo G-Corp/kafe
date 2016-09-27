@@ -33,7 +33,6 @@
           callback = undefined,
           fetch_interval = ?DEFAULT_CONSUMER_FETCH_INTERVAL,
           fetch_pids = [],
-          fetch_size = ?DEFAULT_CONSUMER_FETCH_SIZE,
           max_bytes = ?DEFAULT_FETCH_MAX_BYTES,
           min_bytes = ?DEFAULT_FETCH_MIN_BYTES,
           max_wait_time = ?DEFAULT_FETCH_MAX_WAIT_TIME,
@@ -61,7 +60,6 @@ init([GroupID, Options]) ->
   _ = erlang:process_flag(trap_exit, true),
   _ = kafe_cst:attach_srv(GroupID),
   FetchInterval = maps:get(fetch_interval, Options, ?DEFAULT_CONSUMER_FETCH_INTERVAL),
-  FetchSize = maps:get(fetch_size, Options, ?DEFAULT_CONSUMER_FETCH_SIZE),
   MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
   MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
   MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
@@ -75,7 +73,6 @@ init([GroupID, Options]) ->
           group_id = bucs:to_binary(GroupID),
           callback = maps:get(callback, Options),
           fetch_interval = FetchInterval,
-          fetch_size = FetchSize,
           max_bytes = MaxBytes,
           min_bytes = MinBytes,
           max_wait_time = MaxWaitTime,
@@ -285,7 +282,6 @@ start_fetchers([{Topic, Partition}|Rest], #state{fetchers = Fetchers,
                                                  group_id = GroupID,
                                                  generation_id = GenerationID,
                                                  member_id = MemberID,
-                                                 fetch_size = FetchSize,
                                                  autocommit = Autocommit,
                                                  min_bytes = MinBytes,
                                                  max_bytes = MaxBytes,
@@ -294,9 +290,8 @@ start_fetchers([{Topic, Partition}|Rest], #state{fetchers = Fetchers,
                                                  processing = Processing} = State) ->
   case kafe_consumer_fetcher_sup:start_child(Topic, Partition, self(), FetchInterval,
                                              GroupID, GenerationID, MemberID,
-                                             FetchSize, Autocommit,
-                                             MinBytes, MaxBytes, MaxWaitTime,
-                                             Callback, Processing) of
+                                             Autocommit, MinBytes, MaxBytes,
+                                             MaxWaitTime, Callback, Processing) of
     {ok, Pid} ->
       MRef = erlang:monitor(process, Pid),
       start_fetchers(Rest, State#state{fetchers = [{{Topic, Partition}, Pid, MRef}|Fetchers]});

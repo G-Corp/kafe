@@ -839,8 +839,6 @@ empty (i.e. <<>>, default), but a rejoining member should use the same memberID 
 
 * `fetch_interval :: integer()` : Fetch interval in ms (default : 1000)
 
-* `fetch_size :: integer()` : Maximum number of offset to fetch(default : 1)
-
 * `max_bytes :: integer()` : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 1024*1024)
 
