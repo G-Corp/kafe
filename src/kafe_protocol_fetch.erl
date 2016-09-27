@@ -128,7 +128,7 @@ partitions(
   partitions(N - 1, Remainder,
              [#{partition => Partition,
                 error_code => kafe_error:code(ErrorCode),
-                high_watermaker_offset => HighwaterMarkOffset,
+                high_watermark_offset => HighwaterMarkOffset,
                 messages => message(MessageSet)} | Acc]);
 partitions(_, _, _) ->
   {error, incomplete_data}.
@@ -151,7 +151,7 @@ message(<<Offset:64/signed,
       {Value, <<>>} = get_kv(MessageRemainder1),
       message(Remainder, [#{offset => Offset,
                             crc => Crc,
-                            magic_bytes => 0,
+                            magic_byte => 0,
                             attributes => Attibutes,
                             key => Key,
                             value => Value}|Acc]);
@@ -164,7 +164,7 @@ message(<<Offset:64/signed,
       {Value, <<>>} = get_kv(MessageRemainder1),
       message(Remainder, [#{offset => Offset,
                             crc => Crc,
-                            magic_bytes => 1,
+                            magic_byte => 1,
                             attributes => Attibutes,
                             timestamp => Timestamp,
                             key => Key,

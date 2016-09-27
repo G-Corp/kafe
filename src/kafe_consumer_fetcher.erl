@@ -141,7 +141,7 @@ fetch(#state{fetch_interval = FetchInterval,
                                      [#{name := Topic,
                                         partitions :=
                                         [#{error_code := ErrorCode,
-                                           high_watermaker_offset := NewOffset,
+                                           high_watermark_offset := NewOffset,
                                            messages := Messages,
                                            partition := Partition}]}]}} when ErrorCode == NoError ->
                                 perform_fetch(Messages, Topic, Partition, Autocommit, Processing, Srv, Callback, NewOffset, Offset);
@@ -149,10 +149,16 @@ fetch(#state{fetch_interval = FetchInterval,
                                      [#{name := Topic,
                                         partitions :=
                                         [#{error_code := ErrorCode,
-                                           high_watermaker_offset := NewOffset,
+                                           high_watermark_offset := -1,
                                            partition := Partition}]}]}} when ErrorCode == OffsetOutOfRange ->
-                                % TODO verify
-                                NewOffset - 1;
+                                % REMARK: this must never append...
+                                Offset;
+                              {ok, #{topics :=
+                                     [#{name := Topic,
+                                        partitions :=
+                                        [#{error_code := ErrorCode,
+                                           partition := Partition}]}]}} when ErrorCode == OffsetOutOfRange ->
+                                Offset + 1; % TODO verify if we still have messages
                               {ok, #{topics :=
                                      [#{name := Topic,
                                         partitions :=
@@ -263,7 +269,7 @@ fetch_without_error_test() ->
                                      [#{name => Topic,
                                         partitions =>
                                         [#{error_code => none,
-                                           high_watermaker_offset => Offset + 2,
+                                           high_watermark_offset => Offset + 2,
                                            messages => [
                                                         #{offset => Offset,
                                                           key => <<"key100">>,
@@ -464,6 +470,55 @@ kafka_fetch_error_test() ->
                                      [#{name => Topic,
                                         partitions =>
                                         [#{error_code => unknown_topic_or_partition,
+                                           partition => Partition}]}]}}
+                           end),
+
+  ?assertMatch(#state{fetch_interval = 100,
+                      topic = <<"topic">>,
+                      partition = 10,
+                      server = srv,
+                      offset = 99,
+                      autocommit = false,
+                      processing = at_least_once,
+                      min_bytes = 1,
+                      max_bytes = 10000,
+                      max_wait_time = 10,
+                      callback = _},
+               fetch(#state{fetch_interval = 100,
+                            topic = <<"topic">>,
+                            partition = 10,
+                            server = srv,
+                            offset = 99,
+                            autocommit = false,
+                            processing = at_least_once,
+                            min_bytes = 1,
+                            max_bytes = 10000,
+                            max_wait_time = 10,
+                            callback = fun(_, _, _, _, _, _) -> ok end})),
+
+  meck:unload(kafe),
+  meck:unload(kafe_consumer).
+
+kafka_fetch_offset_out_of_range_error_test() ->
+  meck:new(kafe_consumer),
+  meck:expect(kafe_consumer, can_fetch, fun(_) -> true end),
+  meck:expect(kafe_consumer, store_for_commit, fun(_, _, _, Offset) ->
+                                                   Offset
+                                               end),
+  meck:new(kafe),
+  meck:expect(kafe, offset, fun([{Topic, [{Partition, -1, 1}]}]) ->
+                                {ok, [#{name => Topic,
+                                        partitions => [#{error_code => none,
+                                                         id => Partition,
+                                                         offsets => [102]}]}]}
+                            end),
+  meck:expect(kafe, fetch, fun(_, Topic, #{partition := Partition,
+                                           offset := Offset}) ->
+                              {ok, #{topics =>
+                                     [#{name => Topic,
+                                        partitions =>
+                                        [#{error_code => offset_out_of_range,
+                                           high_watermark_offset => -1,
                                            partition => Partition}]}]}}
                            end),
 

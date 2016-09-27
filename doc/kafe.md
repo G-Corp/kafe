@@ -202,7 +202,7 @@ message() = binary() | {binary(), binary()}
 
 
 <pre><code>
-message_set() = #{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integer(), error_code =&gt; <a href="#type-error_code">error_code()</a>, high_watermaker_offset =&gt; integer(), messages =&gt; [#{offset =&gt; integer(), crc =&gt; integer(), magic_bytes =&gt; 0 | 1, attributes =&gt; integer(), timestamp =&gt; integer(), key =&gt; binary(), value =&gt; binary()}]}]}
+message_set() = #{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integer(), error_code =&gt; <a href="#type-error_code">error_code()</a>, high_watermark_offset =&gt; integer(), messages =&gt; [#{offset =&gt; integer(), crc =&gt; integer(), magic_byte =&gt; 0 | 1, attributes =&gt; integer(), timestamp =&gt; integer(), key =&gt; binary(), value =&gt; binary()}]}]}
 </code></pre>
 
 
