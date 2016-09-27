@@ -100,8 +100,8 @@ response(
  ) ->
   <<CorrelationId:32/signed, Remainder/bytes>> = Packet,
   case orddict:find(CorrelationId, Requests) of
-    {ok, #{from := From, handler := ResponseHandler, socket := Socket, api_version := ApiVersion}} ->
-      _ = gen_server:reply(From, ResponseHandler(Remainder, ApiVersion)),
+    {ok, #{from := From, handler := {ResponseHandler, ResponseHandlerParams}, socket := Socket, api_version := ApiVersion}} ->
+      _ = gen_server:reply(From, erlang:apply(ResponseHandler, [Remainder, ApiVersion|ResponseHandlerParams])),
       case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
         ok ->
           {noreply, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};

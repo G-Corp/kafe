@@ -72,7 +72,7 @@ error_code() = no_error | unknown | offset_out_of_range | invalid_message | unkn
 
 
 <pre><code>
-fetch_options() = #{partition =&gt; integer(), offset =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer()}
+fetch_options() = #{partition =&gt; integer(), offset =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), retrieve =&gt; first | all}
 </code></pre>
 
 
@@ -202,7 +202,7 @@ message() = binary() | {binary(), binary()}
 
 
 <pre><code>
-message_set() = #{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integer(), error_code =&gt; <a href="#type-error_code">error_code()</a>, high_watermaker_offset =&gt; integer(), message =&gt; [#{offset =&gt; integer(), crc =&gt; integer(), attributes =&gt; integer(), key =&gt; binary(), value =&gt; binary()}]}]}
+message_set() = #{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integer(), error_code =&gt; <a href="#type-error_code">error_code()</a>, high_watermaker_offset =&gt; integer(), messages =&gt; [#{offset =&gt; integer(), crc =&gt; integer(), magic_bytes =&gt; 0 | 1, attributes =&gt; integer(), timestamp =&gt; integer(), key =&gt; binary(), value =&gt; binary()}]}]}
 </code></pre>
 
 
@@ -437,7 +437,7 @@ Equivalent to [`fetch(ReplicatID, TopicName, #{})`](#fetch-3).
 ### fetch/3 ###
 
 <pre><code>
-fetch(ReplicatID::integer(), TopicName::binary(), Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {error, term()}
+fetch(ReplicatID::integer(), TopicName::binary(), Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {ok, #{topics =&gt; [<a href="#type-message_set">message_set()</a>], throttle_time =&gt; integer()}} | {error, term()}
 </code></pre>
 <br />
 
@@ -462,6 +462,9 @@ MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait
 
 * `max_wait_time :: integer()` : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
 at the time the request is issued (default : 1).
+
+* `retrieve :: all | first` : if the Kafka's response buffer contains more than one complete message ; with `first` we will ignore the
+remaining data ; with `all` we will parse all complete messages in the buffer (default : first).
 
 
 ReplicatID must __always__ be -1.

@@ -63,9 +63,11 @@ init({Addr, Port}) ->
   end.
 
 handle_call({call, Request, RequestParams, Response}, From, State) ->
+  handle_call({call, Request, RequestParams, Response, []}, From, State);
+handle_call({call, Request, RequestParams, Response, ResponseParams}, From, State) ->
   send_request(erlang:apply(Request, RequestParams ++ [State]),
                From,
-               Response,
+               {Response, ResponseParams},
                State);
 handle_call(alive, _From, #{socket := Socket, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State) ->
   case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of

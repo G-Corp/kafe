@@ -7,7 +7,8 @@ kafe_protocol_fetch_test_() ->
   {setup, fun setup/0, fun teardown/1,
    [
     ?_test(t_request()),
-    ?_test(t_response())
+    ?_test(t_response()),
+    ?_test(t_incomplete_response())
    ]
   }.
 
@@ -38,7 +39,60 @@ t_request() ->
      kafe_protocol_fetch:request(-1, <<"topic">>, #{offset => 0}, ?REQ_STATE2(0, 2))).
 
 t_response() ->
-  ?assertEqual(kafe_protocol_fetch:response(
+  ?assertEqual(
+     {ok, [#{name => <<"topic">>,
+             partitions => [#{error_code => none,
+                              high_watermaker_offset => 5,
+                              messages => [#{attributes => 0,
+                                             crc => 1940715388,
+                                             key => <<>>,
+                                             magic_bytes => 0,
+                                             offset => 0,
+                                             value => <<"hello world">>},
+                                           #{attributes => 0,
+                                             crc => 1940715388,
+                                             key => <<>>,
+                                             magic_bytes => 0,
+                                             offset => 1,
+                                             value => <<"hello world">>},
+                                           #{attributes => 0,
+                                             crc => 1940715388,
+                                             key => <<>>,
+                                             magic_bytes => 0,
+                                             offset => 2,
+                                             value => <<"hello world">>},
+                                           #{attributes => 0,
+                                             crc => 1940715388,
+                                             key => <<>>,
+                                             magic_bytes => 0,
+                                             offset => 3,
+                                             value => <<"hello world">>},
+                                           #{attributes => 0,
+                                             crc => 1940715388,
+                                             key => <<>>,
+                                             magic_bytes => 0,
+                                             offset => 4,
+                                             value => <<"hello world">>}],
+                              partition => 0}]}]},
+     kafe_protocol_fetch:response(
+       <<0, 0, 0, 1, 0, 5, 116, 111, 112, 105, 99, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 5, 0, 0, 0, 185, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 115, 172, 247, 124, 0, 0,
+         255, 255, 255, 255, 0, 0, 0, 11, 104, 101, 108, 108, 111, 32, 119, 111, 114,
+         108, 100, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 25, 115, 172, 247, 124, 0, 0, 255, 255,
+         255, 255, 0, 0, 0, 11, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 0,
+         0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 25, 115, 172, 247, 124, 0, 0, 255, 255, 255, 255, 0,
+         0, 0, 11, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 0, 0, 0, 0, 0, 0,
+         0, 3, 0, 0, 0, 25, 115, 172, 247, 124, 0, 0, 255, 255, 255, 255, 0, 0, 0, 11, 104,
+         101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0,
+         25, 115, 172, 247, 124, 0, 0, 255, 255, 255, 255, 0, 0, 0, 11, 104, 101, 108,
+         108, 111, 32, 119, 111, 114, 108, 100>>, 0)).
+t_incomplete_response() ->
+  ?assertEqual({error, incomplete_data},
+               kafe_protocol_fetch:response(<<>>, 0)),
+  ?assertEqual({error, incomplete_data},
+               kafe_protocol_fetch:response(<<0>>, 0)),
+  ?assertEqual({error, incomplete_data},
+               kafe_protocol_fetch:response(
                  <<0, 0, 0, 1, 0, 5, 116, 111, 112, 105, 99, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                    0, 0, 5, 0, 0, 0, 185, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 115, 172, 247, 124, 0, 0,
                    255, 255, 255, 255, 0, 0, 0, 11, 104, 101, 108, 108, 111, 32, 119, 111, 114,
@@ -49,14 +103,4 @@ t_response() ->
                    0, 3, 0, 0, 0, 25, 115, 172, 247, 124, 0, 0, 255, 255, 255, 255, 0, 0, 0, 11, 104,
                    101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0,
                    25, 115, 172, 247, 124, 0, 0, 255, 255, 255, 255, 0, 0, 0, 11, 104, 101, 108,
-                   108, 111, 32, 119, 111, 114, 108, 100>>, 0),
-               {ok, [#{name => <<"topic">>,
-                      partitions => [#{error_code => none,
-                                       high_watermaker_offset => 5,
-                                       message => #{attributes => 0,
-                                                    crc => 1940715388,
-                                                    key => <<>>,
-                                                    magic_bytes => 0,
-                                                    offset => 0,
-                                                    value => <<"hello world">>},
-                                       partition => 0}]}]}).
+                   108, 111, 32, 119, 111, 114, 108>>, 0)).

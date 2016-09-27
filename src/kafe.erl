@@ -118,14 +118,17 @@
                            offset => integer(),
                            max_bytes => integer(),
                            min_bytes => integer(),
-                           max_wait_time => integer()}.
+                           max_wait_time => integer(),
+                           retrieve => first | all}.
 -type message_set() :: #{name => binary(),
                          partitions => [#{partition => integer(),
                                           error_code => error_code(),
                                           high_watermaker_offset => integer(),
-                                          message => [#{offset => integer(),
+                                          messages => [#{offset => integer(),
                                                         crc => integer(),
+                                                        magic_bytes => 0 | 1,
                                                         attributes => integer(),
+                                                        timestamp => integer(),
                                                         key => binary(),
                                                         value => binary()}]}]}.
 -type group_coordinator() :: #{error_code => error_code(),
@@ -422,6 +425,8 @@ fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_
 % 1).</li>
 % <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
 % at the time the request is issued (default : 1).</li>
+% <li><tt>retrieve :: all | first</tt> : if the Kafka's response buffer contains more than one complete message ; with <tt>first</tt> we will ignore the
+% remaining data ; with <tt>all</tt> we will parse all complete messages in the buffer (default : first).</li>
 % </ul>
 %
 % ReplicatID must <b>always</b> be -1.
@@ -435,7 +440,7 @@ fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI">Kafka protocol documentation</a>.
 % @end
--spec fetch(integer(), binary(), fetch_options()) -> {ok, [message_set()]} | {error, term()}.
+-spec fetch(integer(), binary(), fetch_options()) -> {ok, [message_set()]} | {ok, #{topics => [message_set()], throttle_time => integer()}} | {error, term()}.
 fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), (is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName)), is_map(Options) ->
   kafe_protocol_fetch:run(ReplicatID, TopicName, Options).
 

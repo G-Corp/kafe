@@ -73,15 +73,19 @@ request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) ->
 %   HighwaterMarkOffset => int64
 %   MessageSetSize => int32
 %   ThrottleTime => int32
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion)
-  when ApiVersion == ?V0 ->
-  {ok, response(NumberOfTopics, Remainder, [])};
-response(<<ThrottleTime:32/signed, NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion)
-  when ApiVersion == ?V1;
-       ApiVersion == ?V2 ->
-  {ok, #{topics => response(NumberOfTopics, Remainder, []),
-         throttle_time => ThrottleTime}}.
-
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) when NumberOfTopics > 0 andalso ApiVersion == ?V0 ->
+  response(NumberOfTopics, Remainder, []);
+response(<<ThrottleTime:32/signed, NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) when ApiVersion == ?V1;
+                                                                                                  ApiVersion == ?V2 ->
+  case response(NumberOfTopics, Remainder) of
+    {ok, Response} ->
+      {ok, #{topics => Response,
+             throttle_time => ThrottleTime}};
+    Error ->
+      Error
+  end;
+response(_, _) ->
+  {error, incomplete_data}.
 
 % Private
 
@@ -92,7 +96,7 @@ clean_offset({Partition, Offset}) ->
               end}.
 
 response(0, _, Result) ->
-  Result;
+  {ok, Result};
 response(
   N,
   <<TopicNameLength:16/signed,
@@ -100,12 +104,18 @@ response(
     NumberOfPartitions:32/signed,
     PartitionRemainder/binary>>,
   Acc) ->
-  {Partitions, Remainder} = partitions(NumberOfPartitions, PartitionRemainder, []),
-  response(N - 1, Remainder, [#{name => TopicName,
-                                partitions => Partitions}|Acc]).
+  case partitions(NumberOfPartitions, PartitionRemainder, []) of
+    {ok, Partitions, Remainder} ->
+      response(N - 1, Remainder, [#{name => TopicName,
+                                    partitions => Partitions}|Acc]);
+    Error ->
+      Error
+  end;
+response(_, _, _) ->
+  {error, incomplete_data}.
 
 partitions(0, Remainder, Acc) ->
-  {Acc, Remainder};
+  {ok, Acc, Remainder};
 partitions(
   N,
   <<Partition:32/signed,
@@ -119,14 +129,19 @@ partitions(
              [#{partition => Partition,
                 error_code => kafe_error:code(ErrorCode),
                 high_watermaker_offset => HighwaterMarkOffset,
-                message => message(MessageSet)} | Acc]).
+                messages => message(MessageSet)} | Acc]);
+partitions(_, _, _) ->
+  {error, incomplete_data}.
 
-message(<<>>) ->
-  #{};
+message(Data) ->
+  message(Data, []).
+
+message(<<>>, Acc) ->
+  lists:reverse(Acc);
 message(<<Offset:64/signed,
           MessageSize:32/signed,
           Message:MessageSize/binary,
-          _Remainder/binary>>) ->
+          Remainder/binary>>, Acc) ->
   case Message of
     <<Crc:32/signed,
       0:8/signed,
@@ -134,12 +149,12 @@ message(<<Offset:64/signed,
       MessageRemainder/binary>> ->
       {Key, MessageRemainder1} = get_kv(MessageRemainder),
       {Value, <<>>} = get_kv(MessageRemainder1),
-      #{offset => Offset,
-        crc => Crc,
-        magic_bytes => 0,
-        attributes => Attibutes,
-        key => Key,
-        value => Value};
+      message(Remainder, [#{offset => Offset,
+                            crc => Crc,
+                            magic_bytes => 0,
+                            attributes => Attibutes,
+                            key => Key,
+                            value => Value}|Acc]);
     <<Crc:32/signed,
       1:8/signed,
       Attibutes:8/signed,
@@ -147,14 +162,16 @@ message(<<Offset:64/signed,
       MessageRemainder/binary>> ->
       {Key, MessageRemainder1} = get_kv(MessageRemainder),
       {Value, <<>>} = get_kv(MessageRemainder1),
-      #{offset => Offset,
-        crc => Crc,
-        magic_bytes => 1,
-        attributes => Attibutes,
-        timestamp => Timestamp,
-        key => Key,
-        value => Value}
-  end.
+      message(Remainder, [#{offset => Offset,
+                            crc => Crc,
+                            magic_bytes => 1,
+                            attributes => Attibutes,
+                            timestamp => Timestamp,
+                            key => Key,
+                            value => Value}|Acc])
+  end;
+message(_, Acc) ->
+  Acc.
 
 get_kv(<<KVSize:32/signed, Remainder/binary>>) when KVSize =:= -1 ->
   {<<>>, Remainder};
