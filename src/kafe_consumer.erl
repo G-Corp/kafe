@@ -96,6 +96,8 @@
 -export([
          start_link/2
          , init/1
+         , store_for_commit/4
+         , can_fetch/1
          , member_id/2
          , generation_id/2
          , topics/2
@@ -191,6 +193,14 @@ pending_commits(GroupPIDOrID, Topics) ->
                             lists:append(Acc, [{T, X} || X <- P])
                       end, [], Topics),
   kafe_consumer_sup:call_srv(GroupPIDOrID, {pending_commits, Topics1}).
+
+% @hidden
+store_for_commit(Srv, Topic, Partition, Offset) ->
+  gen_server:call(Srv, {store_for_commit, Topic, Partition, Offset}, infinity).
+
+% @hidden
+can_fetch(Srv) ->
+  gen_server:call(Srv, can_fetch).
 
 % @hidden
 member_id(GroupID, MemberID) ->

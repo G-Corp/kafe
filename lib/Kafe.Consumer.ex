@@ -30,6 +30,12 @@ defmodule Kafe.Consumer do
   def unquote(:"pending_commits")(arg1, arg2) do
     :erlang.apply(:"kafe_consumer", :"pending_commits", [arg1, arg2])
   end
+  def unquote(:"store_for_commit")(arg1, arg2, arg3, arg4) do
+    :erlang.apply(:"kafe_consumer", :"store_for_commit", [arg1, arg2, arg3, arg4])
+  end
+  def unquote(:"can_fetch")(arg1) do
+    :erlang.apply(:"kafe_consumer", :"can_fetch", [arg1])
+  end
   def unquote(:"member_id")(arg1) do
     :erlang.apply(:"kafe_consumer", :"member_id", [arg1])
   end

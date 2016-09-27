@@ -495,3 +495,4 @@ invalid_commit_test() ->
   meck:unload(kafe).
 
 -endif.
+
