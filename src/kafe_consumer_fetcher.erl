@@ -141,10 +141,9 @@ fetch(#state{fetch_interval = FetchInterval,
                                      [#{name := Topic,
                                         partitions :=
                                         [#{error_code := ErrorCode,
-                                           high_watermark_offset := NewOffset,
                                            messages := Messages,
                                            partition := Partition}]}]}} when ErrorCode == NoError ->
-                                perform_fetch(Messages, Topic, Partition, Autocommit, Processing, Srv, Callback, NewOffset, Offset);
+                                perform_fetch(Messages, Topic, Partition, Autocommit, Processing, Srv, Callback, Offset);
                               {ok, #{topics :=
                                      [#{name := Topic,
                                         partitions :=
@@ -187,21 +186,15 @@ fetch(#state{fetch_interval = FetchInterval,
   State#state{timer = erlang:send_after(FetchInterval, self(), fetch),
               offset = OffsetFetch}.
 
-perform_fetch([], _, _, _, _, _, _, NewOffset, LastOffset) ->
-  case NewOffset - 1 of
-    LastOffset ->
-      LastOffset;
-    ExpectedOffset ->
-      lager:info("Last expected offset (~p) for fetch does not match : ~p", [ExpectedOffset, LastOffset]),
-      LastOffset
-  end;
+perform_fetch([], _, _, _, _, _, _, LastOffset) ->
+  LastOffset;
 perform_fetch([#{offset := Offset,
                  key := Key,
                  value := Value}|Messages],
               Topic, Partition,
               Autocommit, Processing,
               Srv, Callback,
-              NewOffset, LastOffset) ->
+              LastOffset) ->
   CommitRef = kafe_consumer:store_for_commit(Srv, Topic, Partition, Offset),
   case commit(CommitRef, Autocommit, Processing, at_most_once) of
     {error, Reason} ->
@@ -224,7 +217,7 @@ perform_fetch([#{offset := Offset,
               lager:error("[~p] Commit error for offset ~p of ~p#~p : ~p", [Processing, Offset, Topic, Partition, Reason]),
               LastOffset;
             _ ->
-              perform_fetch(Messages, Topic, Partition, Autocommit, Processing, Srv, Callback, NewOffset, Offset)
+              perform_fetch(Messages, Topic, Partition, Autocommit, Processing, Srv, Callback, Offset)
           end;
         callback_exception ->
           LastOffset;
