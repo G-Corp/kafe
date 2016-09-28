@@ -649,14 +649,13 @@ offset_fetch(ConsumerGroup, Options) when is_list(Options) ->
 offsets(TopicName, ConsumerGroup, Nth) when is_binary(TopicName) ->
   offsets({TopicName, partitions(TopicName)}, ConsumerGroup, Nth);
 offsets({TopicName, PartitionsList}, ConsumerGroup, Nth) ->
-  NoError = kafe_error:code(0),
   case offset([TopicName]) of
     {ok, [#{name := TopicName, partitions := Partitions}]} ->
       {Offsets, PartitionsID} = lists:foldl(fun
                                               (#{id := PartitionID,
                                                  offsets := [Offset|_],
-                                                 error_code := NoError1},
-                                               {AccOffs, AccParts} = Acc) when NoError1 =:= NoError ->
+                                                 error_code := none},
+                                               {AccOffs, AccParts} = Acc) ->
                                                 case lists:member(PartitionID, PartitionsList) of
                                                   true ->
                                                     {[{PartitionID, Offset - 1}|AccOffs], [PartitionID|AccParts]};
@@ -689,7 +688,7 @@ offsets({TopicName, PartitionsList}, ConsumerGroup, Nth) ->
                                              [{TopicName, [{PartitionID, NewOffset, <<>>}]}]) of
                             {ok, [#{name := TopicName,
                                     partitions := [#{partition := PartitionID,
-                                                     error_code := ErrorCode}]}]} when ErrorCode =:= NoError ->
+                                                     error_code := none}]}]} ->
                               Acc;
                             _ ->
                               delete_offset_for_partition(PartitionID, Acc)
