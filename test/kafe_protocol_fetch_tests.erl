@@ -9,7 +9,7 @@ kafe_protocol_fetch_test_() ->
     ?_test(t_request()),
     ?_test(t_response()),
     ?_test(t_incomplete_response()),
-    ?_test(t_response_incomplete_final_message())
+    ?_test(t_response_incomplete_final_message_is_ignored())
    ]
   }.
 
