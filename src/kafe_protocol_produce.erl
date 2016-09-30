@@ -208,5 +208,5 @@ partitions(
 
 get_timestamp() ->
   {Mega, Sec, Micro} = erlang:timestamp(),
-  (Mega*1000000+Sec)*1000000+Micro.
+  (Mega * 1000000 + Sec) * 1000000 + Micro.
 

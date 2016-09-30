@@ -774,9 +774,9 @@ start_consumer(GroupID, Callback, Options) when is_function(Callback, 6) ->
 % @doc
 % Stop the given consumer
 % @end
--spec stop_consumer(GroupPIDOrID :: binary() | atom() | pid()) -> ok | {error, not_found | simple_one_for_one | detached}.
-stop_consumer(GroupPIDOrID) ->
-  kafe_consumer_sup:stop_child(GroupPIDOrID).
+-spec stop_consumer(GroupID :: binary()) -> ok | {error, not_found | simple_one_for_one | detached}.
+stop_consumer(GroupID) ->
+  kafe_consumer_sup:stop_child(GroupID).
 
 % Private
 

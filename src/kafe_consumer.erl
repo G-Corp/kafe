@@ -87,20 +87,14 @@
          , pending_commits/1
          , pending_commits/2
          , describe/1
-         , member_id/1
-         , generation_id/1
-         , topics/1
         ]).
 
 % Private
 -export([
          start_link/2
          , init/1
-         , store_for_commit/4
          , can_fetch/1
-         , member_id/2
-         , generation_id/2
-         , topics/2
+         , store_for_commit/4
          , encode_group_commit_identifier/7
          , decode_group_commit_identifier/1
         ]).
@@ -116,9 +110,9 @@ stop(GroupID) ->
 % @doc
 % Return consumer group descrition
 % @end
--spec describe(GroupPIDOrID :: atom() | pid() | binary()) -> {ok, kafe:describe_group()} | {error, term()}.
-describe(GroupPIDOrID) ->
-  kafe_consumer_sup:call_srv(GroupPIDOrID, describe).
+-spec describe(GroupID :: binary()) -> {ok, kafe:describe_group()} | {error, term()}.
+describe(GroupID) ->
+  kafe:describe_group(GroupID).
 
 % @equiv commit(GroupCommitIdentifier, #{})
 -spec commit(GroupCommitIdentifier :: kafe:group_commit_identifier()) -> ok | {error, term()} | delayed.
@@ -154,9 +148,9 @@ commit(GroupCommitIdentifier, Options) ->
 % @doc
 % Remove all pending commits for the given consumer group.
 % @end
--spec remove_commits(GroupPIDOrID :: atom() | pid() | binary()) -> ok.
-remove_commits(GroupPIDOrID) ->
-  kafe_consumer_sup:call_srv(GroupPIDOrID, remove_commits).
+-spec remove_commits(GroupID :: binary()) -> ok.
+remove_commits(GroupID) ->
+  gen_server:call(kafe_consumer_store:value(GroupID, server_pid), remove_commits).
 
 % @doc
 % Remove the given commit
@@ -173,67 +167,26 @@ remove_commit(GroupCommitIdentifier) ->
 % @doc
 % Return the list of all pending commits for the given consumer group.
 % @end
--spec pending_commits(GroupPIDOrID :: atom() | pid() | binary()) -> [kafe:group_commit_identifier()].
-pending_commits(GroupPIDOrID) ->
+-spec pending_commits(GroupID :: binary()) -> [kafe:group_commit_identifier()].
+pending_commits(GroupID) ->
   Topics = maps:fold(fun
                        (<<"__consumer_offsets">>, _, Acc) -> Acc;
                        (T, P, Acc) -> [{T, maps:keys(P)}|Acc]
                      end, [], kafe:topics()),
-  pending_commits(GroupPIDOrID, Topics).
+  pending_commits(GroupID, Topics).
 
 % @doc
 % Return the list of pending commits for the given topics (and partitions) for the given consumer group.
 % @end
--spec pending_commits(GroupPIDOrID :: atom() | pid() | binary(), [binary() | {binary(), [integer()]}]) -> [kafe:group_commit_identifier()].
-pending_commits(GroupPIDOrID, Topics) ->
+-spec pending_commits(GroupID :: binary(), [binary() | {binary(), [integer()]}]) -> [kafe:group_commit_identifier()].
+pending_commits(GroupID, Topics) ->
   Topics1 = lists:foldl(fun
                         (T, Acc) when is_binary(T) ->
                             lists:append(Acc, [{T, X} || X <- kafe:partitions(T)]);
                         ({T, P}, Acc) when is_binary(T), is_list(P) ->
                             lists:append(Acc, [{T, X} || X <- P])
                       end, [], Topics),
-  kafe_consumer_sup:call_srv(GroupPIDOrID, {pending_commits, Topics1}).
-
-% @hidden
-store_for_commit(Srv, Topic, Partition, Offset) ->
-  gen_server:call(Srv, {store_for_commit, Topic, Partition, Offset}, infinity).
-
-% @hidden
-can_fetch(Srv) ->
-  gen_server:call(Srv, can_fetch).
-
-% @hidden
-member_id(GroupID, MemberID) ->
-  kafe_consumer_sup:call_srv(GroupID, {member_id, MemberID}).
-
-% @doc
-% Return the <tt>member_id</tt> for the given consumer group.
-% @end
--spec member_id(GroupPIDOrID :: atom() | pid() | binary()) -> binary().
-member_id(GroupID) ->
-  kafe_consumer_sup:call_srv(GroupID, member_id).
-
-% @hidden
-generation_id(GroupID, GenerationID) ->
-  kafe_consumer_sup:call_srv(GroupID, {generation_id, GenerationID}).
-
-% @doc
-% Return the <tt>generation_id</tt> for the given consumer group.
-% @end
--spec generation_id(GroupPIDOrID :: atom() | pid() | binary()) -> integer().
-generation_id(GroupID) ->
-  kafe_consumer_sup:call_srv(GroupID, generation_id).
-
-% @hidden
-topics(GroupID, Topics) ->
-  kafe_consumer_sup:call_srv(GroupID, {topics, Topics}).
-
-% @doc
-% Return the topics (and partitions) for the given the consumer group.
-% @end
--spec topics(GroupPIDOrID :: atom() | pid() | binary()) -> [{binary(), [integer()]}].
-topics(GroupID) ->
-  kafe_consumer_sup:call_srv(GroupID, topics).
+  gen_server:call(kafe_consumer_store:value(GroupID, server_pid), {pending_commits, Topics1}).
 
 % @hidden
 start_link(GroupID, Options) ->
@@ -241,7 +194,8 @@ start_link(GroupID, Options) ->
 
 % @hidden
 init([GroupID, Options]) ->
-  _ = kafe_cst:attach_sup(GroupID),
+  kafe_consumer_store:new(GroupID),
+  kafe_consumer_store:insert(GroupID, sup_pid, self()),
   {ok, {
      #{strategy => one_for_one,
        intensity => 1,
@@ -261,6 +215,19 @@ init([GroupID, Options]) ->
         modules => [kafe_consumer_fsm]}
      ]
     }}.
+
+% @hidden
+can_fetch(GroupID) ->
+  case kafe_consumer_store:lookup(GroupID, can_fetch) of
+    {ok, true} ->
+      true;
+    _ ->
+      false
+  end.
+
+% @hidden
+store_for_commit(GroupID, Topic, Partition, Offset) ->
+  gen_server:call(kafe_consumer_store:value(GroupID, server_pid), {store_for_commit, Topic, Partition, Offset}).
 
 % @hidden
 encode_group_commit_identifier(Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID) ->

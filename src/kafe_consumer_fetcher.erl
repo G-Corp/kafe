@@ -9,7 +9,7 @@
 -endif.
 
 %% API.
--export([start_link/13]).
+-export([start_link/10]).
 
 %% gen_server.
 -export([init/1]).
@@ -22,13 +22,10 @@
 -record(state, {
           topic = undefined,
           partition = undefined,
-          server = undefined,
           fetch_interval = undefined,
           timer = undefined,
           offset = -1,
           group_id = undefined,
-          generation_id = undefined,
-          member_id = undefined,
           autocommit = ?DEFAULT_CONSUMER_AUTOCOMMIT,
           min_bytes = ?DEFAULT_FETCH_MIN_BYTES,
           max_bytes = ?DEFAULT_FETCH_MAX_BYTES,
@@ -37,18 +34,14 @@
           processing = ?DEFAULT_CONSUMER_PROCESSING
          }).
 
-start_link(Topic, Partition, Srv, FetchInterval,
-           GroupID, GenerationID, MemberID,
-           Autocommit, MinBytes, MaxBytes,
+start_link(Topic, Partition, FetchInterval,
+           GroupID, Autocommit, MinBytes, MaxBytes,
            MaxWaitTime, Callback, Processing) ->
   gen_server:start_link(?MODULE, [
                                   Topic
                                   , Partition
-                                  , Srv
                                   , FetchInterval
                                   , GroupID
-                                  , GenerationID
-                                  , MemberID
                                   , Autocommit
                                   , MinBytes
                                   , MaxBytes
@@ -59,10 +52,10 @@ start_link(Topic, Partition, Srv, FetchInterval,
 
 %% gen_server.
 
-init([Topic, Partition, Srv, FetchInterval,
-      GroupID, GenerationID, MemberID,
-      Autocommit, MinBytes, MaxBytes, MaxWaitTime,
-      Callback, Processing]) ->
+init([Topic, Partition, FetchInterval,
+      GroupID, Autocommit, MinBytes, MaxBytes,
+      MaxWaitTime, Callback, Processing]) ->
+  _ = erlang:process_flag(trap_exit, true),
   case kafe:offset_fetch(GroupID, [{Topic, [Partition]}]) of
     {ok, [#{name := Topic,
             partitions_offset := [#{error_code := none,
@@ -72,13 +65,10 @@ init([Topic, Partition, Srv, FetchInterval,
       {ok, #state{
               topic = Topic,
               partition = Partition,
-              server = Srv,
               fetch_interval = FetchInterval,
               timer = erlang:send_after(FetchInterval, self(), fetch),
               offset = Offset,
               group_id = GroupID,
-              generation_id = GenerationID,
-              member_id = MemberID,
               autocommit = Autocommit,
               min_bytes = MinBytes,
               max_bytes = MaxBytes,
@@ -102,8 +92,8 @@ handle_info(fetch, State) ->
 handle_info(_Info, State) ->
   {noreply, State}.
 
-terminate(_Reason, _State) ->
-  lager:debug("Stop fetcher ~p", [_State]),
+terminate(_Reason, State) ->
+  lager:debug("Stop fetcher ~p", [State]),
   ok.
 
 code_change(_OldVsn, State, _Extra) ->
@@ -112,15 +102,15 @@ code_change(_OldVsn, State, _Extra) ->
 fetch(#state{fetch_interval = FetchInterval,
              topic = Topic,
              partition = Partition,
-             server = Srv,
              offset = Offset,
+             group_id = GroupID,
              autocommit = Autocommit,
              processing = Processing,
              min_bytes = MinBytes,
              max_bytes = MaxBytes,
              max_wait_time = MaxWaitTime,
              callback = Callback} = State) ->
-  OffsetFetch = case kafe_consumer:can_fetch(Srv) of
+  OffsetFetch = case kafe_consumer:can_fetch(GroupID) of
                   true ->
                     case kafe:offset([{Topic, [{Partition, -1, 1}]}]) of
                       {ok, [#{name := Topic,
@@ -141,7 +131,7 @@ fetch(#state{fetch_interval = FetchInterval,
                                         [#{error_code := ErrorCode,
                                            messages := Messages,
                                            partition := Partition}]}]}} when ErrorCode == none ->
-                                perform_fetch(Messages, Topic, Partition, Autocommit, Processing, Srv, Callback, Offset);
+                                perform_fetch(Messages, Topic, Partition, Autocommit, Processing, GroupID, Callback, Offset);
                               {ok, #{topics :=
                                      [#{name := Topic,
                                         partitions :=
@@ -191,9 +181,9 @@ perform_fetch([#{offset := Offset,
                  value := Value}|Messages],
               Topic, Partition,
               Autocommit, Processing,
-              Srv, Callback,
+              GroupID, Callback,
               LastOffset) ->
-  CommitRef = kafe_consumer:store_for_commit(Srv, Topic, Partition, Offset),
+  CommitRef = kafe_consumer:store_for_commit(GroupID, Topic, Partition, Offset),
   case commit(CommitRef, Autocommit, Processing, at_most_once) of
     {error, Reason} ->
       lager:error("[~p] Commit error for offset ~p of ~p#~p : ~p", [Processing, Offset, Topic, Partition, Reason]),
@@ -215,7 +205,7 @@ perform_fetch([#{offset := Offset,
               lager:error("[~p] Commit error for offset ~p of ~p#~p : ~p", [Processing, Offset, Topic, Partition, Reason]),
               LastOffset;
             _ ->
-              perform_fetch(Messages, Topic, Partition, Autocommit, Processing, Srv, Callback, Offset)
+              perform_fetch(Messages, Topic, Partition, Autocommit, Processing, GroupID, Callback, Offset)
           end;
         callback_exception ->
           LastOffset;
@@ -275,7 +265,6 @@ fetch_without_error_test() ->
   ?assertMatch(#state{fetch_interval = 100,
                       topic = <<"topic">>,
                       partition = 10,
-                      server = srv,
                       offset = 101,
                       autocommit = false,
                       processing = at_least_once,
@@ -286,7 +275,6 @@ fetch_without_error_test() ->
                fetch(#state{fetch_interval = 100,
                             topic = <<"topic">>,
                             partition = 10,
-                            server = srv,
                             offset = 99,
                             autocommit = false,
                             processing = at_least_once,
@@ -305,7 +293,6 @@ can_not_fetch_test() ->
   ?assertMatch(#state{fetch_interval = 100,
                       topic = <<"topic">>,
                       partition = 10,
-                      server = srv,
                       offset = 99,
                       autocommit = false,
                       processing = at_least_once,
@@ -316,7 +303,6 @@ can_not_fetch_test() ->
                fetch(#state{fetch_interval = 100,
                             topic = <<"topic">>,
                             partition = 10,
-                            server = srv,
                             offset = 99,
                             autocommit = false,
                             processing = at_least_once,
@@ -344,7 +330,6 @@ nothing_to_fetch_test() ->
   ?assertMatch(#state{fetch_interval = 100,
                       topic = <<"topic">>,
                       partition = 10,
-                      server = srv,
                       offset = 99,
                       autocommit = false,
                       processing = at_least_once,
@@ -355,7 +340,6 @@ nothing_to_fetch_test() ->
                fetch(#state{fetch_interval = 100,
                             topic = <<"topic">>,
                             partition = 10,
-                            server = srv,
                             offset = 99,
                             autocommit = false,
                             processing = at_least_once,
@@ -382,7 +366,6 @@ kafka_offset_error_on_fetch_test() ->
   ?assertMatch(#state{fetch_interval = 100,
                       topic = <<"topic">>,
                       partition = 10,
-                      server = srv,
                       offset = 99,
                       autocommit = false,
                       processing = at_least_once,
@@ -393,7 +376,6 @@ kafka_offset_error_on_fetch_test() ->
                fetch(#state{fetch_interval = 100,
                             topic = <<"topic">>,
                             partition = 10,
-                            server = srv,
                             offset = 99,
                             autocommit = false,
                             processing = at_least_once,
@@ -419,7 +401,6 @@ offset_error_on_fetch_test() ->
   ?assertMatch(#state{fetch_interval = 100,
                       topic = <<"topic">>,
                       partition = 10,
-                      server = srv,
                       offset = 99,
                       autocommit = false,
                       processing = at_least_once,
@@ -430,7 +411,6 @@ offset_error_on_fetch_test() ->
                fetch(#state{fetch_interval = 100,
                             topic = <<"topic">>,
                             partition = 10,
-                            server = srv,
                             offset = 99,
                             autocommit = false,
                             processing = at_least_once,
@@ -467,7 +447,6 @@ kafka_fetch_error_test() ->
   ?assertMatch(#state{fetch_interval = 100,
                       topic = <<"topic">>,
                       partition = 10,
-                      server = srv,
                       offset = 99,
                       autocommit = false,
                       processing = at_least_once,
@@ -478,7 +457,6 @@ kafka_fetch_error_test() ->
                fetch(#state{fetch_interval = 100,
                             topic = <<"topic">>,
                             partition = 10,
-                            server = srv,
                             offset = 99,
                             autocommit = false,
                             processing = at_least_once,
@@ -516,7 +494,6 @@ kafka_fetch_offset_out_of_range_error_test() ->
   ?assertMatch(#state{fetch_interval = 100,
                       topic = <<"topic">>,
                       partition = 10,
-                      server = srv,
                       offset = 99,
                       autocommit = false,
                       processing = at_least_once,
@@ -527,7 +504,6 @@ kafka_fetch_offset_out_of_range_error_test() ->
                fetch(#state{fetch_interval = 100,
                             topic = <<"topic">>,
                             partition = 10,
-                            server = srv,
                             offset = 99,
                             autocommit = false,
                             processing = at_least_once,
@@ -559,7 +535,6 @@ fetch_error_test() ->
   ?assertMatch(#state{fetch_interval = 100,
                       topic = <<"topic">>,
                       partition = 10,
-                      server = srv,
                       offset = 99,
                       autocommit = false,
                       processing = at_least_once,
@@ -570,7 +545,6 @@ fetch_error_test() ->
                fetch(#state{fetch_interval = 100,
                             topic = <<"topic">>,
                             partition = 10,
-                            server = srv,
                             offset = 99,
                             autocommit = false,
                             processing = at_least_once,

@@ -25,7 +25,6 @@
         ]).
 
 -record(state, {
-          group_id_atom,
           group_id,
           client_id = undefined,
           member_id,
@@ -59,9 +58,11 @@ start_link(GroupID, Options) when is_map(Options) ->
 % @hidden
 init([GroupID, Options]) ->
   lager:info("Start consumer ~p", [GroupID]),
-  _ = erlang:process_flag(trap_exit, true),
+  erlang:process_flag(trap_exit, true),
+  kafe_consumer_store:insert(GroupID, fsm_pid, self()),
   SessionTimeout = maps:get(session_timeout, Options, ?DEFAULT_JOIN_GROUP_SESSION_TIMEOUT),
   MemberID = maps:get(member_id, Options, ?DEFAULT_JOIN_GROUP_MEMBER_ID),
+  kafe_consumer_store:insert(GroupID, member_id, MemberID),
   Topics = lists:map(fun
                        ({_, _} = T) -> T;
                        (T) -> {T, kafe:partitions(T)}
@@ -70,7 +71,6 @@ init([GroupID, Options]) ->
                                                  {Topic, Partitions}
                                              end, ?DEFAULT_GROUP_PARTITION_ASSIGNMENT))),
   State = #state{
-             group_id_atom = bucs:to_atom(GroupID),
              group_id = bucs:to_binary(GroupID),
              % client_id
              member_id = MemberID,
@@ -81,12 +81,10 @@ init([GroupID, Options]) ->
              % members
              % protocol_group
             },
-  %setelement(1, next_state(dead, State), ok).
   {ok, dead, State, ?DEAD_TIMEOUT(State)}.
 
 % @hidden
-dead(timeout, #state{group_id_atom = GroupIDAtom,
-                     group_id = GroupID,
+dead(timeout, #state{group_id = GroupID,
                      member_id = MemberID,
                      topics = Topics,
                      session_timeout = SessionTimeout} = State) ->
@@ -107,8 +105,8 @@ dead(timeout, #state{group_id_atom = GroupIDAtom,
            leader_id := LeaderID,
            member_id := NewMemberID,
            protocol_group := ProtocolGroup}} ->
-      _ = kafe_consumer:member_id(GroupIDAtom, NewMemberID),
-      _ = kafe_consumer:generation_id(GroupIDAtom, GenerationID),
+      kafe_consumer_store:insert(GroupID, member_id, NewMemberID),
+      kafe_consumer_store:insert(GroupID, generation_id, GenerationID),
       next_state(State#state{generation_id = GenerationID,
                              leader_id = LeaderID,
                              member_id = NewMemberID,
@@ -171,7 +169,8 @@ handle_info(_Info, StateName, State) ->
   {next_state, StateName, State}.
 
 % @hidden
-terminate(_Reason, _StateName, _State) ->
+terminate(_Reason, _StateName, #state{group_id = GroupID}) ->
+  kafe_consumer_store:delete(GroupID, fsm_pid),
   ok.
 
 % @hidden
@@ -179,7 +178,6 @@ code_change(_OldVsn, StateName, State, _Extra) ->
   {ok, StateName, State}.
 
 next_state(#state{group_id = GroupID,
-                  group_id_atom = GroupIDAtom,
                   member_id = MemberID} = State) ->
   case kafe:describe_group(GroupID) of
     {ok, [#{error_code := none,
@@ -191,7 +189,8 @@ next_state(#state{group_id = GroupID,
         [] ->
           ok;
         [Topics] ->
-          kafe_consumer:topics(GroupIDAtom, [{T, P} || #{partitions := P, topic := T} <- Topics])
+          gen_server:call(kafe_consumer_store:value(GroupID, server_pid),
+                          {topics, [{T, P} || #{partitions := P, topic := T} <- Topics]})
       end,
       {NextState, Timeout} = group_state(State, GroupState),
       {next_state, NextState, State#state{members = Members}, Timeout};
@@ -211,7 +210,7 @@ group_state(State, Next) when is_binary(Next) ->
 group_state(_State, preparing_rebalance) ->
   {stable, ?PREPARING_REBALANCE(_State)}; % never append ?
 group_state(#state{group_id = GroupID} = _State, dead) ->
-  case kafe_consumer_sup:server_pid(GroupID) of
+  case kafe_consumer_store:lookup(GroupID, server_pid) of
     {ok, PID} ->
       _ = gen_server:call(PID, stop_fetch);
     _ ->
@@ -219,7 +218,7 @@ group_state(#state{group_id = GroupID} = _State, dead) ->
   end,
   {dead, ?DEAD_TIMEOUT(_State)};
 group_state(#state{group_id = GroupID} = _State, awaiting_sync) ->
-  case kafe_consumer_sup:server_pid(GroupID) of
+  case kafe_consumer_store:lookup(GroupID, server_pid) of
     {ok, PID} ->
       _ = gen_server:call(PID, stop_fetch);
     _ ->
@@ -227,7 +226,7 @@ group_state(#state{group_id = GroupID} = _State, awaiting_sync) ->
   end,
   {awaiting_sync, ?AWAITING_SYNC_TIMEOUT(_State)};
 group_state(#state{group_id = GroupID} = State, stable) ->
-  case kafe_consumer_sup:server_pid(GroupID) of
+  case kafe_consumer_store:lookup(GroupID, server_pid) of
     {ok, PID} ->
       _ = gen_server:call(PID, start_fetch);
     _ ->
