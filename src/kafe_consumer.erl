@@ -48,24 +48,21 @@
 %                                                          +--------------------^--------------------+
 %                                                          |                                         |
 %
-%                                                                             +--&gt; kafe_consumer_srv +--+
-%                  +--&gt; kafe_consumer_sup +------so4o------&gt; kafe_consumer +--+                         |
-%                  |                                                          +--&gt; kafe_consumer_fsm    |
-%                  +--&gt; kafe_consumer_fetcher_sup +--+                                                  m
-% kafe_sup +--o4o--+                                 |                                                  o
-%                  +--&gt; kafe_rr                      s                                                  n
-%                  |                                 o                                                  |
-%                  +--&gt; kafe                         4  +--&gt; kafe_consumer_fetcher &lt;--------------------+
-%                                                    o  |                                               |
-%                                                    |  +--&gt; kafe_consumer_fetcher &lt;--------------------+
-%                                                    +--+                                               |
-%                                                       +--&gt; kafe_consumer_fetcher &lt;--------------------+
-%                                                       |                                               .
-%                                                       +--&gt; ...                                        .
-%                                                                                                       .
-%                                                          |                       |
-%                                                          +-----------v-----------+
-%                                                            one/{topic,partition}
+%                                                                             +--&gt; kafe_consumer_srv +------------------------+
+%                  +--&gt; kafe_consumer_sup +------so4o------&gt; kafe_consumer +--+                                               |
+%                  |                                                          +--&gt; kafe_consumer_fsm                          |
+%                  +--&gt; kafe_consumer_fetcher_sup +--+                                                                        m
+% kafe_sup +--o4o--+                                 |                                                                        o
+%                  +--&gt; kafe_rr                      s                                                                        n
+%                  |                                 o                                                                        |
+%                  +--&gt; kafe                         4                                                                        |
+%                                                    o                                                                        |
+%                                                    |                                          +--&gt; kafe_consumer_fetcher &lt;--+
+%                                                    +--&gt; kafe_consumer_fetcher_commiter_sup +--+
+%                                                                                               +--&gt; kafe_consumer_commiter
+%                                                       |                                                                  |
+%                                                       +----------------------------------v-------------------------------+
+%                                                                                one/{topic,partition}
 %
 % (o4o = one_for_one)
 % (so4o = simple_one_for_one)

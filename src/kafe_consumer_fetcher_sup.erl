@@ -45,7 +45,6 @@ init([]) ->
        intensity => 0,
        period => 1},
      [#{id => kafe_consumer_fetcher,
-        % start => {kafe_consumer_fetcher, start_link, []},
         start => {kafe_consumer_fetcher_commiter_sup, start_link, []},
         type => supervisor,
         shutdown => 5000}]
