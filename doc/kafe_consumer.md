@@ -99,11 +99,14 @@ __Internal :__
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#commit-1">commit/1</a></td><td>Equivalent to <a href="#commit-2"><tt>commit(GroupCommitIdentifier, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#commit-2">commit/2</a></td><td>
 Commit the offset (in Kafka) for the given <tt>GroupCommitIdentifier</tt> received in the <tt>Callback</tt> specified when starting the
 consumer group (see <a href="kafe.md#start_consumer-3"><code>kafe:start_consumer/3</code></a></td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
-Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#pending_commits-1">pending_commits/1</a></td><td>
+Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#generation_id-1">generation_id/1</a></td><td>
+Return the consumer group generation ID.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
+Return the consumer group member ID.</td></tr><tr><td valign="top"><a href="#pending_commits-1">pending_commits/1</a></td><td>
 Return the list of all pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#pending_commits-2">pending_commits/2</a></td><td>
 Return the list of pending commits for the given topics (and partitions) for the given consumer group.</td></tr><tr><td valign="top"><a href="#remove_commit-1">remove_commit/1</a></td><td>
 Remove the given commit.</td></tr><tr><td valign="top"><a href="#remove_commits-1">remove_commits/1</a></td><td>
-Remove all pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupID, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupID)</tt></a>.</td></tr></table>
+Remove all pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupID, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupID)</tt></a>.</td></tr><tr><td valign="top"><a href="#topics-1">topics/1</a></td><td>
+Return the list of {topic, partition} for the consumer group.</td></tr></table>
 
 
 <a name="functions"></a>
@@ -157,6 +160,28 @@ describe(GroupID::binary()) -&gt; {ok, <a href="kafe.md#type-describe_group">kaf
 <br />
 
 Return consumer group descrition
+
+<a name="generation_id-1"></a>
+
+### generation_id/1 ###
+
+<pre><code>
+generation_id(GroupID::binary()) -&gt; integer()
+</code></pre>
+<br />
+
+Return the consumer group generation ID
+
+<a name="member_id-1"></a>
+
+### member_id/1 ###
+
+<pre><code>
+member_id(GroupID::binary()) -&gt; binary()
+</code></pre>
+<br />
+
+Return the consumer group member ID
 
 <a name="pending_commits-1"></a>
 
@@ -217,4 +242,15 @@ Equivalent to [`kafe:start_consumer(GroupID, Callback, Options)`](kafe.md#start_
 `stop(GroupID) -> any()`
 
 Equivalent to [`kafe:stop_consumer(GroupID)`](kafe.md#stop_consumer-1).
+
+<a name="topics-1"></a>
+
+### topics/1 ###
+
+<pre><code>
+topics(GroupID::binary()) -&gt; [{Topic::binary(), Partition::integer()}]
+</code></pre>
+<br />
+
+Return the list of {topic, partition} for the consumer group
 

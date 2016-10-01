@@ -12,6 +12,15 @@ defmodule Kafe.Consumer do
   def unquote(:"describe")(arg1) do
     :erlang.apply(:"kafe_consumer", :"describe", [arg1])
   end
+  def unquote(:"topics")(arg1) do
+    :erlang.apply(:"kafe_consumer", :"topics", [arg1])
+  end
+  def unquote(:"generation_id")(arg1) do
+    :erlang.apply(:"kafe_consumer", :"generation_id", [arg1])
+  end
+  def unquote(:"member_id")(arg1) do
+    :erlang.apply(:"kafe_consumer", :"member_id", [arg1])
+  end
   def unquote(:"commit")(arg1) do
     :erlang.apply(:"kafe_consumer", :"commit", [arg1])
   end
