@@ -68,24 +68,21 @@ __Internal :__
                                                           +--------------------^--------------------+
                                                           |                                         |
 
-                                                                             +--> kafe_consumer_srv +--+
-                  +--> kafe_consumer_sup +------so4o------> kafe_consumer +--+                         |
-                  |                                                          +--> kafe_consumer_fsm    |
-                  +--> kafe_consumer_fetcher_sup +--+                                                  m
- kafe_sup +--o4o--+                                 |                                                  o
-                  +--> kafe_rr                      s                                                  n
-                  |                                 o                                                  |
-                  +--> kafe                         4  +--> kafe_consumer_fetcher <--------------------+
-                                                    o  |                                               |
-                                                    |  +--> kafe_consumer_fetcher <--------------------+
-                                                    +--+                                               |
-                                                       +--> kafe_consumer_fetcher <--------------------+
-                                                       |                                               .
-                                                       +--> ...                                        .
-                                                                                                       .
-                                                          |                       |
-                                                          +-----------v-----------+
-                                                            one/{topic,partition}
+                                                                             +--> kafe_consumer_srv +------------------------+
+                  +--> kafe_consumer_sup +------so4o------> kafe_consumer +--+                                               |
+                  |                                                          +--> kafe_consumer_fsm                          |
+                  +--> kafe_consumer_fetcher_sup +--+                                                                        m
+ kafe_sup +--o4o--+                                 |                                                                        o
+                  +--> kafe_rr                      s                                                                        n
+                  |                                 o                                                                        |
+                  +--> kafe                         4                                                                        |
+                                                    o                                                                        |
+                                                    |                                          +--> kafe_consumer_fetcher <--+
+                                                    +--> kafe_consumer_fetcher_commiter_sup +--+
+                                                                                               +--> kafe_consumer_commiter
+                                                       |                                                                  |
+                                                       +----------------------------------v-------------------------------+
+                                                                                one/{topic,partition}
 
  (o4o = one_for_one)
  (so4o = simple_one_for_one)
