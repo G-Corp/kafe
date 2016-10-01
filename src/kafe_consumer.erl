@@ -256,7 +256,8 @@ can_fetch(GroupID) ->
 
 % @hidden
 store_for_commit(GroupID, Topic, Partition, Offset) ->
-  gen_server:call(kafe_consumer_store:value(GroupID, server_pid), {store_for_commit, Topic, Partition, Offset}).
+  CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
+  gen_server:call(kafe_consumer_store:value(GroupID, {commit_pid, CommitStoreKey}), {store_for_commit, Topic, Partition, Offset}).
 
 % @hidden
 encode_group_commit_identifier(Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID) ->
