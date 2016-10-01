@@ -87,6 +87,9 @@
          , pending_commits/1
          , pending_commits/2
          , describe/1
+         , topics/1
+         , member_id/1
+         , generation_id/1
         ]).
 
 % Private
@@ -113,6 +116,32 @@ stop(GroupID) ->
 -spec describe(GroupID :: binary()) -> {ok, kafe:describe_group()} | {error, term()}.
 describe(GroupID) ->
   kafe:describe_group(GroupID).
+
+% @doc
+% Return the list of {topic, partition} for the consumer group
+% @end
+-spec topics(GroupID :: binary()) -> [{Topic :: binary(), Partition :: integer()}].
+topics(GroupID) ->
+  case kafe_consumer_store:lookup(GroupID, topics) of
+    {ok, Topics} ->
+      Topics;
+    _ ->
+      []
+  end.
+
+% @doc
+% Return the consumer group generation ID
+% @end
+-spec generation_id(GroupID :: binary()) -> integer().
+generation_id(GroupID) ->
+  kafe_consumer_store:value(GroupID, generation_id).
+
+% @doc
+% Return the consumer group member ID
+% @end
+-spec member_id(GroupID :: binary()) -> binary().
+member_id(GroupID) ->
+  kafe_consumer_store:value(GroupID, member_id).
 
 % @equiv commit(GroupCommitIdentifier, #{})
 -spec commit(GroupCommitIdentifier :: kafe:group_commit_identifier()) -> ok | {error, term()} | delayed.

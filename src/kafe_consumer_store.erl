@@ -1,12 +1,22 @@
 % @hidden
+% The store contain, for each consumer group :
+% - sup_pid : the supervisor (kafe_consumer) PID
+% - server_pid : the kafe_consumer_srv PID
+% - fsm_pid : the kafe_consumer_fsm PID
+% - member_id : the kafka member ID
+% - generation_id : the Kafka generation ID
+% - can_fetch : boolean
+% - topics : a list of {topic, partition} for the consumer group
 -module(kafe_consumer_store).
 
 -export([
          new/1,
          exist/1,
          insert/3,
+         append/3,
          lookup/2,
          value/2,
+         value/3,
          count/1,
          delete/1,
          delete/2
@@ -35,6 +45,14 @@ insert(ConsumerGroup, Key, Value) ->
   ets:insert(store(ConsumerGroup), {Key, Value}),
   ok.
 
+append(ConsumerGroup, Key, Value) ->
+  kafe_consumer_store:insert(
+    ConsumerGroup,
+    Key,
+    lists:append(
+      kafe_consumer_store:value(ConsumerGroup, Key, []),
+      [Value])).
+
 lookup(ConsumerGroup, Key) ->
   ?IF_EXIST(ConsumerGroup,
             case ets:lookup(store(ConsumerGroup), Key) of
@@ -49,6 +67,12 @@ value(ConsumerGroup, Key) ->
   case lookup(ConsumerGroup, Key) of
     {ok, Value} -> Value;
     {error, undefined} -> undefined
+  end.
+
+value(ConsumerGroup, Key, Default) ->
+  case lookup(ConsumerGroup, Key) of
+    {ok, Value} -> Value;
+    {error, undefined} -> Default
   end.
 
 count(ConsumerGroup) ->

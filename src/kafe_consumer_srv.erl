@@ -57,12 +57,13 @@ init([GroupID, Options]) ->
   _ = erlang:process_flag(trap_exit, true),
   kafe_consumer_store:insert(GroupID, server_pid, self()),
   kafe_consumer_store:insert(GroupID, can_fetch, false),
+  AllowUnorderedCommit = maps:get(allow_unordered_commit, Options, ?DEFAULT_CONSUMER_ALLOW_UNORDERED_COMMIT),
+  kafe_consumer_store:insert(GroupID, allow_unordered_commit, AllowUnorderedCommit),
   FetchInterval = maps:get(fetch_interval, Options, ?DEFAULT_CONSUMER_FETCH_INTERVAL),
   MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
   MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
   MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
   Autocommit = maps:get(autocommit, Options, ?DEFAULT_CONSUMER_AUTOCOMMIT),
-  AllowUnorderedCommit = maps:get(allow_unordered_commit, Options, ?DEFAULT_CONSUMER_ALLOW_UNORDERED_COMMIT),
   Processing = maps:get(processing, Options, ?DEFAULT_CONSUMER_PROCESSING),
   OnStartFetching = maps:get(on_start_fetching, Options, ?DEFAULT_CONSUMER_ON_START_FETCHING),
   OnStopFetching = maps:get(on_stop_fetching, Options, ?DEFAULT_CONSUMER_ON_STOP_FETCHING),
@@ -87,11 +88,12 @@ handle_call(describe, _From, #state{group_id = GroupID} = State) ->
   {reply, kafe:describe_group(GroupID), State};
 handle_call(topics, _From, #state{topics = Topics} = State) ->
   {reply, Topics, State};
-handle_call({topics, Topics}, _From, #state{topics = CurrentTopics} = State) ->
+handle_call({topics, Topics}, _From, #state{topics = CurrentTopics, group_id = GroupID} = State) ->
   if
     Topics == CurrentTopics ->
       {reply, ok, State};
     true ->
+      kafe_consumer_store:insert(GroupID, topics, Topics),
       {reply, ok, update_fetchers(Topics, State#state{topics = Topics})}
   end;
 handle_call({commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID, Options}, _From, #state{allow_unordered_commit = true,
