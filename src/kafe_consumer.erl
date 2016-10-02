@@ -176,7 +176,12 @@ commit(GroupCommitIdentifier, Options) ->
 % @end
 -spec remove_commits(GroupID :: binary()) -> ok.
 remove_commits(GroupID) ->
-  gen_server:call(kafe_consumer_store:value(GroupID, server_pid), remove_commits).
+  [begin
+     CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
+     gen_server:call(kafe_consumer_store:value(GroupID, {commit_pid, CommitStoreKey}),
+                     remove_commits)
+   end || {Topic, Partition} <- topics(GroupID)],
+  ok.
 
 % @doc
 % Remove the given commit
@@ -195,24 +200,23 @@ remove_commit(GroupCommitIdentifier) ->
 % @end
 -spec pending_commits(GroupID :: binary()) -> [kafe:group_commit_identifier()].
 pending_commits(GroupID) ->
-  Topics = maps:fold(fun
-                       (<<"__consumer_offsets">>, _, Acc) -> Acc;
-                       (T, P, Acc) -> [{T, maps:keys(P)}|Acc]
-                     end, [], kafe:topics()),
-  pending_commits(GroupID, Topics).
+  pending_commits(GroupID, topics(GroupID)).
 
 % @doc
 % Return the list of pending commits for the given topics (and partitions) for the given consumer group.
 % @end
 -spec pending_commits(GroupID :: binary(), [binary() | {binary(), [integer()]}]) -> [kafe:group_commit_identifier()].
 pending_commits(GroupID, Topics) ->
-  Topics1 = lists:foldl(fun
-                        (T, Acc) when is_binary(T) ->
-                            lists:append(Acc, [{T, X} || X <- kafe:partitions(T)]);
-                        ({T, P}, Acc) when is_binary(T), is_list(P) ->
-                            lists:append(Acc, [{T, X} || X <- P])
-                      end, [], Topics),
-  gen_server:call(kafe_consumer_store:value(GroupID, server_pid), {pending_commits, Topics1}).
+  lists:flatten(
+    [begin
+       CommitStoreKey = erlang:term_to_binary(TP),
+       case kafe_consumer_store:value(GroupID, {commit_pid, CommitStoreKey}) of
+         undefined ->
+           [];
+         PID ->
+           gen_server:call(PID, pending_commits)
+       end
+     end || TP <- Topics]).
 
 % @hidden
 start_link(GroupID, Options) ->
@@ -254,7 +258,7 @@ can_fetch(GroupID) ->
 % @hidden
 store_for_commit(GroupID, Topic, Partition, Offset) ->
   CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
-  gen_server:call(kafe_consumer_store:value(GroupID, {commit_pid, CommitStoreKey}), {store_for_commit, Topic, Partition, Offset}).
+  gen_server:call(kafe_consumer_store:value(GroupID, {commit_pid, CommitStoreKey}), {store_for_commit, Offset}).
 
 % @hidden
 encode_group_commit_identifier(Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID) ->

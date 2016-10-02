@@ -7,6 +7,7 @@
 % - generation_id : the Kafka generation ID
 % - can_fetch : boolean
 % - topics : a list of {topic, partition} for the consumer group
+% - allow_unordered_commit : boolean
 -module(kafe_consumer_store).
 
 -export([

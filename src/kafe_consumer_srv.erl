@@ -84,8 +84,6 @@ init([GroupID, Options]) ->
          }}.
 
 % @hidden
-handle_call(describe, _From, #state{group_id = GroupID} = State) ->
-  {reply, kafe:describe_group(GroupID), State};
 handle_call({topics, Topics}, _From, #state{topics = CurrentTopics, group_id = GroupID} = State) ->
   if
     Topics == CurrentTopics ->
