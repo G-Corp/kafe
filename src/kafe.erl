@@ -58,6 +58,7 @@
 
 % Internal API
 -export([
+         number_of_brokers/0,
          start_link/0,
          first_broker/0,
          release_broker/1,
@@ -207,6 +208,10 @@ start_link() ->
 % @hidden
 first_broker() ->
   gen_server:call(?SERVER, first_broker, ?TIMEOUT).
+
+% @hidden
+number_of_brokers() ->
+  gen_server:call(?SERVER, number_of_brokers, ?TIMEOUT).
 
 % @hidden
 release_broker(Broker) ->
@@ -805,6 +810,8 @@ init(_) ->
   {ok, State1}.
 
 % @hidden
+handle_call(number_of_brokers, _From, #{brokers_list := Brokers} = State) ->
+  {reply, length(Brokers), State};
 handle_call(first_broker, _From, State) ->
   {reply, get_first_broker(State), State};
 handle_call({broker_id_by_topic_and_partition, Topic, Partition}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
