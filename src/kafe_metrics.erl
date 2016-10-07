@@ -10,6 +10,7 @@
          , delete_consumer_partition/3
          , consumer_partition_messages/4
          , consumer_partition_duration/4
+         , consumer_partition_pending_commits/4
 
          , ensure_metrics_mod_started/0
         ]).
@@ -52,12 +53,14 @@ init_consumer_partition(Consumer, Topic, Partition) ->
   ensure_metrics_mod_started(),
   metrics:new(gauge, consumer_partition_metric(Consumer, Topic, Partition, <<"messages.fetch">>)),
   metrics:new(gauge, consumer_partition_metric(Consumer, Topic, Partition, <<"duration.fetch">>)),
-  metrics:new(counter, consumer_partition_metric(Consumer, Topic, Partition, <<"messages">>)).
+  metrics:new(counter, consumer_partition_metric(Consumer, Topic, Partition, <<"messages">>)),
+  metrics:new(gauge, consumer_partition_metric(Consumer, Topic, Partition, <<"pending_commits">>)).
 
 delete_consumer_partition(Consumer, Topic, Partition) ->
   metrics:delete(consumer_partition_metric(Consumer, Topic, Partition, <<"messages.fetch">>)),
   metrics:delete(consumer_partition_metric(Consumer, Topic, Partition, <<"duration.fetch">>)),
-  metrics:delete(consumer_partition_metric(Consumer, Topic, Partition, <<"messages">>)).
+  metrics:delete(consumer_partition_metric(Consumer, Topic, Partition, <<"messages">>)),
+  metrics:delete(consumer_partition_metric(Consumer, Topic, Partition, <<"pending_commits">>)).
 
 consumer_partition_messages(Consumer, Topic, Partition, NbMessages) ->
   metrics:update(consumer_partition_metric(Consumer, Topic, Partition, <<"messages.fetch">>),
@@ -68,6 +71,10 @@ consumer_partition_messages(Consumer, Topic, Partition, NbMessages) ->
 consumer_partition_duration(Consumer, Topic, Partition, Duration) ->
   metrics:update(consumer_partition_metric(Consumer, Topic, Partition, <<"duration.fetch">>),
                  Duration).
+
+consumer_partition_pending_commits(Consumer, Topic, Partition, NbCommits) ->
+  metrics:update(consumer_partition_metric(Consumer, Topic, Partition, <<"pending_commits">>),
+                 NbCommits).
 
 consumer_partition_metric(Consumer, Topic, Partition, Ext) ->
   Prefix = case doteki:get_as_binary([metrics, metrics_prefix], <<>>) of

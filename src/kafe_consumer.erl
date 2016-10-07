@@ -71,6 +71,7 @@
 % @end
 -module(kafe_consumer).
 -include("../include/kafe.hrl").
+-compile([{parse_transform, lager_transform}]).
 -behaviour(supervisor).
 
 % API
@@ -170,8 +171,10 @@ commit(GroupCommitIdentifier) ->
 commit(GroupCommitIdentifier, Options) ->
   case decode_group_commit_identifier(GroupCommitIdentifier) of
     {Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID} ->
+      lager:debug("Ask for commit offset ~p, topic ~s, partition ~p", [Offset, Topic, Partition]),
       gen_server:call(Pid, {commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID, Options});
     _ ->
+      lager:error("Invalid commit identifier ~p", [GroupCommitIdentifier]),
       {error, invalid_group_commit_identifier}
   end.
 

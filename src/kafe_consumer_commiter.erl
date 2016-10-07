@@ -47,6 +47,7 @@ init([Topic, Partition, GroupID]) ->
 
 % @hidden
 handle_call({commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID, Options}, _From, State) ->
+  lager:debug("Will commit offset ~p for topic ~s, partition ~p", [Offset, Topic, Partition]),
   case kafe_consumer_store:lookup(GroupID, allow_unordered_commit) of
     {ok, true} ->
       unordered_commit(Topic, Partition, Offset, GroupID, GenerationID, MemberID, Options, State);
@@ -62,14 +63,19 @@ handle_call({store_for_commit, Offset}, _From, #state{commits = Commits,
   MemberID = kafe_consumer_store:value(GroupID, member_id),
   CommitsList = lists:append(Commits,
                              [{{Topic, Partition, Offset, GroupID, GenerationID, MemberID}, false}]),
+  kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(CommitsList)),
   {reply,
    kafe_consumer:encode_group_commit_identifier(self(), Topic, Partition, Offset, GroupID, GenerationID, MemberID),
    State#state{commits = CommitsList}};
-handle_call(remove_commits, _From, State) ->
+handle_call(remove_commits, _From, #state{topic = Topic,
+                                          partition = Partition,
+                                          group_id = GroupID} = State) ->
+  kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, 0),
   {reply, ok, State#state{commits = []}};
 handle_call({remove_commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID}, _From, #state{commits = Commits} = State) ->
   case Commits of
     [{{Topic, Partition, Offset, GroupID, GenerationID, MemberID}, _}|Rest] ->
+      kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(Rest)),
       {reply, ok, State#state{commits = Rest}};
     _ ->
       {reply, {error, not_head_commit}, State}
@@ -116,6 +122,7 @@ unordered_commit(Topic, Partition, Offset, GroupID, GenerationID, MemberID, Opti
             {ok, [#{name := Topic,
                     partitions := [#{error_code := none,
                                      partition := Partition}]}]} ->
+              kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(Commits0)),
               {reply, ok, State#state{commits = Commits0}};
             {ok, [#{name := Topic,
                     partitions := [#{error_code := Error,
@@ -134,22 +141,26 @@ ordered_commit(Topic, Partition, Offset, GroupID, GenerationID, MemberID, Option
   Delay = maps:get(delay, Options, ?DEFAULT_CONSUMER_COMMIT_DELAY),
   case Commits of
     [{{Topic, Partition, Offset, GroupID, GenerationID, MemberID}, _}|Commits1] ->
-      lager:debug("COMMIT Offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]),
       case do_commit(GroupID, GenerationID, MemberID,
                      Topic, Partition, Offset,
                      Retry, Delay, {error, invalid_retry}) of
         {ok, [#{name := Topic,
                 partitions := [#{error_code := none,
                                  partition := Partition}]}]} ->
+          lager:debug("COMMIT Offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]),
+          kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(Commits1)),
           {reply, ok, State#state{commits = Commits1}};
         {ok, [#{name := Topic,
                 partitions := [#{error_code := Error,
                                  partition := Partition}]}]} ->
+          lager:error("COMMIT Offset ~p for Topic ~p, partition ~p error: ~s", [Offset, Topic, Partition, kafe_error:message(Error)]),
           {reply, {error, Error}, State};
         Error ->
+          lager:error("COMMIT Offset ~p for Topic ~p, partition ~p error: ~s", [Offset, Topic, Partition, Error]),
           {reply, Error, State}
       end;
     _ ->
+      lager:error("Can't Offset ~p for Topic ~p, partition ~p : not the first commit in list", [Offset, Topic, Partition]),
       {reply, {error, missing_previous_commit}, State}
   end.
 
@@ -197,6 +208,8 @@ commit_test() ->
               fun
                 (_, allow_unordered_commit) -> {ok, false}
               end),
+  meck:new(kafe_metrics),
+  meck:expect(kafe_metrics, consumer_partition_pending_commits, 4, ok),
   State0 = #state{topic = <<"topic">>, partition = 0, group_id = <<"FakeGroup">>},
   {reply, CommitID1, State1} = handle_call({store_for_commit, 0}, from, State0),
   ?assertEqual(
@@ -216,6 +229,7 @@ commit_test() ->
   ?assertEqual(
      [kafe_consumer:encode_group_commit_identifier(self(), <<"topic">>, 0, 1, <<"FakeGroup">>, 1, <<"memberID">>)],
      Commits1),
+  meck:unload(kafe_metrics),
   meck:unload(kafe_consumer_store),
   meck:unload(kafe).
 
@@ -234,6 +248,8 @@ commit_generation_change_test() ->
               fun
                 (_, allow_unordered_commit) -> {ok, false}
               end),
+  meck:new(kafe_metrics),
+  meck:expect(kafe_metrics, consumer_partition_pending_commits, 4, ok),
   State0 = #state{group_id = <<"FakeGroup">>, topic = <<"topic">>, partition = 0},
   {reply, CommitID1, State1} = handle_call({store_for_commit, 0}, from, State0),
   ?assertEqual(
@@ -255,6 +271,7 @@ commit_generation_change_test() ->
   ?assertEqual(
      [kafe_consumer:encode_group_commit_identifier(self(), <<"topic">>, 0, 1, <<"FakeGroup">>, 2, <<"memberID">>)],
      Commits1),
+  meck:unload(kafe_metrics),
   meck:unload(kafe_consumer_store),
   meck:unload(kafe).
 
@@ -276,6 +293,8 @@ delayed_commit_test() ->
               fun
                 (_, allow_unordered_commit) -> {ok, true}
               end),
+  meck:new(kafe_metrics),
+  meck:expect(kafe_metrics, consumer_partition_pending_commits, 4, ok),
   State0 = #state{group_id = <<"FakeGroup">>, topic = <<"topic">>, partition = 0},
   {reply, CommitID1, State1} = handle_call({store_for_commit, 0}, from, State0),
   ?assertEqual(
@@ -293,6 +312,7 @@ delayed_commit_test() ->
   {reply, ok, State5} = handle_call({commit, <<"topic">>, 0, 0, <<"FakeGroup">>, 1, <<"memberID">>, #{}}, from, State4),
   ?assertMatch({reply, [], _},
                handle_call(pending_commits, from, State5)),
+  meck:unload(kafe_metrics),
   meck:unload(kafe_consumer_store),
   meck:unload(kafe).
 
@@ -313,6 +333,8 @@ remove_commit_test() ->
               fun
                 (_, allow_unordered_commit) -> {ok, false}
               end),
+  meck:new(kafe_metrics),
+  meck:expect(kafe_metrics, consumer_partition_pending_commits, 4, ok),
   State0 = #state{group_id = <<"FakeGroup">>, topic = <<"topic">>, partition = 0},
   {reply, CommitID1, State1} = handle_call({store_for_commit, 0}, from, State0),
   ?assertEqual(
@@ -333,6 +355,7 @@ remove_commit_test() ->
   ?assertEqual(
      [CommitID2],
      Commits1),
+  meck:unload(kafe_metrics),
   meck:unload(kafe_consumer_store),
   meck:unload(kafe).
 
@@ -353,6 +376,8 @@ invalid_commit_test() ->
               fun
                 (_, allow_unordered_commit) -> {ok, false}
               end),
+  meck:new(kafe_metrics),
+  meck:expect(kafe_metrics, consumer_partition_pending_commits, 4, ok),
   State0 = #state{group_id = <<"FakeGroup">>, topic = <<"topic">>, partition = 0},
   {reply, CommitID1, State1} = handle_call({store_for_commit, 0}, from, State0),
   ?assertEqual(
@@ -371,6 +396,7 @@ invalid_commit_test() ->
   {reply, ok, State4} = handle_call(remove_commits, from, State3),
   ?assertMatch({reply, [], _},
                handle_call(pending_commits, from, State4)),
+  meck:unload(kafe_metrics),
   meck:unload(kafe_consumer_store),
   meck:unload(kafe).
 
@@ -390,6 +416,8 @@ unordered_commit_test() ->
                                            [#{error_code => none,
                                               partition => Partition}]}]}
                                    end),
+  meck:new(kafe_metrics),
+  meck:expect(kafe_metrics, consumer_partition_pending_commits, 4, ok),
   State = #state{commits =
                  [
                   {{<<"topic">>, 0, 100, <<"group_id">>, 0, <<"member_id">>}, false},
@@ -406,6 +434,7 @@ unordered_commit_test() ->
                                 <<"member_id">>,
                                 #{},
                                 State)),
+  meck:unload(kafe_metrics),
   meck:unload(kafe).
 
 unordered_commit_kafka_failed_test() ->
@@ -424,6 +453,8 @@ unordered_commit_kafka_failed_test() ->
                                            [#{error_code => test_error,
                                               partition => Partition}]}]}
                                    end),
+  meck:new(kafe_metrics),
+  meck:expect(kafe_metrics, consumer_partition_pending_commits, 4, ok),
   State = #state{commits =
                  [
                   {{<<"topic">>, 0, 100, <<"group_id">>, 0, <<"member_id">>}, false},
@@ -447,6 +478,7 @@ unordered_commit_kafka_failed_test() ->
                                 <<"member_id">>,
                                 #{},
                                 State)),
+  meck:unload(kafe_metrics),
   meck:unload(kafe).
 
 unordered_commit_kafe_offset_commit_failed_test() ->
@@ -461,6 +493,8 @@ unordered_commit_kafe_offset_commit_failed_test() ->
                                        ?assertEqual(103, Offset),
                                        {error, test_error}
                                    end),
+  meck:new(kafe_metrics),
+  meck:expect(kafe_metrics, consumer_partition_pending_commits, 4, ok),
   State = #state{commits =
                  [
                   {{<<"topic">>, 0, 100, <<"group_id">>, 0, <<"member_id">>}, false},
@@ -484,6 +518,7 @@ unordered_commit_kafe_offset_commit_failed_test() ->
                                 <<"member_id">>,
                                 #{},
                                 State)),
+  meck:unload(kafe_metrics),
   meck:unload(kafe).
 
 unordered_commit_delayed_test() ->
@@ -632,6 +667,8 @@ ordered_commit_test() ->
                                            [#{error_code => none,
                                               partition => Partition}]}]}
                                    end),
+  meck:new(kafe_metrics),
+  meck:expect(kafe_metrics, consumer_partition_pending_commits, 4, ok),
   State = #state{commits =
                  [
                   {{<<"topic">>, 0, 100, <<"group_id">>, 0, <<"member_id">>}, false},
@@ -654,6 +691,7 @@ ordered_commit_test() ->
                               <<"member_id">>,
                               #{},
                               State)),
+  meck:unload(kafe_metrics),
   meck:unload(kafe).
 
 ordered_commit_kafka_commit_failed_test() ->
@@ -672,6 +710,8 @@ ordered_commit_kafka_commit_failed_test() ->
                                            [#{error_code => test_error,
                                               partition => Partition}]}]}
                                    end),
+  meck:new(kafe_metrics),
+  meck:expect(kafe_metrics, consumer_partition_pending_commits, 4, ok),
   State = #state{commits =
                  [
                   {{<<"topic">>, 0, 100, <<"group_id">>, 0, <<"member_id">>}, false},
@@ -688,6 +728,7 @@ ordered_commit_kafka_commit_failed_test() ->
                               <<"member_id">>,
                               #{},
                               State)),
+  meck:unload(kafe_metrics),
   meck:unload(kafe).
 
 
@@ -703,6 +744,8 @@ ordered_commit_kafe_offset_commit_failed_test() ->
                                        ?assertEqual(100, Offset),
                                        {error, test_error}
                                    end),
+  meck:new(kafe_metrics),
+  meck:expect(kafe_metrics, consumer_partition_pending_commits, 4, ok),
   State = #state{commits =
                  [
                   {{<<"topic">>, 0, 100, <<"group_id">>, 0, <<"member_id">>}, false},
@@ -719,9 +762,12 @@ ordered_commit_kafe_offset_commit_failed_test() ->
                               <<"member_id">>,
                               #{},
                               State)),
+  meck:unload(kafe_metrics),
   meck:unload(kafe).
 
 ordered_commit_missing_previous_commit_test() ->
+  meck:new(kafe_metrics),
+  meck:expect(kafe_metrics, consumer_partition_pending_commits, 4, ok),
   State = #state{commits =
                  [
                   {{<<"topic">>, 0, 100, <<"group_id">>, 0, <<"member_id">>}, false},
@@ -737,6 +783,7 @@ ordered_commit_missing_previous_commit_test() ->
                               0,
                               <<"member_id">>,
                               #{},
-                              State)).
+                              State)),
+  meck:unload(kafe_metrics).
 -endif.
 

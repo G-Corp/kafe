@@ -43,6 +43,7 @@ MKDIR_P = mkdir -p
 # Config
 
 NODE_HOST ?= 127.0.0.1
+NODE_NAME ?= ${current_dir}-$(shell bash -c 'echo $$RANDOM')
 ifneq ("$(wildcard config/$(current_dir).config)","")
   ERL_CONFIG="config/$(current_dir).config"
 endif
@@ -176,10 +177,9 @@ distclean: $(DISTCLEAN) ## Clean the distribution
 
 dev: compile-erl
 ifdef ERL_CONFIG
-	$(verbose) echo "Start with configuration $(ERL_CONFIG) name ${current_dir}@${NODE_HOST}, cookie ${current_dir}"
-	$(verbose) erl -pa _build/$(REBAR_ENV)/lib/*/ebin _build/$(REBAR_ENV)/lib/*/include -config ${ERL_CONFIG} -name ${current_dir}@${NODE_HOST} -setcookie ${current_dir}
+	$(verbose) erl -pa _build/$(REBAR_ENV)/lib/*/ebin _build/$(REBAR_ENV)/lib/*/include -config ${ERL_CONFIG} -name ${NODE_NAME}@${NODE_HOST} -setcookie ${current_dir}
 else
-	$(verbose) erl -pa _build/$(REBAR_ENV)/lib/*/ebin _build/$(REBAR_ENV)/lib/*/include -name ${current_dir}@${NODE_HOST} -setcookie ${current_dir}
+	$(verbose) erl -pa _build/$(REBAR_ENV)/lib/*/ebin _build/$(REBAR_ENV)/lib/*/include -name ${NODE_NAME}@${NODE_HOST} -setcookie ${current_dir}
 endif
 
 dist-erl: clean compile-erl tests $(LINT) doc

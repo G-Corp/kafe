@@ -181,6 +181,7 @@ Kafe offers the following metrics :
 <tr><td>kafe_consumer.CONSUMER_GROUP.messages</td><td>counter</td><td>Total number of received messages for the CONSUMER_GROUP</td></tr>
 <tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.messages</td><td>counter</td><td>Total number of received messages for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
 <tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.duration.fetch</td><td>gauge</td><td>Fetch duration (ms) per message, for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.pending_commits</td><td>gauge</td><td>Number of pending commits, for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
 </table>
 
 
