@@ -9,5 +9,5 @@
   0},
  {<<"poolgirl">>,
   {git,"https://github.com/botsunit/poolgirl.git",
-       {ref,"0fa24c3363ead552c92c8c699811fcca73736364"}},
+       {ref,"b9e52d711bc8dfb55d26c2de0b44cb4e2e774eb3"}},
   0}].
