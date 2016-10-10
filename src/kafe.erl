@@ -763,6 +763,8 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % <li><tt>on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any())</tt> : Function called when the
 % partitions' assignments change. The first parameter is the consumer group ID, the second is the list of {topic, partition} that were unassigned, the third
 % parameter is the list of {topic, partition} that were reassigned. (default: undefined).</li>
+% <li><tt>from_beginning :: true | false</tt> : Start consuming method. If it's set to <tt>true</tt>, the consumer will start to consume from the offset next to the
+% last commited one. If it's set to <tt>false</tt>, the consumer will start to consume next to the last offset. (default: true).</li>
 % </ul>
 % @end
 -spec start_consumer(GroupID :: binary(),

@@ -870,6 +870,9 @@ no effect when `autocommit` is set to false.  (default: at_most_once).
 partitions' assignments change. The first parameter is the consumer group ID, the second is the list of {topic, partition} that were unassigned, the third
 parameter is the list of {topic, partition} that were reassigned. (default: undefined).
 
+* `from_beginning :: true | false` : Start consuming method. If it's set to `true`, the consumer will start to consume from the offset next to the
+last commited one. If it's set to `false`, the consumer will start to consume next to the last offset. (default: true).
+
 
 <a name="stop_consumer-1"></a>
 

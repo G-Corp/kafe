@@ -35,6 +35,7 @@
           min_bytes = ?DEFAULT_FETCH_MIN_BYTES,
           max_wait_time = ?DEFAULT_FETCH_MAX_WAIT_TIME,
           autocommit = ?DEFAULT_CONSUMER_AUTOCOMMIT,
+          from_beginning = ?DEFAULT_CONSUMER_START_FROM_BEGINNING,
           allow_unordered_commit = ?DEFAULT_CONSUMER_ALLOW_UNORDERED_COMMIT,
           commits = #{},
           processing = ?DEFAULT_CONSUMER_PROCESSING,
@@ -64,6 +65,7 @@ init([GroupID, Options]) ->
   MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
   MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
   Autocommit = maps:get(autocommit, Options, ?DEFAULT_CONSUMER_AUTOCOMMIT),
+  FromBeginning = maps:get(from_beginning, Options, ?DEFAULT_CONSUMER_START_FROM_BEGINNING),
   Processing = maps:get(processing, Options, ?DEFAULT_CONSUMER_PROCESSING),
   OnStartFetching = maps:get(on_start_fetching, Options, ?DEFAULT_CONSUMER_ON_START_FETCHING),
   OnStopFetching = maps:get(on_stop_fetching, Options, ?DEFAULT_CONSUMER_ON_STOP_FETCHING),
@@ -76,6 +78,7 @@ init([GroupID, Options]) ->
           min_bytes = MinBytes,
           max_wait_time = MaxWaitTime,
           autocommit = Autocommit,
+          from_beginning = FromBeginning,
           allow_unordered_commit = AllowUnorderedCommit,
           processing = Processing,
           on_start_fetching = OnStartFetching,
@@ -196,6 +199,7 @@ start_fetchers([{Topic, Partition}|Rest], #state{fetchers = Fetchers,
                                                  fetch_interval = FetchInterval,
                                                  group_id = GroupID,
                                                  autocommit = Autocommit,
+                                                 from_beginning = FromBeginning,
                                                  min_bytes = MinBytes,
                                                  max_bytes = MaxBytes,
                                                  max_wait_time = MaxWaitTime,
@@ -203,8 +207,9 @@ start_fetchers([{Topic, Partition}|Rest], #state{fetchers = Fetchers,
                                                  processing = Processing} = State) ->
   kafe_metrics:init_consumer_partition(GroupID, Topic, Partition),
   case kafe_consumer_fetcher_sup:start_child(Topic, Partition, FetchInterval,
-                                             GroupID, Autocommit, MinBytes, MaxBytes,
-                                             MaxWaitTime, Callback, Processing) of
+                                             GroupID, Autocommit, FromBeginning,
+                                             MinBytes, MaxBytes, MaxWaitTime,
+                                             Callback, Processing) of
     {ok, Pid} ->
       MRef = erlang:monitor(process, Pid),
       start_fetchers(Rest, State#state{fetchers = [{{Topic, Partition}, Pid, MRef}|Fetchers]});
@@ -277,7 +282,7 @@ stop_fetch_with_invalid_fun_test() ->
 
 update_fetchers_create_test() ->
   meck:new(kafe_consumer_fetcher_sup, [passthrough]),
-  meck:expect(kafe_consumer_fetcher_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_fetcher_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_fetcher_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
@@ -306,7 +311,7 @@ update_fetchers_create_test() ->
 
 update_fetchers_unchange_test() ->
   meck:new(kafe_consumer_fetcher_sup, [passthrough]),
-  meck:expect(kafe_consumer_fetcher_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_fetcher_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_fetcher_sup, stop_child, 1, ok),
 %  meck:new(kafe_metrics, [passthrough]),
 %  meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
@@ -329,7 +334,7 @@ update_fetchers_unchange_test() ->
 
 update_fetchers_add_test() ->
   meck:new(kafe_consumer_fetcher_sup, [passthrough]),
-  meck:expect(kafe_consumer_fetcher_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_fetcher_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_fetcher_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
 %  meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
@@ -368,7 +373,7 @@ update_fetchers_add_test() ->
 
 update_fetchers_delete_test() ->
   meck:new(kafe_consumer_fetcher_sup, [passthrough]),
-  meck:expect(kafe_consumer_fetcher_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_fetcher_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_fetcher_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
@@ -399,7 +404,7 @@ update_fetchers_delete_test() ->
 
 update_fetchers_update_test() ->
   meck:new(kafe_consumer_fetcher_sup, [passthrough]),
-  meck:expect(kafe_consumer_fetcher_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_fetcher_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_fetcher_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),

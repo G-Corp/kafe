@@ -9,7 +9,7 @@
 -endif.
 
 %% API.
--export([start_link/10]).
+-export([start_link/11]).
 
 %% gen_server.
 -export([init/1]).
@@ -27,6 +27,7 @@
           offset = -1,
           group_id = undefined,
           autocommit = ?DEFAULT_CONSUMER_AUTOCOMMIT,
+          from_beginning = ?DEFAULT_CONSUMER_START_FROM_BEGINNING,
           min_bytes = ?DEFAULT_FETCH_MIN_BYTES,
           max_bytes = ?DEFAULT_FETCH_MAX_BYTES,
           max_wait_time = ?DEFAULT_FETCH_MAX_WAIT_TIME,
@@ -35,14 +36,16 @@
          }).
 
 start_link(Topic, Partition, FetchInterval,
-           GroupID, Autocommit, MinBytes, MaxBytes,
-           MaxWaitTime, Callback, Processing) ->
+           GroupID, Autocommit, FromBeginning,
+           MinBytes, MaxBytes, MaxWaitTime,
+           Callback, Processing) ->
   gen_server:start_link(?MODULE, [
                                   Topic
                                   , Partition
                                   , FetchInterval
                                   , GroupID
                                   , Autocommit
+                                  , FromBeginning
                                   , MinBytes
                                   , MaxBytes
                                   , MaxWaitTime
@@ -53,14 +56,12 @@ start_link(Topic, Partition, FetchInterval,
 %% gen_server.
 
 init([Topic, Partition, FetchInterval,
-      GroupID, Autocommit, MinBytes, MaxBytes,
-      MaxWaitTime, Callback, Processing]) ->
+      GroupID, Autocommit, FromBeginning,
+      MinBytes, MaxBytes, MaxWaitTime,
+      Callback, Processing]) ->
   _ = erlang:process_flag(trap_exit, true),
-  case kafe:offset_fetch(GroupID, [{Topic, [Partition]}]) of
-    {ok, [#{name := Topic,
-            partitions_offset := [#{error_code := none,
-                                    offset := Offset,
-                                    partition := Partition}]}]} ->
+  case get_start_offset(GroupID, Topic, Partition, FromBeginning) of
+    {ok, Offset} ->
       lager:info("Start fetcher for ~p#~p with offset ~p", [Topic, Partition, Offset]),
       {ok, #state{
               topic = Topic,
@@ -70,6 +71,7 @@ init([Topic, Partition, FetchInterval,
               offset = Offset,
               group_id = GroupID,
               autocommit = Autocommit,
+              from_beginning = FromBeginning,
               min_bytes = MinBytes,
               max_bytes = MaxBytes,
               max_wait_time = MaxWaitTime,
@@ -234,6 +236,32 @@ commit(_, _, Processing1, Processing2) when (Processing1 == at_least_once orelse
   ok;
 commit(_, _, _, _) ->
   {error, invalid_processing}.
+
+get_start_offset(_, Topic, Partition, false) ->
+  case kafe:offset(-1, [{Topic, [{Partition, -1, 1}]}]) of
+    {ok, [#{name := Topic,
+            partitions := [#{error_code := none,
+                             id := Partition,
+                             offsets := [Offset]}]}]} ->
+      case (Offset < 0) of
+        true ->
+          {ok, Offset};
+        false ->
+          {ok, Offset - 1}
+      end;
+    _ ->
+      error
+  end;
+get_start_offset(GroupID, Topic, Partition, true) ->
+  case kafe:offset_fetch(GroupID, [{Topic, [Partition]}]) of
+    {ok, [#{name := Topic,
+            partitions_offset := [#{error_code := none,
+                                    offset := Offset,
+                                    partition := Partition}]}]} ->
+      {ok, Offset};
+    _ ->
+      error
+  end.
 
 -ifdef(TEST).
 fetch_without_error_test() ->
