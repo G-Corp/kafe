@@ -151,9 +151,8 @@ defmodule My.Consumer do
   end
 end
 
-defmodule My.Consumer.Subscriber do<br />
-
-  &#64;behaviour Kafe.Consumer.Subscriber
+defmodule My.Consumer.Subscriber do
+  behaviour Kafe.Consumer.Subscriber
 
   def init(group, topic, partition, args) do
     % Do something with group/topic/partition/args
