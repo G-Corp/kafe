@@ -151,7 +151,7 @@ defmodule My.Consumer do
   end
 end
 
-defmodule My.Consumer.Subscriber do
+defmodule My.Consumer.Subscriber do<br />
 
   &#64;behaviour Kafe.Consumer.Subscriber
 
