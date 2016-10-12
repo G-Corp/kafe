@@ -74,6 +74,9 @@ __Kafe__ use [lager](https://github.com/basho/lager) ; see also how to [configur
 
 ### Create a consumer ###
 
+
+#### Using a function ####
+
 To create a consumer, create a function with 6 parameters :
 
 ```
@@ -118,18 +121,69 @@ kafe:stop_consumer(my_group),
 ```
 
 
+#### Using the `kafe_consumer_subscriber` behaviour ####
+
+```
+
+-module(my_consumer).
+-behaviour(kafe_consumer_subscriber).
+
+-export([init/4, handle_message/2]).
+
+-record(state, {
+               }).
+
+init(Group, Topic, Partition, Args) ->
+  % Do something with Group, Topic, Partition, Args
+  {ok, #state{}}.
+
+handle_message(Message, State) ->
+  % Do something with Message
+  % And update your State (if needed)
+  {ok, NewState}.
+
+```
+
+Then start a new consumer :
+
+```
+
+...
+kafe:start().
+...
+kafe:start_consumer(my_group, {my_consumer, Args}, Options).
+% Or
+kafe:start_consumer(my_group, my_consumer, Options).
+...
+
+```
+
+
 ### Using with Elixir ###
 
 Elixir' users can use `Kafe` and `Kafe.Consumer` instead of `:kafe` and `:kafe_consumer`.
 
 ```
 
-defmodule MyConsumer do
+defmodule My.Consumer do
   def consume(commit_id, topic, partition, offset, key, value) do
     # Do something with topic/partition/offset/key/value
     :ok
   end
 end
+
+defmodule My.Consumer.Subscriber do@behaviour Kafe.Consumer.Subscriber
+
+  def init(group, topic, partition, args) do
+    % Do something with group/topic/partition/args
+    % and create the state
+    {:ok, state}
+  end
+
+  def handle_message(message, state) do
+    % Do something with message
+    % and update (or not)the state
+    {:ok, new_state}
 
 ```
 
@@ -139,6 +193,10 @@ end
 Kafe.start()
 ...
 Kafe.start_consumer(:my_group, &My.Consumer.consume/6, options)
+# or
+Kafe.start_consumer(:my_group, {My.Consumer.Subscriber, args}, options)
+# or
+Kafe.start_consumer(:my_group, My.Consumer.Subscriber, options)
 ...
 Kafe.stop_consumer(:my_group)
 ...
@@ -249,5 +307,6 @@ THIS SOFTWARE IS PROVIDED BY THE AUTHOR `AS IS` AND ANY EXPRESS OR IMPLIED WARRA
 
 <table width="100%" border="0" summary="list of modules">
 <tr><td><a href="kafe.md" class="module">kafe</a></td></tr>
-<tr><td><a href="kafe_consumer.md" class="module">kafe_consumer</a></td></tr></table>
+<tr><td><a href="kafe_consumer.md" class="module">kafe_consumer</a></td></tr>
+<tr><td><a href="kafe_consumer_subscriber.md" class="module">kafe_consumer_subscriber</a></td></tr></table>
 

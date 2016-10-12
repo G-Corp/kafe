@@ -16,6 +16,12 @@ init([]) ->
        intensity => 1,
        period => 5},
      [
+      #{id => kafe_consumer_subscriber_sup,
+        start => {kafe_consumer_subscriber_sup, start_link, []},
+        restart => permanent,
+        type => supervisor,
+        shutdown => infinity,
+        modules => [kafe_consumer_subscriber_sup]},
       #{id => kafe_consumer_sup,
         start => {kafe_consumer_sup, start_link, []},
         restart => permanent,

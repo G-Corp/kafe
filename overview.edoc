@@ -66,6 +66,8 @@ Example :
 
 <h3>Create a consumer</h3>
 
+<h4>Using a function</h4>
+
 To create a consumer, create a function with 6 parameters :
 
 <pre>
@@ -103,17 +105,65 @@ kafe:stop_consumer(my_group),
 ...
 </pre>
 
+<h4>Using the <tt>kafe_consumer_subscriber</tt> behaviour</h4>
+
+<pre>
+-module(my_consumer).
+-behaviour(kafe_consumer_subscriber).
+
+-export([init/4, handle_message/2]).
+
+-record(state, {
+               }).
+
+init(Group, Topic, Partition, Args) ->
+  % Do something with Group, Topic, Partition, Args
+  {ok, #state{}}.
+
+handle_message(Message, State) ->
+  % Do something with Message
+  % And update your State (if needed)
+  {ok, NewState}.
+</pre>
+
+Then start a new consumer :
+
+<pre>
+...
+kafe:start().
+...
+kafe:start_consumer(my_group, {my_consumer, Args}, Options).
+% Or
+kafe:start_consumer(my_group, my_consumer, Options).
+...
+</pre>
+
+
 <h3>Using with Elixir</h3>
 
 Elixir' users can use <tt>Kafe</tt> and <tt>Kafe.Consumer</tt> instead of <tt>:kafe</tt> and <tt>:kafe_consumer</tt>.
 
 <pre>
-defmodule MyConsumer do
+defmodule My.Consumer do
   def consume(commit_id, topic, partition, offset, key, value) do
     # Do something with topic/partition/offset/key/value
     :ok
   end
 end
+
+defmodule My.Consumer.Subscriber do
+  &#64;behaviour Kafe.Consumer.Subscriber
+
+  def init(group, topic, partition, args) do
+    % Do something with group/topic/partition/args
+    % and create the state
+    {:ok, state}
+  end
+
+  def handle_message(message, state) do
+    % Do something with message
+    % and update (or not)the state
+    {:ok, new_state}
 </pre>
 
 <pre>
@@ -121,6 +171,10 @@ end
 Kafe.start()
 ...
 Kafe.start_consumer(:my_group, &amp;My.Consumer.consume/6, options)
+# or
+Kafe.start_consumer(:my_group, {My.Consumer.Subscriber, args}, options)
+# or
+Kafe.start_consumer(:my_group, My.Consumer.Subscriber, options)
 ...
 Kafe.stop_consumer(:my_group)
 ...

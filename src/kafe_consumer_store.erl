@@ -8,6 +8,8 @@
 % - can_fetch : boolean
 % - topics : a list of {topic, partition} for the consumer group
 % - allow_unordered_commit : boolean
+% - {commit_pid, CommitStoreKey} : PID of the kafe_consumer_commiter for the CommitStoreKey (Topic, Partition)
+% - {subscriber_pid, CommitStoreKey} : PID og the kafe_consumer_subscriber for the CommitStoreKey (Topic, Partition)
 -module(kafe_consumer_store).
 
 -export([

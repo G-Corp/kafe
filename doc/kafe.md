@@ -821,7 +821,7 @@ Start kafe application
 ### start_consumer/3 ###
 
 <pre><code>
-start_consumer(GroupID::binary(), Callback::fun((CommitID::<a href="#type-group_commit_identifier">group_commit_identifier()</a>, Topic::binary(), PartitionID::integer(), Offset::integer(), Key::binary(), Value::binary()) -&gt; ok | {error, term()}), Options::<a href="#type-consumer_options">consumer_options()</a>) -&gt; {ok, GroupPID::pid()} | {error, term()}
+start_consumer(GroupID::binary(), Callback::fun((CommitID::<a href="#type-group_commit_identifier">group_commit_identifier()</a>, Topic::binary(), PartitionID::integer(), Offset::integer(), Key::binary(), Value::binary()) -&gt; ok | {error, term()}) | atom() | {atom(), [term()]}, Options::<a href="#type-consumer_options">consumer_options()</a>) -&gt; {ok, GroupPID::pid()} | {error, term()}
 </code></pre>
 <br />
 

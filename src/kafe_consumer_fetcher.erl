@@ -63,6 +63,7 @@ init([Topic, Partition, FetchInterval,
   case get_start_offset(GroupID, Topic, Partition, FromBeginning) of
     {ok, Offset} ->
       lager:info("Start fetcher for ~p#~p with offset ~p", [Topic, Partition, Offset]),
+      start_subscriber(Callback, GroupID, Topic, Partition),
       {ok, #state{
               topic = Topic,
               partition = Partition,
@@ -82,6 +83,14 @@ init([Topic, Partition, FetchInterval,
       lager:debug("Failed to fetch offset for ~p:~p in group ~p", [Topic, Partition, GroupID]),
       {stop, fetch_offset_faild}
   end.
+
+start_subscriber(Module, GroupID, Topic, Partition) when is_atom(Module) ->
+  start_subscriber({Module, []}, GroupID, Topic, Partition);
+start_subscriber({Module, Args}, GroupID, Topic, Partition) when is_atom(Module),
+                                                                 is_list(Args) ->
+  kafe_consumer_subscriber_sup:start_child(Module, Args, GroupID, Topic, Partition);
+start_subscriber(_, _ , _, _) ->
+  ok.
 
 handle_call(_Request, _From, State) ->
   {reply, ignored, State}.
@@ -195,15 +204,7 @@ perform_fetch([#{offset := Offset,
       LastOffset;
     _ ->
       lager:debug("Perform message offset ~p for ~p#~p with commit ref ~p", [Offset, Topic, Partition, CommitRef]),
-      case try
-             erlang:apply(Callback, [CommitRef, Topic, Partition, Offset, Key, Value])
-           catch
-             Class:Reason0 ->
-               lager:error(
-                 "Callback for message #~p of ~p#~p crash:~s",
-                 [Offset, Topic, Partition, lager:pr_stacktrace(erlang:get_stacktrace(), {Class, Reason0})]),
-               callback_exception
-           end of
+      case call_subscriber(Callback, GroupID, CommitRef, Topic, Partition, Offset, Key, Value) of
         ok ->
           case commit(CommitRef, Autocommit, Processing, at_least_once) of
             {error, Reason} ->
@@ -224,6 +225,22 @@ perform_fetch([#{offset := Offset,
           LastOffset
       end
   end.
+
+call_subscriber(Callback, _GroupID, CommitRef, Topic, Partition, Offset, Key, Value) when is_function(Callback) ->
+  try
+    erlang:apply(Callback, [CommitRef, Topic, Partition, Offset, Key, Value])
+  catch
+    Class:Reason0 ->
+      lager:error(
+        "Callback for message #~p of ~p#~p crash:~s",
+        [Offset, Topic, Partition, lager:pr_stacktrace(erlang:get_stacktrace(), {Class, Reason0})]),
+      callback_exception
+  end;
+call_subscriber(Callback, GroupID, CommitRef, Topic, Partition, Offset, Key, Value) when is_atom(Callback);
+                                                                                         is_tuple(Callback) ->
+  CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
+  SubscriberPID = kafe_consumer_store:value(GroupID, {subscriber_pid, CommitStoreKey}),
+  gen_server:call(SubscriberPID, {message, CommitRef, Topic, Partition, Offset, Key, Value}).
 
 commit(CommitRef, true, Processing, Processing) when Processing == at_least_once;
                                                      Processing == at_most_once ->
