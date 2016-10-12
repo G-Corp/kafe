@@ -152,6 +152,7 @@ defmodule My.Consumer do
 end
 
 defmodule My.Consumer.Subscriber do
+
   &#64;behaviour Kafe.Consumer.Subscriber
 
   def init(group, topic, partition, args) do
@@ -164,6 +165,8 @@ defmodule My.Consumer.Subscriber do
     % Do something with message
     % and update (or not)the state
     {:ok, new_state}
+  end
+end
 </pre>
 
 <pre>

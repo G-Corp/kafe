@@ -184,6 +184,8 @@ defmodule My.Consumer.Subscriber do@behaviour Kafe.Consumer.Subscriber
     % Do something with message
     % and update (or not)the state
     {:ok, new_state}
+  end
+end
 
 ```
 
