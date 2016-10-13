@@ -1,11 +1,17 @@
 -module(kafe_consumer_subscriber).
 -behaviour(gen_server).
 -include("../include/kafe_consumer.hrl").
--include_lib("bucs/include/bucs.hrl").
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
--include_lib("bucs/include/bucassert.hrl").
 -endif.
+
+% Copied from bucs due to Elixir 1.3 compilation error
+-define(RECORD_TO_LIST(Record, Val),
+        begin
+            Fields = record_info(fields, Record),
+            [_Tag| Values] = tuple_to_list(Val),
+            lists:zip(Fields, Values)
+        end).
 
 %% API
 -export([start_link/5]).
@@ -59,7 +65,7 @@
 % </pre>
 % @end
 message(Message, Field) ->
-  case lists:keyfind(Field, 1, ?record_to_list(message, Message)) of
+  case lists:keyfind(Field, 1, ?RECORD_TO_LIST(message, Message)) of
     {Field, Value} ->
       Value;
     false ->
