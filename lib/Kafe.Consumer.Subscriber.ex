@@ -5,4 +5,7 @@
 defmodule Kafe.Consumer.Subscriber do
   @callback init(any, any, any, any) :: any
   @callback handle_message(any, any) :: any
+  def unquote(:"message")(arg1, arg2) do
+    :erlang.apply(:"kafe_consumer_subscriber", :"message", [arg1, arg2])
+  end
 end

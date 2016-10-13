@@ -1,5 +1,11 @@
 -module(kafe_consumer_subscriber).
 -behaviour(gen_server).
+-include("../include/kafe_consumer.hrl").
+-include_lib("bucs/include/bucs.hrl").
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-include_lib("bucs/include/bucassert.hrl").
+-endif.
 
 %% API
 -export([start_link/5]).
@@ -12,6 +18,8 @@
          , terminate/2
          , code_change/3]).
 
+-export([message/2]).
+
 -record(state, {
           group_id,
           topic,
@@ -21,16 +29,6 @@
           subscriber_args,
           subscriber_state
          }).
-
--record(message, {
-          commit_ref,
-          topic,
-          partition,
-          offset,
-          key,
-          value}).
-
--type message() :: #message{}.
 
 % Initialize the consumer group subscriber
 -callback init(Group :: binary(),
@@ -51,6 +49,22 @@
                          State :: term()) ->
   {ok, NewState :: term()}
   | {error, Reason :: term(), NewState :: term()}.
+
+% @doc
+% Get message attributes.
+%
+% Example:
+% <pre>
+% Topic = kafe_consumer_subscriber:message(Message, topic).
+% </pre>
+% @end
+message(Message, Field) ->
+  case lists:keyfind(Field, 1, ?record_to_list(message, Message)) of
+    {Field, Value} ->
+      Value;
+    false ->
+      undefined
+  end.
 
 % @hidden
 start_link(Module, Args, GroupID, Topic, Partition) ->
@@ -93,13 +107,12 @@ handle_call({message, CommitRef, Topic, Partition, Offset, Key, Value},
                               value = Value},
                      SubscriberState]) of
     {error, Reason, NewSubscriberState} ->
-      {ok, {error, Reason}, State#state{subscriber_state = NewSubscriberState}};
+      {reply, {error, Reason}, State#state{subscriber_state = NewSubscriberState}};
     {ok, NewSubscriberState} ->
       {reply, ok, State#state{subscriber_state = NewSubscriberState}}
   end;
 handle_call(_Request, _From, State) ->
-  Reply = ok,
-  {reply, Reply, State}.
+  {reply, {error, invalid_message}, State}.
 
 % @hidden
 handle_cast(_Msg, State) ->
@@ -117,3 +130,175 @@ terminate(_Reason, #state{group_id = GroupID, commit_store_key = CommitStoreKey}
 % @hidden
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
+
+-ifdef(TEST).
+message_test() ->
+  Message = #message{commit_ref = <<"COMMITREF">>,
+                     topic = <<"topic">>,
+                     partition = 1,
+                     offset = 1234,
+                     key = <<"key">>,
+                     value = <<"value">>},
+  ?assertEqual(<<"COMMITREF">>, message(Message, commit_ref)),
+  ?assertEqual(<<"topic">>, message(Message, topic)),
+  ?assertEqual(1, message(Message, partition)),
+  ?assertEqual(<<"key">>, message(Message, key)),
+  ?assertEqual(<<"value">>, message(Message, value)),
+  ?assertEqual(undefined, message(Message, invalid_field)).
+
+init_ok_test() ->
+  meck:new(test_subscriber, [non_strict]),
+  meck:expect(test_subscriber, init, 4, {ok, subscriber_state_for_test}),
+  ?assertEqual({ok, #state{
+                       group_id = <<"group">>,
+                       topic = <<"topic">>,
+                       partition = 1,
+                       commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
+                       subscriber_module = test_subscriber,
+                       subscriber_args = subscriber_args_for_test,
+                       subscriber_state = subscriber_state_for_test
+                      }},
+               init([test_subscriber,
+                     subscriber_args_for_test,
+                     <<"group">>,
+                     <<"topic">>,
+                     1])),
+  meck:unload(test_subscriber).
+
+init_stop_test() ->
+  meck:new(test_subscriber, [non_strict]),
+  meck:expect(test_subscriber, init, 4, {stop, test_stop}),
+  ?assertEqual({stop, test_stop},
+               init([test_subscriber,
+                     subscriber_args_for_test,
+                     <<"group">>,
+                     <<"topic">>,
+                     1])),
+  meck:unload(test_subscriber).
+
+handle_message_test() ->
+  meck:new(test_subscriber, [non_strict]),
+  meck:expect(test_subscriber, handle_message, 2, {ok, new_subscriber_state_for_test}),
+  ?assertEqual({reply, ok, #state{
+                              group_id = <<"group">>,
+                              topic = <<"topic">>,
+                              partition = 1,
+                              commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
+                              subscriber_module = test_subscriber,
+                              subscriber_args = subscriber_args_for_test,
+                              subscriber_state = new_subscriber_state_for_test
+                             }},
+               handle_call({message,
+                            <<"COMMITREF">>,
+                            <<"topic">>,
+                            1,
+                            1234,
+                            <<"key">>,
+                            <<"value">>},
+                           from,
+                           #state{
+                              group_id = <<"group">>,
+                              topic = <<"topic">>,
+                              partition = 1,
+                              commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
+                              subscriber_module = test_subscriber,
+                              subscriber_args = subscriber_args_for_test,
+                              subscriber_state = subscriber_state_for_test
+                             })),
+  meck:unload(test_subscriber).
+
+handle_message_subscriber_error_test() ->
+  meck:new(test_subscriber, [non_strict]),
+  meck:expect(test_subscriber, handle_message, 2, {error, subscriber_error, new_subscriber_state_for_test}),
+  ?assertEqual({reply,
+                {error, subscriber_error},
+                #state{
+                   group_id = <<"group">>,
+                   topic = <<"topic">>,
+                   partition = 1,
+                   commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
+                   subscriber_module = test_subscriber,
+                   subscriber_args = subscriber_args_for_test,
+                   subscriber_state = new_subscriber_state_for_test
+                  }},
+               handle_call({message,
+                            <<"COMMITREF">>,
+                            <<"topic">>,
+                            1,
+                            1234,
+                            <<"key">>,
+                            <<"value">>},
+                           from,
+                           #state{
+                              group_id = <<"group">>,
+                              topic = <<"topic">>,
+                              partition = 1,
+                              commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
+                              subscriber_module = test_subscriber,
+                              subscriber_args = subscriber_args_for_test,
+                              subscriber_state = subscriber_state_for_test
+                             })),
+  meck:unload(test_subscriber).
+
+handle_message_invalid_message_topic_test() ->
+  ?assertEqual({reply,
+                {error, invalid_message},
+                #state{
+                   group_id = <<"group">>,
+                   topic = <<"topic">>,
+                   partition = 1,
+                   commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
+                   subscriber_module = test_subscriber,
+                   subscriber_args = subscriber_args_for_test,
+                   subscriber_state = subscriber_state_for_test
+                  }},
+               handle_call({message,
+                            <<"COMMITREF">>,
+                            <<"topic1">>,
+                            1,
+                            1234,
+                            <<"key">>,
+                            <<"value">>},
+                           from,
+                           #state{
+                              group_id = <<"group">>,
+                              topic = <<"topic">>,
+                              partition = 1,
+                              commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
+                              subscriber_module = test_subscriber,
+                              subscriber_args = subscriber_args_for_test,
+                              subscriber_state = subscriber_state_for_test
+                             })).
+
+handle_message_invalid_message_partition_test() ->
+  ?assertEqual({reply,
+                {error, invalid_message},
+                #state{
+                   group_id = <<"group">>,
+                   topic = <<"topic">>,
+                   partition = 1,
+                   commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
+                   subscriber_module = test_subscriber,
+                   subscriber_args = subscriber_args_for_test,
+                   subscriber_state = subscriber_state_for_test
+                  }},
+               handle_call({message,
+                            <<"COMMITREF">>,
+                            <<"topic">>,
+                            2,
+                            1234,
+                            <<"key">>,
+                            <<"value">>},
+                           from,
+                           #state{
+                              group_id = <<"group">>,
+                              topic = <<"topic">>,
+                              partition = 1,
+                              commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
+                              subscriber_module = test_subscriber,
+                              subscriber_args = subscriber_args_for_test,
+                              subscriber_state = subscriber_state_for_test
+                             })).
+
+-endif.
+

@@ -182,7 +182,7 @@ defmodule My.Consumer.Subscriber do
   end
 
   def handle_message(message, state) do
-    % Do something with message
+    % Do something with message (Kafe.Records.message)
     % and update (or not)the state
     {:ok, new_state}
   end
