@@ -1,3 +1,4 @@
+{"1.1.0",
 [{<<"bristow">>,{pkg,<<"bristow">>,<<"0.1.1">>},0},
  {<<"bucs">>,{pkg,<<"bucs">>,<<"0.1.9">>},0},
  {<<"doteki">>,{pkg,<<"doteki">>,<<"0.1.13">>},0},
@@ -10,4 +11,12 @@
  {<<"poolgirl">>,
   {git,"https://github.com/botsunit/poolgirl.git",
        {ref,"b9e52d711bc8dfb55d26c2de0b44cb4e2e774eb3"}},
-  0}].
+  0}]}.
+[
+{pkg_hash,[
+ {<<"bristow">>, <<"1F9C1D6F0368E23E34B67908F5578BEB3FAED9668DE8F86BFE4E4047D1F59A86">>},
+ {<<"bucs">>, <<"810FDFEB83ADF127E6303FBB1E8139BD575699DEE8204F46F162908B5F343CF5">>},
+ {<<"doteki">>, <<"C78BA7B2373371D5319896F462D437456E7C9DE75ED79AA433BAC8532235057F">>},
+ {<<"goldrush">>, <<"2024BA375CEEA47E27EA70E14D2C483B2D8610101B4E852EF7F89163CDB6E649">>},
+ {<<"lager">>, <<"EEF4E18B39E4195D37606D9088EA05BF1B745986CF8EC84F01D332456FE88D17">>}]}
+].
