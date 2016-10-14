@@ -14,7 +14,7 @@
         end).
 
 %% API
--export([start_link/5]).
+-export([start_link/4]).
 
 %% gen_server callbacks
 -export([init/1
@@ -73,8 +73,10 @@ message(Message, Field) ->
   end.
 
 % @hidden
-start_link(Module, Args, GroupID, Topic, Partition) ->
-  gen_server:start_link(?MODULE, [Module, Args, GroupID, Topic, Partition], []).
+start_link({Module, Args}, GroupID, Topic, Partition) ->
+  gen_server:start_link(?MODULE, [Module, Args, GroupID, Topic, Partition], []);
+start_link(Module, GroupID, Topic, Partition) ->
+  gen_server:start_link(?MODULE, [Module, [], GroupID, Topic, Partition], []).
 
 % @hidden
 init([SubscriberModule, SubscriberArgs, GroupID, Topic, Partition]) ->

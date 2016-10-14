@@ -182,7 +182,7 @@ stop_fetchers([TP|Rest], #state{fetchers = Fetchers, commits = Commits, group_id
       CommitStoreKey = erlang:term_to_binary(TP),
       _ = erlang:demonitor(MRef),
       try
-        kafe_consumer_fetcher_sup:stop_child(Pid)
+        kafe_consumer_group_sup:stop_child(Pid)
       catch
         C:E ->
           lager:error("Can't terminate kafe_consumer_fetcher #~p: ~p:~p", [Pid, C, E])
@@ -206,7 +206,7 @@ start_fetchers([{Topic, Partition}|Rest], #state{fetchers = Fetchers,
                                                  callback = Callback,
                                                  processing = Processing} = State) ->
   kafe_metrics:init_consumer_partition(GroupID, Topic, Partition),
-  case kafe_consumer_fetcher_sup:start_child(Topic, Partition, FetchInterval,
+  case kafe_consumer_group_sup:start_child(Topic, Partition, FetchInterval,
                                              GroupID, Autocommit, FromBeginning,
                                              MinBytes, MaxBytes, MaxWaitTime,
                                              Callback, Processing) of
@@ -281,9 +281,9 @@ stop_fetch_with_invalid_fun_test() ->
   kafe_consumer_store:delete(<<"test_cg">>).
 
 update_fetchers_create_test() ->
-  meck:new(kafe_consumer_fetcher_sup, [passthrough]),
-  meck:expect(kafe_consumer_fetcher_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
-  meck:expect(kafe_consumer_fetcher_sup, stop_child, 1, ok),
+  meck:new(kafe_consumer_group_sup, [passthrough]),
+  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
   meck:expect(kafe_metrics, init_consumer_partition, 3, ok),
@@ -307,12 +307,12 @@ update_fetchers_create_test() ->
                kafe_consumer:topics(<<"test_cg">>)),
   kafe_consumer_store:delete(<<"test_cg">>),
   meck:unload(kafe_metrics),
-  meck:unload(kafe_consumer_fetcher_sup).
+  meck:unload(kafe_consumer_group_sup).
 
 update_fetchers_unchange_test() ->
-  meck:new(kafe_consumer_fetcher_sup, [passthrough]),
-  meck:expect(kafe_consumer_fetcher_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
-  meck:expect(kafe_consumer_fetcher_sup, stop_child, 1, ok),
+  meck:new(kafe_consumer_group_sup, [passthrough]),
+  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
 %  meck:new(kafe_metrics, [passthrough]),
 %  meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
 %  meck:expect(kafe_metrics, init_consumer_partition, 3, ok),
@@ -330,12 +330,12 @@ update_fetchers_unchange_test() ->
                kafe_consumer:topics(<<"test_cg">>)),
   kafe_consumer_store:delete(<<"test_cg">>),
 %  meck:unload(kafe_metrics),
-  meck:unload(kafe_consumer_fetcher_sup).
+  meck:unload(kafe_consumer_group_sup).
 
 update_fetchers_add_test() ->
-  meck:new(kafe_consumer_fetcher_sup, [passthrough]),
-  meck:expect(kafe_consumer_fetcher_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
-  meck:expect(kafe_consumer_fetcher_sup, stop_child, 1, ok),
+  meck:new(kafe_consumer_group_sup, [passthrough]),
+  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
 %  meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
   meck:expect(kafe_metrics, init_consumer_partition, 3, ok),
@@ -369,12 +369,12 @@ update_fetchers_add_test() ->
                kafe_consumer:topics(<<"test_cg">>)),
   kafe_consumer_store:delete(<<"test_cg">>),
   meck:unload(kafe_metrics),
-  meck:unload(kafe_consumer_fetcher_sup).
+  meck:unload(kafe_consumer_group_sup).
 
 update_fetchers_delete_test() ->
-  meck:new(kafe_consumer_fetcher_sup, [passthrough]),
-  meck:expect(kafe_consumer_fetcher_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
-  meck:expect(kafe_consumer_fetcher_sup, stop_child, 1, ok),
+  meck:new(kafe_consumer_group_sup, [passthrough]),
+  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
   meck:expect(kafe_metrics, init_consumer_partition, 3, ok),
@@ -400,12 +400,12 @@ update_fetchers_delete_test() ->
                kafe_consumer:topics(<<"test_cg">>)),
   kafe_consumer_store:delete(<<"test_cg">>),
   meck:unload(kafe_metrics),
-  meck:unload(kafe_consumer_fetcher_sup).
+  meck:unload(kafe_consumer_group_sup).
 
 update_fetchers_update_test() ->
-  meck:new(kafe_consumer_fetcher_sup, [passthrough]),
-  meck:expect(kafe_consumer_fetcher_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
-  meck:expect(kafe_consumer_fetcher_sup, stop_child, 1, ok),
+  meck:new(kafe_consumer_group_sup, [passthrough]),
+  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
   meck:expect(kafe_metrics, init_consumer_partition, 3, ok),
@@ -433,6 +433,6 @@ update_fetchers_update_test() ->
                kafe_consumer:topics(<<"test_cg">>)),
   kafe_consumer_store:delete(<<"test_cg">>),
   meck:unload(kafe_metrics),
-  meck:unload(kafe_consumer_fetcher_sup).
+  meck:unload(kafe_consumer_group_sup).
 -endif.
 

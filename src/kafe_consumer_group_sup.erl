@@ -1,5 +1,5 @@
 % @hidden
--module(kafe_consumer_fetcher_sup).
+-module(kafe_consumer_group_sup).
 -compile([{parse_transform, lager_transform}]).
 
 -behaviour(supervisor).
@@ -47,7 +47,7 @@ init([]) ->
        intensity => 0,
        period => 1},
      [#{id => kafe_consumer_fetcher,
-        start => {kafe_consumer_fetcher_commiter_sup, start_link, []},
+        start => {kafe_consumer_tp_group_sup, start_link, []},
         type => supervisor,
         shutdown => 5000}]
     }}.

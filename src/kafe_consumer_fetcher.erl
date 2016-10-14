@@ -63,7 +63,6 @@ init([Topic, Partition, FetchInterval,
   case get_start_offset(GroupID, Topic, Partition, FromBeginning) of
     {ok, Offset} ->
       lager:info("Start fetcher for ~p#~p with offset ~p", [Topic, Partition, Offset]),
-      start_subscriber(Callback, GroupID, Topic, Partition),
       {ok, #state{
               topic = Topic,
               partition = Partition,
@@ -83,14 +82,6 @@ init([Topic, Partition, FetchInterval,
       lager:debug("Failed to fetch offset for ~p:~p in group ~p", [Topic, Partition, GroupID]),
       {stop, fetch_offset_faild}
   end.
-
-start_subscriber(Module, GroupID, Topic, Partition) when is_atom(Module) ->
-  start_subscriber({Module, []}, GroupID, Topic, Partition);
-start_subscriber({Module, Args}, GroupID, Topic, Partition) when is_atom(Module),
-                                                                 is_list(Args) ->
-  kafe_consumer_subscriber_sup:start_child(Module, Args, GroupID, Topic, Partition);
-start_subscriber(_, _ , _, _) ->
-  ok.
 
 handle_call(_Request, _From, State) ->
   {reply, ignored, State}.
