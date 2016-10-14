@@ -14,9 +14,9 @@ run(ReplicaID, TopicName, Options) ->
   {Partition, Offset} = case {maps:get(partition, Options, undefined),
                               maps:get(offset, Options, undefined)} of
                           {undefined, undefined} ->
-                            clean_offset(kafe:max_offset(TopicName));
+                            kafe:max_offset(TopicName);
                           {Partition1, undefined} ->
-                            clean_offset(kafe:max_offset(TopicName, Partition1));
+                            kafe:max_offset(TopicName, Partition1);
                           {undefined, Offset1} ->
                             kafe:partition_for_offset(TopicName, Offset1);
                           R -> R
@@ -88,12 +88,6 @@ response(_, _) ->
   {error, incomplete_data}.
 
 % Private
-
-clean_offset({Partition, Offset}) ->
-  {Partition, if
-                Offset > 0 -> Offset;
-                true -> Offset
-              end}.
 
 response(0, _, Result) ->
   {ok, Result};
