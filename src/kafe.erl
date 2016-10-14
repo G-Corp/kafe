@@ -419,7 +419,7 @@ fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_
 % Options:
 % <ul>
 % <li><tt>partition :: integer()</tt> : The id of the partition the fetch is for (default : partition with the highiest offset).</li>
-% <li><tt>offset :: integer()</tt> : The offset to begin this fetch from (default : last offset for the partition)</li>
+% <li><tt>offset :: integer()</tt> : The offset to begin this fetch from (default : next offset for the partition)</li>
 % <li><tt>max_bytes :: integer()</tt> : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 % 1024*1024)</li>
 % <li><tt>min_bytes :: integer()</tt> : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0
@@ -429,7 +429,7 @@ fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_
 % MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait up to 100ms to try to accumulate 64k of data before responding) (default :
 % 1).</li>
 % <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
-% at the time the request is issued (default : 1).</li>
+% at the time the request is issued (default : 100).</li>
 % <li><tt>retrieve :: all | first</tt> : if the Kafka's response buffer contains more than one complete message ; with <tt>first</tt> we will ignore the
 % remaining data ; with <tt>all</tt> we will parse all complete messages in the buffer (default : first).</li>
 % </ul>

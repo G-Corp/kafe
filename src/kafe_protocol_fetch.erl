@@ -91,7 +91,7 @@ response(_, _) ->
 
 clean_offset({Partition, Offset}) ->
   {Partition, if
-                Offset > 0 -> Offset - 1;
+                Offset > 0 -> Offset;
                 true -> Offset
               end}.
 

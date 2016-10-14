@@ -448,7 +448,7 @@ Options:
 
 * `partition :: integer()` : The id of the partition the fetch is for (default : partition with the highiest offset).
 
-* `offset :: integer()` : The offset to begin this fetch from (default : last offset for the partition)
+* `offset :: integer()` : The offset to begin this fetch from (default : next offset for the partition)
 
 * `max_bytes :: integer()` : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 1024*1024)
@@ -461,7 +461,7 @@ MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait
 1).
 
 * `max_wait_time :: integer()` : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
-at the time the request is issued (default : 1).
+at the time the request is issued (default : 100).
 
 * `retrieve :: all | first` : if the Kafka's response buffer contains more than one complete message ; with `first` we will ignore the
 remaining data ; with `all` we will parse all complete messages in the buffer (default : first).
