@@ -23,7 +23,7 @@ run(ReplicaID, TopicName, Options) ->
                         end,
   Options1 = Options#{partition => Partition,
                       offset => Offset},
-  lager:debug("Fetch ~p (partition #~p, offset ~p)", [TopicName, Partition, Offset]),
+  lager:debug("Fetch topic ~s (partition ~p, offset ~p)", [TopicName, Partition, Offset]),
   kafe_protocol:run({topic_and_partition, TopicName, Partition},
                     {call,
                      fun ?MODULE:request/4, [ReplicaID, bucs:to_binary(TopicName), Options1],

@@ -62,7 +62,7 @@ init([Topic, Partition, FetchInterval,
   _ = erlang:process_flag(trap_exit, true),
   case get_start_offset(GroupID, Topic, Partition, FromBeginning) of
     {ok, Offset} ->
-      lager:info("Start fetcher for ~p#~p with offset ~p", [Topic, Partition, Offset]),
+      lager:info("Starting fetcher for topic ~s, partition ~p with offset ~p", [Topic, Partition, Offset]),
       {ok, #state{
               topic = Topic,
               partition = Partition,
@@ -79,7 +79,7 @@ init([Topic, Partition, FetchInterval,
               processing = Processing
              }};
     _ ->
-      lager:debug("Failed to fetch offset for ~p:~p in group ~p", [Topic, Partition, GroupID]),
+      lager:error("Failed to fetch offset for topic ~s, partition ~p in group ~s", [Topic, Partition, GroupID]),
       {stop, fetch_offset_faild}
   end.
 
@@ -94,8 +94,8 @@ handle_info(fetch, State) ->
 handle_info(_Info, State) ->
   {noreply, State}.
 
-terminate(_Reason, State) ->
-  lager:debug("Stop fetcher ~p", [State]),
+terminate(Reason, State) ->
+  lager:debug("Stop fetcher ~p for reason ~p", [State, Reason]),
   ok.
 
 code_change(_OldVsn, State, _Extra) ->
@@ -155,10 +155,10 @@ fetch(#state{fetch_interval = FetchInterval,
                                         partitions :=
                                         [#{error_code := ErrorCode,
                                            partition := Partition}]}]}} ->
-                                lager:debug("Offset #~p topic ~s:~p error: ~s", [Offset + 1, Topic, Partition, kafe_error:message(ErrorCode)]),
+                                lager:error("Error fetching offset ~p of topic ~s, partition ~p: ~s", [Offset + 1, Topic, Partition, kafe_error:message(ErrorCode)]),
                                 Offset;
                               Error ->
-                                lager:error("Failed to fetch message #~p topic ~p:~p : ~p", [Offset + 1, Topic, Partition, Error]),
+                                lager:error("Error fetching offset ~p of topic ~s, partition ~p: ~p", [Offset + 1, Topic, Partition, Error]),
                                 Offset
                             end;
                           false ->
@@ -166,10 +166,10 @@ fetch(#state{fetch_interval = FetchInterval,
                         end;
                       {ok, [#{name := Topic,
                               partitions := [#{error_code := Error}]}]} ->
-                        lager:error("Get offset for ~p#~p error : ~p", [Topic, Partition, kafe_error:message(Error)]),
+                        lager:error("Error getting offset for topic ~s, partition ~p: ~s", [Topic, Partition, kafe_error:message(Error)]),
                         Offset;
                       {error, Error} ->
-                        lager:error("Get offset for ~p#~p error : ~p", [Topic, Partition, Error]),
+                        lager:error("Error getting offset for topic ~s, partition ~p: ~p", [Topic, Partition, Error]),
                         Offset
                     end;
                   false ->
@@ -191,15 +191,15 @@ perform_fetch([#{offset := Offset,
   CommitRef = kafe_consumer:store_for_commit(GroupID, Topic, Partition, Offset),
   case commit(CommitRef, Autocommit, Processing, at_most_once) of
     {error, Reason} ->
-      lager:error("[~p] Commit error for offset ~p of ~p#~p : ~p", [Processing, Offset, Topic, Partition, Reason]),
+      lager:error("[~p] autocommit error for offset ~p of topic ~s, partition ~p: ~p", [Processing, Offset, Topic, Partition, Reason]),
       LastOffset;
     _ ->
-      lager:debug("Perform message offset ~p for ~p#~p with commit ref ~p", [Offset, Topic, Partition, CommitRef]),
+      lager:debug("Processing message ~p of topic ~s, partition ~p with commit ref ~p", [Offset, Topic, Partition, CommitRef]),
       case call_subscriber(Callback, GroupID, CommitRef, Topic, Partition, Offset, Key, Value) of
         ok ->
           case commit(CommitRef, Autocommit, Processing, at_least_once) of
             {error, Reason} ->
-              lager:error("[~p] Commit error for offset ~p of ~p#~p : ~p", [Processing, Offset, Topic, Partition, Reason]),
+              lager:error("[~p] autocommit error for offset ~p of topic ~s, patition ~p: ~p", [Processing, Offset, Topic, Partition, Reason]),
               LastOffset;
             _ ->
               Next = erlang:system_time(milli_seconds),
@@ -209,10 +209,10 @@ perform_fetch([#{offset := Offset,
         callback_exception ->
           LastOffset;
         {error, Error} ->
-          lager:error("Callback for message #~p of ~p#~p return error : ~p", [Offset, Topic, Partition, Error]),
+          lager:error("Callback for message ~p of topic ~s, partition ~p returned error: ~p", [Offset, Topic, Partition, Error]),
           LastOffset;
         Other ->
-          lager:error("Callback for message #~p of ~p#~p invalid response : ~p", [Offset, Topic, Partition, Other]),
+          lager:error("Callback for message ~p of topic ~s, partition ~p returned invalid response: ~p", [Offset, Topic, Partition, Other]),
           LastOffset
       end
   end.
@@ -223,7 +223,7 @@ call_subscriber(Callback, _GroupID, CommitRef, Topic, Partition, Offset, Key, Va
   catch
     Class:Reason0 ->
       lager:error(
-        "Callback for message #~p of ~p#~p crash:~s",
+        "Callback for message ~p of topic ~s, partition ~p crash:~s",
         [Offset, Topic, Partition, lager:pr_stacktrace(erlang:get_stacktrace(), {Class, Reason0})]),
       callback_exception
   end;

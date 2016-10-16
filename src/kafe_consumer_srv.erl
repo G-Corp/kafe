@@ -214,7 +214,7 @@ start_fetchers([{Topic, Partition}|Rest], #state{fetchers = Fetchers,
       MRef = erlang:monitor(process, Pid),
       start_fetchers(Rest, State#state{fetchers = [{{Topic, Partition}, Pid, MRef}|Fetchers]});
     {error, Error} ->
-      lager:error("Faild to start fetcher for ~p#~p : ~p", [Topic, Partition, Error]),
+      lager:error("Faild to start fetcher for topic ~s, partition ~p: ~p", [Topic, Partition, Error]),
       start_fetchers(Rest, State)
   end.
 

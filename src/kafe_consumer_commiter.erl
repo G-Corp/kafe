@@ -55,7 +55,7 @@ handle_call({store_for_commit, Offset}, _From, #state{commits = Commits,
                                                       topic = Topic,
                                                       partition = Partition,
                                                       group_id = GroupID} = State) ->
-  lager:debug("Store for commit offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]),
+  lager:debug("Store for commit offset ~p for topic ~s, partition ~p", [Offset, Topic, Partition]),
   GenerationID = kafe_consumer_store:value(GroupID, generation_id),
   MemberID = kafe_consumer_store:value(GroupID, member_id),
   CommitsList = lists:append(Commits,
@@ -144,20 +144,20 @@ ordered_commit(Topic, Partition, Offset, GroupID, GenerationID, MemberID, Option
         {ok, [#{name := Topic,
                 partitions := [#{error_code := none,
                                  partition := Partition}]}]} ->
-          lager:debug("COMMIT Offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]),
+          lager:debug("COMMIT Offset ~p for Topic ~s, partition ~p", [Offset, Topic, Partition]),
           kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(Commits1)),
           {reply, ok, State#state{commits = Commits1}};
         {ok, [#{name := Topic,
                 partitions := [#{error_code := Error,
                                  partition := Partition}]}]} ->
-          lager:error("COMMIT Offset ~p for Topic ~p, partition ~p error: ~s", [Offset, Topic, Partition, kafe_error:message(Error)]),
+          lager:error("COMMIT Offset ~p for topic ~s, partition ~p error: ~s", [Offset, Topic, Partition, kafe_error:message(Error)]),
           {reply, {error, Error}, State};
         Error ->
-          lager:error("COMMIT Offset ~p for Topic ~p, partition ~p error: ~s", [Offset, Topic, Partition, Error]),
+          lager:error("COMMIT Offset ~p for topic ~s, partition ~p error: ~p", [Offset, Topic, Partition, Error]),
           {reply, Error, State}
       end;
     _ ->
-      lager:error("Can't Offset ~p for Topic ~p, partition ~p : not the first commit in list", [Offset, Topic, Partition]),
+      lager:error("Can't commit offset ~p for topic ~s, partition ~p: not the first commit in list", [Offset, Topic, Partition]),
       {reply, {error, missing_previous_commit}, State}
   end.
 
@@ -172,17 +172,17 @@ find_last_commit([{_, true} = Commit|Rest], _) ->
 do_commit(_, _, _, _, _, _, Retry, _, Return) when Retry < 0 ->
   Return;
 do_commit(GroupID, GenerationID, MemberID, Topic, Partition, Offset, Retry, Delay, _) ->
-  lager:debug("Try (~p) to commit Offset ~p for Topic ~p, partition ~p", [Retry, Offset, Topic, Partition]),
+  lager:debug("Attempting (~p retries remaining) to commit offset ~p for topic ~s, partition ~p", [Retry, Offset, Topic, Partition]),
   case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
                           [{Topic, [{Partition, Offset, <<>>}]}]) of
     {ok, [#{name := Topic,
             partitions := [#{error_code := none,
                              partition := Partition}]}]} = R ->
-      lager:debug("Commit Offset ~p for Topic ~p, partition ~p", [Offset, Topic, Partition]),
+      lager:debug("Committed offset ~p for topic ~s, partition ~p", [Offset, Topic, Partition]),
       R;
     Other ->
+      lager:warning("Attempt (~p retries remaining) to commit offset ~p for topic ~s, partition ~p failed: ~p", [Retry, Offset, Topic, Partition, Other]),
       _ = timer:sleep(Delay),
-      lager:debug("Try (~p) to commit Offset ~p for Topic ~p, partition ~p failed: ~p", [Retry, Offset, Topic, Partition, Other]),
       do_commit(GroupID, GenerationID, MemberID, Topic, Partition, Offset, Retry - 1, Delay, Other)
   end.
 
