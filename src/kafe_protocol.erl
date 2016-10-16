@@ -69,13 +69,13 @@ request(ApiKey, RequestMessage,
         #{correlation_id := CorrelationId,
           client_id := ClientId} = State,
        ApiVersion) ->
-  #{packet => encode_bytes(<<
-                             ApiKey:16/signed,
-                             ApiVersion:16/signed,
-                             CorrelationId:32/signed,
-                             (encode_string(ClientId))/binary,
-                             RequestMessage/binary
-                           >>),
+  #{packet => <<
+                 ApiKey:16/signed,
+                 ApiVersion:16/signed,
+                 CorrelationId:32/signed,
+                 (encode_string(ClientId))/binary,
+                 RequestMessage/binary
+               >>,
     state => maps:update(correlation_id, CorrelationId + 1, State),
     api_version => ApiVersion}.
 
@@ -94,21 +94,12 @@ encode_array(List) ->
   Payload = << <<B/binary>> || B <- List>>,
   <<Len:32/signed, Payload/binary>>.
 
-response(
-  <<Size:32/signed, Packet:Size/bytes>>,
-  #{requests := Requests, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
- ) ->
-  <<CorrelationId:32/signed, Remainder/bytes>> = Packet,
+response(<<CorrelationId:32/signed, Remainder/bytes>>, #{requests := Requests} = State) ->
   case orddict:find(CorrelationId, Requests) of
-    {ok, #{from := From, handler := {ResponseHandler, ResponseHandlerParams}, socket := Socket, api_version := ApiVersion}} ->
+    {ok, #{from := From, handler := {ResponseHandler, ResponseHandlerParams}, api_version := ApiVersion}} ->
       _ = gen_server:reply(From, erlang:apply(ResponseHandler, [Remainder, ApiVersion|ResponseHandlerParams])),
-      case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
-        ok ->
-          {noreply, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};
-        {error, _} = Reason ->
-          {stop, Reason, State}
-      end;
+      {ok, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};
     error ->
-      {noreply, State} %;
+      {error, request_not_found} %;
   end.
 
