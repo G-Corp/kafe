@@ -229,8 +229,7 @@ call_subscriber(Callback, _GroupID, CommitRef, Topic, Partition, Offset, Key, Va
   end;
 call_subscriber(Callback, GroupID, CommitRef, Topic, Partition, Offset, Key, Value) when is_atom(Callback);
                                                                                          is_tuple(Callback) ->
-  CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
-  SubscriberPID = kafe_consumer_store:value(GroupID, {subscriber_pid, CommitStoreKey}),
+  SubscriberPID = kafe_consumer_store:value(GroupID, {subscriber_pid, {Topic, Partition}}),
   gen_server:call(SubscriberPID, {message, CommitRef, Topic, Partition, Offset, Key, Value}).
 
 commit(CommitRef, true, Processing, Processing) when Processing == at_least_once;

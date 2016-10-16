@@ -25,7 +25,6 @@
           topic,
           partition,
           group_id,
-          commit_store_key,
           commits = []
          }).
 
@@ -35,13 +34,11 @@ start_link(Topic, Partition, GroupID) ->
 % @hidden
 init([Topic, Partition, GroupID]) ->
   erlang:process_flag(trap_exit, true),
-  CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
-  kafe_consumer_store:insert(GroupID, {commit_pid, CommitStoreKey}, self()),
+  kafe_consumer_store:insert(GroupID, {commit_pid, {Topic, Partition}}, self()),
   {ok, #state{
           topic = Topic,
           partition = Partition,
           group_id = GroupID,
-          commit_store_key = CommitStoreKey,
           commits = []
          }}.
 
@@ -98,8 +95,8 @@ handle_info(_Info, State) ->
   {noreply, State}.
 
 % @hidden
-terminate(_Reason, #state{group_id = GroupID, commit_store_key = CommitStoreKey}) ->
-  kafe_consumer_store:delete(GroupID, {commit_pid, CommitStoreKey}),
+terminate(_Reason, #state{group_id = GroupID, topic = Topic, partition = Partition}) ->
+  kafe_consumer_store:delete(GroupID, {commit_pid, {Topic, Partition}}),
   ok.
 
 % @hidden

@@ -30,7 +30,6 @@
           group_id,
           topic,
           partition,
-          commit_store_key,
           subscriber_module,
           subscriber_args,
           subscriber_state
@@ -83,13 +82,11 @@ init([SubscriberModule, SubscriberArgs, GroupID, Topic, Partition]) ->
   erlang:process_flag(trap_exit, true),
   case erlang:apply(SubscriberModule, init, [GroupID, Topic, Partition, SubscriberArgs]) of
     {ok, SubscriberState} ->
-      CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
-      kafe_consumer_store:insert(GroupID, {subscriber_pid, CommitStoreKey}, self()),
+      kafe_consumer_store:insert(GroupID, {subscriber_pid, {Topic, Partition}}, self()),
       {ok, #state{
               group_id = GroupID,
               topic = Topic,
               partition = Partition,
-              commit_store_key = CommitStoreKey,
               subscriber_module = SubscriberModule,
               subscriber_args = SubscriberArgs,
               subscriber_state = SubscriberState
@@ -131,8 +128,8 @@ handle_info(_Info, State) ->
   {noreply, State}.
 
 % @hidden
-terminate(_Reason, #state{group_id = GroupID, commit_store_key = CommitStoreKey}) ->
-  kafe_consumer_store:delete(GroupID, {subscriber_pid, CommitStoreKey}),
+terminate(_Reason, #state{group_id = GroupID, topic = Topic, partition = Partition}) ->
+  kafe_consumer_store:delete(GroupID, {subscriber_pid, {Topic, Partition}}),
   ok.
 
 % @hidden
@@ -161,7 +158,6 @@ init_ok_test() ->
                        group_id = <<"group">>,
                        topic = <<"topic">>,
                        partition = 1,
-                       commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
                        subscriber_module = test_subscriber,
                        subscriber_args = subscriber_args_for_test,
                        subscriber_state = subscriber_state_for_test
@@ -191,7 +187,6 @@ handle_message_test() ->
                               group_id = <<"group">>,
                               topic = <<"topic">>,
                               partition = 1,
-                              commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
                               subscriber_module = test_subscriber,
                               subscriber_args = subscriber_args_for_test,
                               subscriber_state = new_subscriber_state_for_test
@@ -208,7 +203,6 @@ handle_message_test() ->
                               group_id = <<"group">>,
                               topic = <<"topic">>,
                               partition = 1,
-                              commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
                               subscriber_module = test_subscriber,
                               subscriber_args = subscriber_args_for_test,
                               subscriber_state = subscriber_state_for_test
@@ -224,7 +218,6 @@ handle_message_subscriber_error_test() ->
                    group_id = <<"group">>,
                    topic = <<"topic">>,
                    partition = 1,
-                   commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
                    subscriber_module = test_subscriber,
                    subscriber_args = subscriber_args_for_test,
                    subscriber_state = new_subscriber_state_for_test
@@ -241,7 +234,6 @@ handle_message_subscriber_error_test() ->
                               group_id = <<"group">>,
                               topic = <<"topic">>,
                               partition = 1,
-                              commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
                               subscriber_module = test_subscriber,
                               subscriber_args = subscriber_args_for_test,
                               subscriber_state = subscriber_state_for_test
@@ -255,7 +247,6 @@ handle_message_invalid_message_topic_test() ->
                    group_id = <<"group">>,
                    topic = <<"topic">>,
                    partition = 1,
-                   commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
                    subscriber_module = test_subscriber,
                    subscriber_args = subscriber_args_for_test,
                    subscriber_state = subscriber_state_for_test
@@ -272,7 +263,6 @@ handle_message_invalid_message_topic_test() ->
                               group_id = <<"group">>,
                               topic = <<"topic">>,
                               partition = 1,
-                              commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
                               subscriber_module = test_subscriber,
                               subscriber_args = subscriber_args_for_test,
                               subscriber_state = subscriber_state_for_test
@@ -285,7 +275,6 @@ handle_message_invalid_message_partition_test() ->
                    group_id = <<"group">>,
                    topic = <<"topic">>,
                    partition = 1,
-                   commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
                    subscriber_module = test_subscriber,
                    subscriber_args = subscriber_args_for_test,
                    subscriber_state = subscriber_state_for_test
@@ -302,7 +291,6 @@ handle_message_invalid_message_partition_test() ->
                               group_id = <<"group">>,
                               topic = <<"topic">>,
                               partition = 1,
-                              commit_store_key = erlang:term_to_binary({<<"topic">>, 1}),
                               subscriber_module = test_subscriber,
                               subscriber_args = subscriber_args_for_test,
                               subscriber_state = subscriber_state_for_test

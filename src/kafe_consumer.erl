@@ -175,7 +175,12 @@ commit(GroupCommitIdentifier, Options) ->
   case decode_group_commit_identifier(GroupCommitIdentifier) of
     {Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID} ->
       lager:debug("Ask for commit offset ~p, topic ~s, partition ~p", [Offset, Topic, Partition]),
-      gen_server:call(Pid, {commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID, Options});
+      case erlang:is_process_alive(Pid) of
+        true ->
+          gen_server:call(Pid, {commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID, Options});
+        false ->
+          {error, dead_commit}
+      end;
     _ ->
       lager:error("Invalid commit identifier ~p", [GroupCommitIdentifier]),
       {error, invalid_group_commit_identifier}
@@ -187,8 +192,7 @@ commit(GroupCommitIdentifier, Options) ->
 -spec remove_commits(GroupID :: binary()) -> ok.
 remove_commits(GroupID) ->
   [begin
-     CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
-     gen_server:call(kafe_consumer_store:value(GroupID, {commit_pid, CommitStoreKey}),
+     gen_server:call(kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
                      remove_commits)
    end || {Topic, Partition} <- topics(GroupID)],
   ok.
@@ -200,7 +204,12 @@ remove_commits(GroupID) ->
 remove_commit(GroupCommitIdentifier) ->
   case decode_group_commit_identifier(GroupCommitIdentifier) of
     {Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID} ->
-      gen_server:call(Pid, {remove_commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID});
+      case erlang:is_process_alive(Pid) of
+        true ->
+          gen_server:call(Pid, {remove_commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID});
+        false ->
+          {error, dead_commit}
+      end;
     _ ->
       {error, invalid_group_commit_identifier}
   end.
@@ -219,14 +228,13 @@ pending_commits(GroupID) ->
 pending_commits(GroupID, Topics) ->
   lists:flatten(
     [begin
-       CommitStoreKey = erlang:term_to_binary(TP),
-       case kafe_consumer_store:value(GroupID, {commit_pid, CommitStoreKey}) of
+       case kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}) of
          undefined ->
            [];
          PID ->
            gen_server:call(PID, pending_commits)
        end
-     end || TP <- Topics]).
+     end || {Topic, Partition} <- Topics]).
 
 % @hidden
 start_link(GroupID, Options) ->
@@ -267,8 +275,7 @@ can_fetch(GroupID) ->
 
 % @hidden
 store_for_commit(GroupID, Topic, Partition, Offset) ->
-  CommitStoreKey = erlang:term_to_binary({Topic, Partition}),
-  gen_server:call(kafe_consumer_store:value(GroupID, {commit_pid, CommitStoreKey}), {store_for_commit, Offset}).
+  gen_server:call(kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}), {store_for_commit, Offset}).
 
 % @hidden
 encode_group_commit_identifier(Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID) ->
