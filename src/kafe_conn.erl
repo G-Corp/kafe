@@ -6,6 +6,10 @@
 -include("../include/kafe.hrl").
 %-define(SERVER, ?MODULE).
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
 %% ------------------------------------------------------------------
 %% API Function Exports
 %% ------------------------------------------------------------------
@@ -35,7 +39,8 @@ init({Addr, Port}) ->
   RecBuf = doteki:get_env([kafe, socker, recbuf], ?DEFAULT_SOCKET_RECBUF),
   Buffer = lists:max([SndBuf, RecBuf, doteki:get_env([kafe, socket, buffer], max(SndBuf, RecBuf))]),
   case gen_tcp:connect(Addr, Port, [{mode, binary},
-                                    {active, once},
+                                    {active, true},
+                                    {packet, 4},
                                     {sndbuf, SndBuf},
                                     {recbuf, RecBuf},
                                     {buffer, Buffer}]) of
@@ -51,11 +56,7 @@ init({Addr, Port}) ->
          api_version => ApiVersion,
          correlation_id => CorrelationID,
          client_id => ClientID,
-         requests => orddict:new(),
-         parts => <<>>,
-         sndbuf => SndBuf,
-         recbuf => RecBuf,
-         buffer => Buffer
+         requests => orddict:new()
         }};
     {error, Reason} ->
       lager:debug("Connection faild to ~p:~p : ~p", [bucinet:ip_to_string(Addr), Port, Reason]),
@@ -69,8 +70,8 @@ handle_call({call, Request, RequestParams, Response, ResponseParams}, From, Stat
                From,
                {Response, ResponseParams},
                State);
-handle_call(alive, _From, #{socket := Socket, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State) ->
-  case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
+handle_call(alive, _From, #{socket := Socket} = State) ->
+  case inet:setopts(Socket, []) of
     ok ->
       {reply, ok, State};
     {error, _} = Reason ->
@@ -82,31 +83,18 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
-handle_info(
-  {tcp, _, <<Size:32/signed, Remainder/binary>> = Packet},
-  #{parts := <<>>} = State
- ) when Size =< byte_size(Remainder) ->
-  <<Size:32/signed, Packet1:Size/bytes, _Remainder1/binary>> = Packet,
-  kafe_protocol:response(<<Size:32, Packet1/binary>>, maps:update(parts, <<>>, State));
-handle_info(
-  {tcp, _, Part},
-  #{parts := <<Size:32/signed, CParts/binary>> = Parts} = State
- ) when byte_size(<<CParts/binary, Part/binary>>) >= Size ->
-  <<Size:32/signed, Packet:Size/bytes, _Remainder/binary>> = <<Parts/binary, Part/binary>>,
-  kafe_protocol:response(<<Size:32, Packet/binary>>, maps:update(parts, <<>>, State));
-handle_info(
-  {tcp, Socket, Part},
-  #{parts := Parts, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
- ) ->
-  case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
-    ok ->
-      {noreply, maps:update(parts, <<Parts/binary, Part/binary>>, State)};
+handle_info({tcp, _Socket, Packet}, State) ->
+  case kafe_protocol:response(Packet, State) of
+    {ok, State1} ->
+      {noreply, State1};
     {error, _} = Reason ->
       {stop, Reason, State}
   end;
+
 handle_info({tcp_closed, Socket}, State) ->
   lager:debug("Connections close ~p ...", [Socket]),
   {stop, normal, State};
+
 handle_info(Info, State) ->
   lager:debug("Invalid message : ~p", [Info]),
   lager:debug("--- State ~p", [State]),
@@ -129,25 +117,44 @@ send_request(#{packet := Packet, state := State2, api_version := ApiVersion},
              Handler,
              #{correlation_id := CorrelationId,
                requests := Requests,
-               socket := Socket,
-               sndbuf := SndBuf,
-               recbuf := RecBuf,
-               buffer := Buffer} = State1) ->
+               socket := Socket} = State1) ->
   case gen_tcp:send(Socket, Packet) of
     ok ->
-      case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
-        ok ->
-          {noreply,
-           maps:update(
-             requests,
-             orddict:store(CorrelationId,
-                           #{from => From, handler => Handler, socket => Socket, api_version => ApiVersion},
-                           Requests),
-             State2)};
-        {error, _} = Error ->
-          {stop, abnormal, Error, State1}
-      end;
+      {noreply,
+       maps:update(
+         requests,
+         orddict:store(CorrelationId,
+                       #{from => From, handler => Handler, socket => Socket, api_version => ApiVersion},
+                       Requests),
+         State2)};
     {error, _} = Error ->
       {stop, abnormal, Error, State1}
   end.
 
+-ifdef(TEST).
+
+handle_info_tcp_test_() ->
+  {foreach,
+    fun ()->
+      meck:new(kafe_protocol)
+    end,
+    fun (_)->
+      meck:unload()
+    end,
+    [
+     {"Forwards packets to kafe_protocol:response",
+      ?_test(begin
+               meck:expect(kafe_protocol, response, fun(Packet, _State) -> {ok, #{state => Packet}} end),
+               ?assertEqual({noreply, #{state => <<"packet">>}},
+                             handle_info({tcp, fake_socket, <<"packet">>}, #{state => before}))
+             end)},
+     {"Errors in response processing stop kafe_conn",
+      ?_test(begin
+               meck:expect(kafe_protocol, response, fun(_Packet, _State) -> {error, some_reason} end),
+               ?assertEqual({stop, {error, some_reason}, #{state => before}},
+                             handle_info({tcp, fake_socket, <<1, 2, 3>>}, #{state => before}))
+             end)}
+    ]
+  }.
+
+-endif.

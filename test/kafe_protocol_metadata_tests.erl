@@ -19,17 +19,17 @@ teardown(_) ->
 
 t_request() ->
   ?assertEqual(#{api_version => 0,
-                 packet => <<0, 0, 0, 25, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 0, 0, 1, 0, 5, 116, 111,
+                 packet => <<0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 0, 0, 1, 0, 5, 116, 111,
                              112, 105, 99>>,
                  state => ?REQ_STATE2(1, 0)},
      kafe_protocol_metadata:request([<<"topic">>], ?REQ_STATE2(0, 0))),
   ?assertEqual(#{api_version => 0,
-                 packet => <<0, 0, 0, 25, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 0, 0, 1, 0, 5, 116, 111,
+                 packet => <<0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 0, 0, 1, 0, 5, 116, 111,
                              112, 105, 99>>,
                  state => ?REQ_STATE2(1, 1)},
      kafe_protocol_metadata:request([<<"topic">>], ?REQ_STATE2(0, 1))),
   ?assertEqual(#{api_version => 0,
-                 packet => <<0, 0, 0, 25, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 0, 0, 1, 0, 5, 116, 111,
+                 packet => <<0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 0, 0, 1, 0, 5, 116, 111,
                              112, 105, 99>>,
                  state => ?REQ_STATE2(1, 2)},
      kafe_protocol_metadata:request([<<"topic">>], ?REQ_STATE2(0, 2))).
