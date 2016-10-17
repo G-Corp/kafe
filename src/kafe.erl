@@ -763,7 +763,8 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % </ul>
 % @end
 -spec start_consumer(GroupID :: binary(),
-                     Callback :: fun((Topic :: binary(),
+                     Callback :: fun((GroupID :: binary(),
+                                      Topic :: binary(),
                                       PartitionID :: integer(),
                                       Offset :: integer(),
                                       Key :: binary(),
@@ -771,7 +772,7 @@ delete_offset_for_partition(PartitionID, Offsets) ->
                                    | atom()
                                    | {atom(), list(term())},
                      Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
-start_consumer(GroupID, Callback, Options) when is_function(Callback, 5);
+start_consumer(GroupID, Callback, Options) when is_function(Callback, 6);
                                                 is_atom(Callback);
                                                 is_tuple(Callback) ->
   kafe_consumer_sup:start_child(GroupID, Options#{callback => Callback}).

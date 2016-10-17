@@ -225,9 +225,9 @@ perform_fetch([#{offset := Offset,
       end
   end.
 
-call_subscriber(Callback, _GroupID, Topic, Partition, Offset, Key, Value) when is_function(Callback) ->
+call_subscriber(Callback, GroupID, Topic, Partition, Offset, Key, Value) when is_function(Callback) ->
   try
-    erlang:apply(Callback, [Topic, Partition, Offset, Key, Value])
+    erlang:apply(Callback, [GroupID, Topic, Partition, Offset, Key, Value])
   catch
     Class:Reason0 ->
       lager:error(
@@ -338,7 +338,7 @@ fetch_without_error_test() ->
                         min_bytes = 1,
                         max_bytes = 10000,
                         max_wait_time = 10,
-                        callback = fun(_, _, _, _, _) -> ok end
+                        callback = fun(_, _, _, _, _, _) -> ok end
                        })),
 
   meck:unload(kafe_metrics),
@@ -366,7 +366,7 @@ can_not_fetch_test() ->
                             min_bytes = 1,
                             max_bytes = 10000,
                             max_wait_time = 10,
-                            callback = fun(_, _, _, _, _) -> ok end})),
+                            callback = fun(_, _, _, _, _, _) -> ok end})),
 
   meck:unload(kafe_consumer).
 
@@ -402,7 +402,7 @@ nothing_to_fetch_test() ->
                             min_bytes = 1,
                             max_bytes = 10000,
                             max_wait_time = 10,
-                            callback = fun(_, _, _, _, _) -> ok end})),
+                            callback = fun(_, _, _, _, _, _) -> ok end})),
 
   meck:unload(kafe_metrics),
   meck:unload(kafe),
@@ -434,7 +434,7 @@ kafka_offset_error_on_fetch_test() ->
                             min_bytes = 1,
                             max_bytes = 10000,
                             max_wait_time = 10,
-                            callback = fun(_, _, _, _, _) -> ok end})),
+                            callback = fun(_, _, _, _, _, _) -> ok end})),
 
   meck:unload(kafe),
   meck:unload(kafe_consumer).
@@ -464,7 +464,7 @@ offset_error_on_fetch_test() ->
                             min_bytes = 1,
                             max_bytes = 10000,
                             max_wait_time = 10,
-                            callback = fun(_, _, _, _, _) -> ok end})),
+                            callback = fun(_, _, _, _, _, _) -> ok end})),
 
   meck:unload(kafe),
   meck:unload(kafe_consumer).
@@ -505,7 +505,7 @@ kafka_fetch_error_test() ->
                             min_bytes = 1,
                             max_bytes = 10000,
                             max_wait_time = 10,
-                            callback = fun(_, _, _, _, _) -> ok end})),
+                            callback = fun(_, _, _, _, _, _) -> ok end})),
 
   meck:unload(kafe),
   meck:unload(kafe_consumer).
@@ -547,7 +547,7 @@ kafka_fetch_offset_out_of_range_error_test() ->
                             min_bytes = 1,
                             max_bytes = 10000,
                             max_wait_time = 10,
-                            callback = fun(_, _, _, _, _) -> ok end})),
+                            callback = fun(_, _, _, _, _, _) -> ok end})),
 
   meck:unload(kafe),
   meck:unload(kafe_consumer).
@@ -583,7 +583,7 @@ fetch_error_test() ->
                             min_bytes = 1,
                             max_bytes = 10000,
                             max_wait_time = 10,
-                            callback = fun(_, _, _, _, _) -> ok end})),
+                            callback = fun(_, _, _, _, _, _) -> ok end})),
 
   meck:unload(kafe),
   meck:unload(kafe_consumer).
@@ -599,7 +599,7 @@ perform_fetch_without_error_test() ->
                              1,
                              after_processing,
                              srv,
-                             fun(_, _, _, _, _) -> ok end,
+                             fun(_, _, _, _, _, _) -> ok end,
                              100,
                              0)),
   ?assertEqual(102,
@@ -610,7 +610,7 @@ perform_fetch_without_error_test() ->
                              1,
                              after_processing,
                              srv,
-                             fun(_, _, _, _, _) -> ok end,
+                             fun(_, _, _, _, _, _) -> ok end,
                              100,
                              0)),
   ?assertEqual(100,
@@ -619,7 +619,7 @@ perform_fetch_without_error_test() ->
                              1,
                              after_processing,
                              srv,
-                             fun(_, _, _, _, _) -> ok end,
+                             fun(_, _, _, _, _, _) -> ok end,
                              100,
                              0)),
   ?assertEqual(102,
@@ -630,7 +630,7 @@ perform_fetch_without_error_test() ->
                              1,
                              after_processing,
                              srv,
-                             fun(_, _, _, _, _) -> ok end,
+                             fun(_, _, _, _, _, _) -> ok end,
                              100,
                              0)),
   meck:unload(kafe_metrics),
@@ -648,7 +648,7 @@ perform_fetch_with_invalid_processing_commit_test() ->
                              1,
                              invalid_processing,
                              srv,
-                             fun(_, _, _, _, _) -> ok end,
+                             fun(_, _, _, _, _, _) -> ok end,
                              100,
                              0)),
   meck:unload(kafe_metrics),
@@ -666,7 +666,7 @@ perform_fetch_with_commit_error_test() ->
                              1,
                              after_processing,
                              srv,
-                             fun(_, _, _, _, _) -> ok end,
+                             fun(_, _, _, _, _, _) -> ok end,
                              100,
                              0)),
   ?assertEqual(100,
@@ -676,7 +676,7 @@ perform_fetch_with_commit_error_test() ->
                              1,
                              after_processing,
                              srv,
-                             fun(_, _, _, _, _) -> ok end,
+                             fun(_, _, _, _, _, _) -> ok end,
                              100,
                              0)),
   meck:unload(kafe_metrics),
@@ -694,7 +694,7 @@ perform_fetch_with_callback_exception_test() ->
                              1,
                              after_processing,
                              srv,
-                             fun(_, _, _, _, <<"bad match">>) -> ok end,
+                             fun(_, _, _, _, _, <<"bad match">>) -> ok end,
                              100,
                              0)),
   ?assertEqual(100,
@@ -704,7 +704,7 @@ perform_fetch_with_callback_exception_test() ->
                              1,
                              after_processing,
                              srv,
-                             fun(_, _, _, _, <<"bat match">>) -> ok end,
+                             fun(_, _, _, _, _, <<"bat match">>) -> ok end,
                              100,
                              0)),
   meck:unload(kafe_metrics),
@@ -722,7 +722,7 @@ perform_fetch_with_callback_error_test() ->
                              1,
                              after_processing,
                              srv,
-                             fun(_, _, _, _, _) -> {error, test_error} end,
+                             fun(_, _, _, _, _, _) -> {error, test_error} end,
                              100,
                              0)),
   ?assertEqual(100,
@@ -732,7 +732,7 @@ perform_fetch_with_callback_error_test() ->
                              1,
                              after_processing,
                              srv,
-                             fun(_, _, _, _, _) -> {error, test_error} end,
+                             fun(_, _, _, _, _, _) -> {error, test_error} end,
                              100,
                              0)),
   meck:unload(kafe_metrics),
@@ -750,7 +750,7 @@ perform_fetch_with_invalid_callback_response_test() ->
                              1,
                              after_processing,
                              srv,
-                             fun(_, _, _, _, _) -> invalid_test_response end,
+                             fun(_, _, _, _, _, _) -> invalid_test_response end,
                              100,
                              0)),
   ?assertEqual(100,
@@ -760,7 +760,7 @@ perform_fetch_with_invalid_callback_response_test() ->
                              1,
                              after_processing,
                              srv,
-                             fun(_, _, _, _, _) -> invalid_test_response end,
+                             fun(_, _, _, _, _, _) -> invalid_test_response end,
                              100,
                              0)),
   meck:unload(kafe_metrics),
