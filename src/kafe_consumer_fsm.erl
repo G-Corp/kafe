@@ -57,7 +57,7 @@ start_link(GroupID, Options) when is_map(Options) ->
 
 % @hidden
 init([GroupID, Options]) ->
-  lager:info("Start consumer ~p", [GroupID]),
+  lager:info("Starting consumer for group ~s", [GroupID]),
   erlang:process_flag(trap_exit, true),
   kafe_consumer_store:insert(GroupID, fsm_pid, self()),
   SessionTimeout = maps:get(session_timeout, Options, ?DEFAULT_JOIN_GROUP_SESSION_TIMEOUT),
@@ -88,7 +88,7 @@ dead(timeout, #state{group_id = GroupID,
                      member_id = MemberID,
                      topics = Topics,
                      session_timeout = SessionTimeout} = State) ->
-  lager:debug("Group ~p : join_group...", [GroupID]),
+  lager:debug("Group ~s : join_group...", [GroupID]),
   ProtocolTopics = lists:map(fun({Topic, _}) -> Topic;
                                 (Topic) -> Topic
                              end, Topics),
@@ -116,7 +116,7 @@ dead(timeout, #state{group_id = GroupID,
     {ok, #{error_code := _}} ->
       next_state(dead, State);
     {error, Reason} ->
-      lager:info("Join group faild: ~p", [Reason]),
+      lager:warning("Join group failed: ~p", [Reason]),
       next_state(State)
   end.
 
@@ -127,16 +127,16 @@ awaiting_sync(timeout, #state{group_id = GroupID,
                               leader_id = LeaderID,
                               members = Members,
                               topics = Topics} = State) ->
-  lager:debug("Group ~p : awaiting_sync...", [GroupID]),
+  lager:debug("Group ~s : awaiting_sync...", [GroupID]),
   GroupAssignment = group_assignment(LeaderID, MemberID, Topics, Members),
   case kafe:sync_group(GroupID, GenerationID, MemberID, GroupAssignment) of
     {ok, #{error_code := none}} ->
       next_state(State);
     {ok, #{error_code := Error}} ->
-      lager:info("Sync group faild: ~p", [Error]),
+      lager:warning("Sync group failed: ~p", [Error]),
       next_state(State);
     {error, Reason} ->
-      lager:info("Sync group faild: ~p", [Reason]),
+      lager:warning("Sync group failed: ~p", [Reason]),
       next_state(State)
   end.
 
@@ -144,15 +144,15 @@ awaiting_sync(timeout, #state{group_id = GroupID,
 stable(timeout, #state{group_id = GroupID,
                        member_id = MemberID,
                        generation_id = GenerationID} = State) ->
-  lager:debug("Group ~p : heartbeat...", [GroupID]),
+  lager:debug("Group ~s : heartbeat...", [GroupID]),
   case kafe:heartbeat(GroupID, GenerationID, MemberID) of
     {ok, #{error_code := none}} ->
       next_state(State);
     {ok, #{error_code := Error}} ->
-      lager:info("Heartbeat error: ~p", [Error]),
+      lager:warning("Heartbeat error: ~p", [Error]),
       next_state(dead, State);
     {error, Reason} ->
-      lager:info("Heartbeat faild: ~p", [Reason]),
+      lager:warning("Heartbeat failed: ~p", [Reason]),
       next_state(State)
   end.
 
@@ -195,7 +195,7 @@ next_state(#state{group_id = GroupID,
       {NextState, Timeout} = group_state(State, GroupState),
       {next_state, NextState, State#state{members = Members}, Timeout};
     {ok, [#{error_code := Error}]} ->
-      lager:info("Can't get group ~p description : ~p", [GroupID, Error]),
+      lager:warning("Can't get group ~s description: ~p", [GroupID, Error]),
       next_state(dead, State);
     {error, _} ->
       next_state(dead, State)

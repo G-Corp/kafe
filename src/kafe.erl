@@ -218,7 +218,7 @@ release_broker(Broker) ->
   case poolgirl:checkin(Broker) of
     ok -> ok;
     {error, Error} ->
-      lager:debug("Checkin broker ~p faild: ~p", [Broker, Error]),
+      lager:error("Checkin broker ~p failed: ~p", [Broker, Error]),
       ok
   end.
 
@@ -700,11 +700,11 @@ offsets({TopicName, PartitionsList}, ConsumerGroup, Nth) ->
                           end
                       end, Result, NewOffsets);
         _ ->
-          lager:debug("Can't retrieve offsets for consumer group ~p on topic ~p", [ConsumerGroup, TopicName]),
+          lager:error("Can't retrieve offsets for consumer group ~s on topic ~s", [ConsumerGroup, TopicName]),
           error
       end;
     _ ->
-      lager:debug("Can't retrieve offsets for topic ~p", [TopicName]),
+      lager:error("Can't retrieve offsets for topic ~s", [TopicName]),
       error
   end.
 
@@ -904,7 +904,7 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                     h_addr_list = AddrsList}} ->
         case get_host(AddrsList, Hostname, AddrType) of
           undefined ->
-            lager:debug("Can't retrieve host for ~p:~p", [Host, Port]),
+            lager:error("Can't retrieve host for ~s:~p", [Host, Port]),
             get_connection(Rest, State);
           {BrokerAddr, BrokerHostList} ->
             case lists:foldl(fun(E, Acc) ->
@@ -915,14 +915,14 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                                  end
                              end, [], BrokerHostList) of
               [] ->
-                lager:debug("All host already registered for ~p:~p", [bucinet:ip_to_string(BrokerAddr), Port]),
+                lager:debug("All hosts already registered for ~s:~p", [bucinet:ip_to_string(BrokerAddr), Port]),
                 get_connection(Rest, State);
               BrokerHostList1 ->
                 IP = bucinet:ip_to_string(BrokerAddr),
                 BrokerID = kafe_utils:broker_id(IP, Port),
                 case poolgirl:size(BrokerID) of
                   {ok, N, A} when N > 0 ->
-                    lager:debug("Pool ~p size ~p/~p", [BrokerID, N, A]),
+                    lager:debug("Pool ~s size ~p/~p", [BrokerID, N, A]),
                     get_connection(Rest, State);
                   _ ->
                     case poolgirl:add_pool(BrokerID,
@@ -930,26 +930,26 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                                            #{size => PoolSize,
                                              chunk_size => ChunkPoolSize}) of
                       {ok, PoolSize1} ->
-                        lager:info("Broker pool ~p (size ~p) reference ~p", [BrokerID, PoolSize1, BrokerHostList1]),
+                        lager:info("Broker pool ~s (size ~p) reference ~p", [BrokerID, PoolSize1, BrokerHostList1]),
                         Brokers1 = lists:foldl(fun(BrokerHost, Acc) ->
                                                    maps:put(BrokerHost, BrokerID, Acc)
                                                end, Brokers, BrokerHostList1),
                         get_connection(Rest, State#{brokers => Brokers1,
                                                     brokers_list => BrokerHostList1 ++ BrokersList});
                       {error, Reason} ->
-                        lager:debug("Connection faild to ~p:~p : ~p", [bucinet:ip_to_string(BrokerAddr), Port, Reason]),
+                        lager:error("Connection failed to ~p:~p : ~p", [bucinet:ip_to_string(BrokerAddr), Port, Reason]),
                         get_connection(Rest, State)
                     end
                 end
             end
         end;
       {error, Reason} ->
-        lager:debug("Can't retrieve host by name for ~p:~p : ~p", [Host, Port, Reason]),
+        lager:error("Can't retrieve host by name for ~s:~p : ~p", [Host, Port, Reason]),
         get_connection(Rest, State)
     end
   catch
     Type:Reason1 ->
-      lager:debug("Error while get connection for ~p:~p : ~p:~p", [Host, Port, Type, Reason1]),
+      lager:error("Error while getting connection for ~s:~p : ~p:~p", [Host, Port, Type, Reason1]),
       get_connection(Rest, State)
   end.
 
@@ -1030,7 +1030,7 @@ remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
                             {error, Reason} ->
                               _ = poolgirl:checkin(BrokerPID),
                               _ = poolgirl:remove_pool(BrokerID),
-                              lager:debug("Broker ~p (from ~p) not alive : ~p", [Broker, BrokerID, Reason]),
+                              lager:warning("Broker ~s (from ~s) not alive : ~p", [Broker, BrokerID, Reason]),
                               maps:put(brokers_list,
                                        lists:delete(Broker, BrokersList1),
                                        maps:put(brokers, maps:remove(Broker, Brokers1), State1))
@@ -1069,11 +1069,11 @@ get_first_broker([BrokerID|Rest]) ->
           Broker;
         {error, Reason} ->
           _ = poolgirl:checkin(Broker),
-          lager:debug("Broker ~p is not alive : ~p", [Broker, Reason]),
+          lager:warning("Broker ~s is not alive: ~p", [Broker, Reason]),
           get_first_broker(Rest)
       end;
     {error, Reason} ->
-      lager:debug("Can't checkout broker from pool ~p: ~p", [BrokerID, Reason]),
+      lager:error("Can't checkout broker from pool ~s: ~p", [BrokerID, Reason]),
       get_first_broker(Rest)
   end.
 

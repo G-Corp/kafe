@@ -30,7 +30,7 @@ run(BrokerPID, Request) when is_pid(BrokerPID) ->
     Response
   catch
     Type:Error ->
-      lager:info("Request error : ~p:~p", [Type, Error]),
+      lager:error("Request error: ~p:~p", [Type, Error]),
       {error, Error}
   end;
 run(BrokerName, Request) when is_list(BrokerName) ->
