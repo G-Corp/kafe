@@ -34,11 +34,10 @@
           max_bytes = ?DEFAULT_FETCH_MAX_BYTES,
           min_bytes = ?DEFAULT_FETCH_MIN_BYTES,
           max_wait_time = ?DEFAULT_FETCH_MAX_WAIT_TIME,
-          autocommit = ?DEFAULT_CONSUMER_AUTOCOMMIT,
+          commit = ?DEFAULT_CONSUMER_COMMIT,
           from_beginning = ?DEFAULT_CONSUMER_START_FROM_BEGINNING,
           allow_unordered_commit = ?DEFAULT_CONSUMER_ALLOW_UNORDERED_COMMIT,
           commits = #{},
-          processing = ?DEFAULT_CONSUMER_PROCESSING,
           on_start_fetching = ?DEFAULT_CONSUMER_ON_START_FETCHING,
           on_stop_fetching = ?DEFAULT_CONSUMER_ON_STOP_FETCHING,
           on_assignment_change = ?DEFAULT_CONSUMER_ON_ASSIGNMENT_CHANGE
@@ -64,9 +63,8 @@ init([GroupID, Options]) ->
   MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
   MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
   MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
-  Autocommit = maps:get(autocommit, Options, ?DEFAULT_CONSUMER_AUTOCOMMIT),
+  Commit = maps:get(commit, Options, ?DEFAULT_CONSUMER_COMMIT),
   FromBeginning = maps:get(from_beginning, Options, ?DEFAULT_CONSUMER_START_FROM_BEGINNING),
-  Processing = maps:get(processing, Options, ?DEFAULT_CONSUMER_PROCESSING),
   OnStartFetching = maps:get(on_start_fetching, Options, ?DEFAULT_CONSUMER_ON_START_FETCHING),
   OnStopFetching = maps:get(on_stop_fetching, Options, ?DEFAULT_CONSUMER_ON_STOP_FETCHING),
   OnAssignmentChange = maps:get(on_assignment_change, Options, ?DEFAULT_CONSUMER_ON_ASSIGNMENT_CHANGE),
@@ -77,10 +75,9 @@ init([GroupID, Options]) ->
           max_bytes = MaxBytes,
           min_bytes = MinBytes,
           max_wait_time = MaxWaitTime,
-          autocommit = Autocommit,
+          commit = Commit,
           from_beginning = FromBeginning,
           allow_unordered_commit = AllowUnorderedCommit,
-          processing = Processing,
           on_start_fetching = OnStartFetching,
           on_stop_fetching = OnStopFetching,
           on_assignment_change = OnAssignmentChange
@@ -198,18 +195,17 @@ start_fetchers([], State) ->
 start_fetchers([{Topic, Partition}|Rest], #state{fetchers = Fetchers,
                                                  fetch_interval = FetchInterval,
                                                  group_id = GroupID,
-                                                 autocommit = Autocommit,
+                                                 commit = Commit,
                                                  from_beginning = FromBeginning,
                                                  min_bytes = MinBytes,
                                                  max_bytes = MaxBytes,
                                                  max_wait_time = MaxWaitTime,
-                                                 callback = Callback,
-                                                 processing = Processing} = State) ->
+                                                 callback = Callback} = State) ->
   kafe_metrics:init_consumer_partition(GroupID, Topic, Partition),
   case kafe_consumer_group_sup:start_child(Topic, Partition, FetchInterval,
-                                             GroupID, Autocommit, FromBeginning,
-                                             MinBytes, MaxBytes, MaxWaitTime,
-                                             Callback, Processing) of
+                                           GroupID, Commit, FromBeginning,
+                                           MinBytes, MaxBytes, MaxWaitTime,
+                                           Callback) of
     {ok, Pid} ->
       MRef = erlang:monitor(process, Pid),
       start_fetchers(Rest, State#state{fetchers = [{{Topic, Partition}, Pid, MRef}|Fetchers]});
@@ -282,7 +278,7 @@ stop_fetch_with_invalid_fun_test() ->
 
 update_fetchers_create_test() ->
   meck:new(kafe_consumer_group_sup, [passthrough]),
-  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
@@ -311,7 +307,7 @@ update_fetchers_create_test() ->
 
 update_fetchers_unchange_test() ->
   meck:new(kafe_consumer_group_sup, [passthrough]),
-  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
 %  meck:new(kafe_metrics, [passthrough]),
 %  meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
@@ -334,7 +330,7 @@ update_fetchers_unchange_test() ->
 
 update_fetchers_add_test() ->
   meck:new(kafe_consumer_group_sup, [passthrough]),
-  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
 %  meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
@@ -373,7 +369,7 @@ update_fetchers_add_test() ->
 
 update_fetchers_delete_test() ->
   meck:new(kafe_consumer_group_sup, [passthrough]),
-  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
@@ -404,7 +400,7 @@ update_fetchers_delete_test() ->
 
 update_fetchers_update_test() ->
   meck:new(kafe_consumer_group_sup, [passthrough]),
-  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),

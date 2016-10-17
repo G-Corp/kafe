@@ -2,22 +2,22 @@
 -module(kafe_consumer_tp_group_sup).
 -behaviour(supervisor).
 
--export([start_link/11]).
+-export([start_link/10]).
 -export([init/1]).
 
 start_link(Topic, Partition, FetchInterval,
-           GroupID, Autocommit, FromBeginning,
+           GroupID, Commit, FromBeginning,
            MinBytes, MaxBytes, MaxWaitTime,
-           Callback, Processing) ->
+           Callback) ->
   supervisor:start_link(?MODULE, [Topic, Partition, FetchInterval,
-                                  GroupID, Autocommit, FromBeginning,
+                                  GroupID, Commit, FromBeginning,
                                   MinBytes, MaxBytes, MaxWaitTime,
-                                  Callback, Processing]).
+                                  Callback]).
 
 init([Topic, Partition, FetchInterval,
-      GroupID, Autocommit, FromBeginning,
+      GroupID, Commit, FromBeginning,
       MinBytes, MaxBytes, MaxWaitTime,
-      Callback, Processing]) when is_function(Callback) ->
+      Callback]) when is_function(Callback) ->
   {ok, {
     #{strategy => one_for_all,
       intensity => 1,
@@ -25,9 +25,9 @@ init([Topic, Partition, FetchInterval,
     [
       #{id => kafe_consumer_fetcher,
         start => {kafe_consumer_fetcher, start_link, [Topic, Partition, FetchInterval,
-                                                      GroupID, Autocommit, FromBeginning,
+                                                      GroupID, Commit, FromBeginning,
                                                       MinBytes, MaxBytes, MaxWaitTime,
-                                                      Callback, Processing]},
+                                                      Callback]},
         type => worker,
         shutdown => 5000},
       #{id => kafe_consumer_commiter,
@@ -37,28 +37,28 @@ init([Topic, Partition, FetchInterval,
     ]
   }};
 init([Topic, Partition, FetchInterval,
-      GroupID, Autocommit, FromBeginning,
+      GroupID, Commit, FromBeginning,
       MinBytes, MaxBytes, MaxWaitTime,
-      Callback, Processing]) when is_atom(Callback);
-                                  is_tuple(Callback)->
+      Callback]) when is_atom(Callback);
+                      is_tuple(Callback)->
   {ok, {
     #{strategy => one_for_all,
       intensity => 1,
       period => 5},
     [
-      #{id => kafe_consumer_fetcher,
-        start => {kafe_consumer_fetcher, start_link, [Topic, Partition, FetchInterval,
-                                                      GroupID, Autocommit, FromBeginning,
-                                                      MinBytes, MaxBytes, MaxWaitTime,
-                                                      Callback, Processing]},
-        type => worker,
-        shutdown => 5000},
       #{id => kafe_consumer_commiter,
-        start => {kafe_consumer_commiter, start_link, [Topic, Partition, GroupID]},
+        start => {kafe_consumer_commiter, start_link, [Topic, Partition, GroupID, Commit]},
         type => worker,
         shutdown => 5000},
       #{id => kafe_consumer_subscriber,
         start => {kafe_consumer_subscriber, start_link, [Callback, GroupID, Topic, Partition]},
+        type => worker,
+        shutdown => 5000},
+      #{id => kafe_consumer_fetcher,
+        start => {kafe_consumer_fetcher, start_link, [Topic, Partition, FetchInterval,
+                                                      GroupID, Commit, FromBeginning,
+                                                      MinBytes, MaxBytes, MaxWaitTime,
+                                                      Callback]},
         type => worker,
         shutdown => 5000}
     ]

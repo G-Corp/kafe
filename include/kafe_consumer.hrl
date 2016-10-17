@@ -1,5 +1,5 @@
 -record(message, {
-          commit_ref,
+          group_id,
           topic,
           partition,
           offset,

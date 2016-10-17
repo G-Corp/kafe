@@ -197,8 +197,9 @@
                               max_bytes => integer(),
                               min_bytes => integer(),
                               max_wait_time => integer(),
-                              autocommit => boolean(),
-                              allow_unordered_commit => boolean()}.
+                              commit => [commit()]}.
+-type commit() :: processing() | {interval, integer()} | {message, integer()}.
+-type processing() :: before_processing | after_processing.
 -type group_commit_identifier() :: binary().
 
 % @hidden
@@ -751,13 +752,7 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % 1).</li>
 % <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
 % at the time the request is issued (default : 1).</li>
-% <li><tt>autocommit :: boolean()</tt> : Autocommit offset (default: true).</li>
-% <li><tt>allow_unordered_commit :: boolean()</tt> : Allow unordered commit (default: false).</li>
-% <li><tt>processing :: at_least_once | at_most_once : </tt> When using <tt>at_most_once</tt>, the message offset will be commited before passing the message to the
-% callback. With <tt>at_least_once</tt> the commit is executed after passing the message to the callback and only if it return <tt>ok</tt>. If the callback
-% return an error, with <tt>at_least_once</tt>, the process will stop fetching messages for the partition until you manually commit the offset
-% (see {@link kafe_consumer:commit/2}), or remove it (see {@link kafe_consumer:remove_commit/1} or {@link kafe_consumer:remove_commits/1})). This options has
-% no effect when <tt>autocommit</tt> is set to false.  (default: at_most_once).</li>
+% <li><tt>commit :: commit()</tt> : Commit configuration (default: [after_processing, {interval, 1000}]).</li>
 % <li><tt>on_start_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher start/restart fetching. (default: undefined).</li>
 % <li><tt>on_stop_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher stop fetching. (default: undefined).</li>
 % <li><tt>on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any())</tt> : Function called when the
@@ -768,8 +763,7 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % </ul>
 % @end
 -spec start_consumer(GroupID :: binary(),
-                     Callback :: fun((CommitID :: group_commit_identifier(),
-                                      Topic :: binary(),
+                     Callback :: fun((Topic :: binary(),
                                       PartitionID :: integer(),
                                       Offset :: integer(),
                                       Key :: binary(),
@@ -777,7 +771,7 @@ delete_offset_for_partition(PartitionID, Offsets) ->
                                    | atom()
                                    | {atom(), list(term())},
                      Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
-start_consumer(GroupID, Callback, Options) when is_function(Callback, 6);
+start_consumer(GroupID, Callback, Options) when is_function(Callback, 5);
                                                 is_atom(Callback);
                                                 is_tuple(Callback) ->
   kafe_consumer_sup:start_child(GroupID, Options#{callback => Callback}).

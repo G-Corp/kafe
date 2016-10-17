@@ -38,11 +38,21 @@ broker_id() = atom()
 
 
 
+### <a name="type-commit">commit()</a> ###
+
+
+<pre><code>
+commit() = <a href="#type-processing">processing()</a> | {interval, integer()} | {message, integer()}
+</code></pre>
+
+
+
+
 ### <a name="type-consumer_options">consumer_options()</a> ###
 
 
 <pre><code>
-consumer_options() = #{session_timeout =&gt; integer(), member_id =&gt; binary(), topics =&gt; [binary() | {binary(), [integer()]}], fetch_interval =&gt; integer(), fetch_size =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), autocommit =&gt; boolean(), allow_unordered_commit =&gt; boolean()}
+consumer_options() = #{session_timeout =&gt; integer(), member_id =&gt; binary(), topics =&gt; [binary() | {binary(), [integer()]}], fetch_interval =&gt; integer(), fetch_size =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), commit =&gt; [<a href="#type-commit">commit()</a>]}
 </code></pre>
 
 
@@ -273,6 +283,16 @@ offset_fetch_set() = #{name =&gt; binary(), partitions_offset =&gt; [#{partition
 
 <pre><code>
 partition_assignment() = #{topic =&gt; binary(), partitions =&gt; [integer()]}
+</code></pre>
+
+
+
+
+### <a name="type-processing">processing()</a> ###
+
+
+<pre><code>
+processing() = before_processing | after_processing
 </code></pre>
 
 
@@ -821,7 +841,7 @@ Start kafe application
 ### start_consumer/3 ###
 
 <pre><code>
-start_consumer(GroupID::binary(), Callback::fun((CommitID::<a href="#type-group_commit_identifier">group_commit_identifier()</a>, Topic::binary(), PartitionID::integer(), Offset::integer(), Key::binary(), Value::binary()) -&gt; ok | {error, term()}) | atom() | {atom(), [term()]}, Options::<a href="#type-consumer_options">consumer_options()</a>) -&gt; {ok, GroupPID::pid()} | {error, term()}
+start_consumer(GroupID::binary(), Callback::fun((Topic::binary(), PartitionID::integer(), Offset::integer(), Key::binary(), Value::binary()) -&gt; ok | {error, term()}) | atom() | {atom(), [term()]}, Options::<a href="#type-consumer_options">consumer_options()</a>) -&gt; {ok, GroupPID::pid()} | {error, term()}
 </code></pre>
 <br />
 
@@ -837,7 +857,7 @@ empty (i.e. <<>>, default), but a rejoining member should use the same memberID 
 
 * `topics :: [binary() | {binary(), [integer()]}]` : List or topics (and partitions).
 
-* `fetch_interval :: integer()` : Fetch interval in ms (default : 1000)
+* `fetch_interval :: integer()` : Fetch interval in ms (default : 10)
 
 * `max_bytes :: integer()` : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 1024*1024)
@@ -852,15 +872,7 @@ MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait
 * `max_wait_time :: integer()` : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
 at the time the request is issued (default : 1).
 
-* `autocommit :: boolean()` : Autocommit offset (default: true).
-
-* `allow_unordered_commit :: boolean()` : Allow unordered commit (default: false).
-
-* `processing :: at_least_once | at_most_once :` When using `at_most_once`, the message offset will be commited before passing the message to the
-callback. With `at_least_once` the commit is executed after passing the message to the callback and only if it return `ok`. If the callback
-return an error, with `at_least_once`, the process will stop fetching messages for the partition until you manually commit the offset
-(see [`kafe_consumer:commit/2`](kafe_consumer.md#commit-2)), or remove it (see [`kafe_consumer:remove_commit/1`](kafe_consumer.md#remove_commit-1) or [`kafe_consumer:remove_commits/1`](kafe_consumer.md#remove_commits-1))). This options has
-no effect when `autocommit` is set to false.  (default: at_most_once).
+* `commit :: commit()` : Commit configuration (default: [after_processing, {interval, 1000}]).
 
 * `on_start_fetching :: fun((GroupID :: binary()) -> any())` : Function called when the fetcher start/restart fetching. (default: undefined).
 

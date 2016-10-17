@@ -48,9 +48,6 @@ Then start a new consumer :
 
 See [`kafe:start_consumer/3`](kafe.md#start_consumer-3) for the available `Options`.
 
-In the `consume` function, if you didn't start the consumer with `autocommit` set to `true`, you need to commit manually when you
-have finished to treat the message. To do so, use [`kafe_consumer:commit/1`](kafe_consumer.md#commit-1) with the `CommitID` as parameter.
-
 When you are done with your consumer, stop it :
 
 ```
@@ -96,16 +93,12 @@ __Internal :__
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#commit-1">commit/1</a></td><td>Equivalent to <a href="#commit-2"><tt>commit(GroupCommitIdentifier, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#commit-2">commit/2</a></td><td>
-Commit the offset (in Kafka) for the given <tt>GroupCommitIdentifier</tt> received in the <tt>Callback</tt> specified when starting the
-consumer group (see <a href="kafe.md#start_consumer-3"><code>kafe:start_consumer/3</code></a></td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#commit-1">commit/1</a></td><td>
+Commit the offset for the given message.</td></tr><tr><td valign="top"><a href="#commit-4">commit/4</a></td><td>
+Commit the <tt>Offset</tt> for the given <tt>GroupID</tt>, <tt>Topic</tt> and <tt>Partition</tt>.</td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
 Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#generation_id-1">generation_id/1</a></td><td>
 Return the consumer group generation ID.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
-Return the consumer group member ID.</td></tr><tr><td valign="top"><a href="#pending_commits-1">pending_commits/1</a></td><td>
-Return the list of all pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#pending_commits-2">pending_commits/2</a></td><td>
-Return the list of pending commits for the given topics (and partitions) for the given consumer group.</td></tr><tr><td valign="top"><a href="#remove_commit-1">remove_commit/1</a></td><td>
-Remove the given commit.</td></tr><tr><td valign="top"><a href="#remove_commits-1">remove_commits/1</a></td><td>
-Remove all pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupID, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupID)</tt></a>.</td></tr><tr><td valign="top"><a href="#topics-1">topics/1</a></td><td>
+Return the consumer group member ID.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupID, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupID)</tt></a>.</td></tr><tr><td valign="top"><a href="#topics-1">topics/1</a></td><td>
 Return the list of {topic, partition} for the consumer group.</td></tr></table>
 
 
@@ -118,37 +111,22 @@ Return the list of {topic, partition} for the consumer group.</td></tr></table>
 ### commit/1 ###
 
 <pre><code>
-commit(GroupCommitIdentifier::<a href="kafe.md#type-group_commit_identifier">kafe:group_commit_identifier()</a>) -&gt; ok | {error, term()} | delayed
+commit(Message::<a href="#type-message">message()</a>) -&gt; ok | {error, term()}
 </code></pre>
 <br />
 
-Equivalent to [`commit(GroupCommitIdentifier, #{})`](#commit-2).
+Commit the offset for the given message
 
-<a name="commit-2"></a>
+<a name="commit-4"></a>
 
-### commit/2 ###
+### commit/4 ###
 
 <pre><code>
-commit(GroupCommitIdentifier::<a href="kafe.md#type-group_commit_identifier">kafe:group_commit_identifier()</a>, Options::#{}) -&gt; ok | {error, term()} | delayed
+commit(GroupID::binary(), Topic::binary(), Partition::integer(), Offset::integer()) -&gt; ok | {error, term()}
 </code></pre>
 <br />
 
-Commit the offset (in Kafka) for the given `GroupCommitIdentifier` received in the `Callback` specified when starting the
-consumer group (see [`kafe:start_consumer/3`](kafe.md#start_consumer-3)
-
-If the `GroupCommitIdentifier` is not the lowerest offset to commit in the group :
-
-* If the consumer was created with `allow_unordered_commit`, the commit is delayed
-
-* Otherwise this function return `{error, cant_commit}`
-
-
-Available options:
-
-* `retry :: integer()` : max retry (default 0).
-
-* `delay :: integer()` : Time (in ms) between each retry.
-
+Commit the `Offset` for the given `GroupID`, `Topic` and `Partition`.
 
 <a name="describe-1"></a>
 
@@ -182,50 +160,6 @@ member_id(GroupID::binary()) -&gt; binary()
 <br />
 
 Return the consumer group member ID
-
-<a name="pending_commits-1"></a>
-
-### pending_commits/1 ###
-
-<pre><code>
-pending_commits(GroupID::binary()) -&gt; [<a href="kafe.md#type-group_commit_identifier">kafe:group_commit_identifier()</a>]
-</code></pre>
-<br />
-
-Return the list of all pending commits for the given consumer group.
-
-<a name="pending_commits-2"></a>
-
-### pending_commits/2 ###
-
-<pre><code>
-pending_commits(GroupID::binary(), Topics::[binary() | {binary(), [integer()]}]) -&gt; [<a href="kafe.md#type-group_commit_identifier">kafe:group_commit_identifier()</a>]
-</code></pre>
-<br />
-
-Return the list of pending commits for the given topics (and partitions) for the given consumer group.
-
-<a name="remove_commit-1"></a>
-
-### remove_commit/1 ###
-
-<pre><code>
-remove_commit(GroupCommitIdentifier::<a href="kafe.md#type-group_commit_identifier">kafe:group_commit_identifier()</a>) -&gt; ok | {error, term()}
-</code></pre>
-<br />
-
-Remove the given commit
-
-<a name="remove_commits-1"></a>
-
-### remove_commits/1 ###
-
-<pre><code>
-remove_commits(GroupID::binary()) -&gt; ok
-</code></pre>
-<br />
-
-Remove all pending commits for the given consumer group.
 
 <a name="start-3"></a>
 

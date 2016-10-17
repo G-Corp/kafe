@@ -93,37 +93,3 @@ kafe_consumer_can_not_fetch_undef_test_() ->
     end
    ]}.
 
-kafe_encode_decode_group_commit_identifier_test_() ->
-  {setup,
-   fun() ->
-       ok
-   end,
-   fun(_) ->
-       ok
-   end,
-   [
-    fun() ->
-        GCI = kafe_consumer:encode_group_commit_identifier(self(),
-                                                           <<"topic">>,
-                                                           0,
-                                                           9999,
-                                                           <<"group_id">>,
-                                                           1,
-                                                           <<"member_id">>),
-        {Pid,
-         Topic,
-         Partition,
-         Offset,
-         GroupID,
-         GenerationID,
-         MemberID} = kafe_consumer:decode_group_commit_identifier(GCI),
-        ?assertEqual(self(), Pid),
-        ?assertEqual(<<"topic">>, Topic),
-        ?assertEqual(0, Partition),
-        ?assertEqual(9999, Offset),
-        ?assertEqual(<<"group_id">>, GroupID),
-        ?assertEqual(1, GenerationID),
-        ?assertEqual(<<"member_id">>, MemberID)
-    end
-   ]}.
-

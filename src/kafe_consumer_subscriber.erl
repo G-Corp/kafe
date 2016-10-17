@@ -96,15 +96,16 @@ init([SubscriberModule, SubscriberArgs, GroupID, Topic, Partition]) ->
   end.
 
 % @hidden
-handle_call({message, CommitRef, Topic, Partition, Offset, Key, Value},
+handle_call({message, GroupID, Topic, Partition, Offset, Key, Value},
             _From,
-            #state{topic = Topic,
+            #state{group_id = GroupID,
+                   topic = Topic,
                    partition = Partition,
                    subscriber_module = SubscriberModule,
                    subscriber_state = SubscriberState} = State) ->
   case erlang:apply(SubscriberModule,
                     handle_message,
-                    [#message{commit_ref = CommitRef,
+                    [#message{group_id = GroupID,
                               topic = Topic,
                               partition = Partition,
                               offset = Offset,
@@ -138,13 +139,13 @@ code_change(_OldVsn, State, _Extra) ->
 
 -ifdef(TEST).
 message_test() ->
-  Message = #message{commit_ref = <<"COMMITREF">>,
+  Message = #message{group_id = <<"group">>,
                      topic = <<"topic">>,
                      partition = 1,
                      offset = 1234,
                      key = <<"key">>,
                      value = <<"value">>},
-  ?assertEqual(<<"COMMITREF">>, message(Message, commit_ref)),
+  ?assertEqual(<<"group">>, message(Message, group_id)),
   ?assertEqual(<<"topic">>, message(Message, topic)),
   ?assertEqual(1, message(Message, partition)),
   ?assertEqual(<<"key">>, message(Message, key)),
@@ -192,7 +193,7 @@ handle_message_test() ->
                               subscriber_state = new_subscriber_state_for_test
                              }},
                handle_call({message,
-                            <<"COMMITREF">>,
+                            <<"group">>,
                             <<"topic">>,
                             1,
                             1234,
@@ -223,7 +224,7 @@ handle_message_subscriber_error_test() ->
                    subscriber_state = new_subscriber_state_for_test
                   }},
                handle_call({message,
-                            <<"COMMITREF">>,
+                            <<"group">>,
                             <<"topic">>,
                             1,
                             1234,
@@ -252,7 +253,7 @@ handle_message_invalid_message_topic_test() ->
                    subscriber_state = subscriber_state_for_test
                   }},
                handle_call({message,
-                            <<"COMMITREF">>,
+                            <<"group">>,
                             <<"topic1">>,
                             1,
                             1234,
@@ -280,7 +281,7 @@ handle_message_invalid_message_partition_test() ->
                    subscriber_state = subscriber_state_for_test
                   }},
                handle_call({message,
-                            <<"COMMITREF">>,
+                            <<"group">>,
                             <<"topic">>,
                             2,
                             1234,
