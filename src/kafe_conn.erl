@@ -4,35 +4,18 @@
 -behaviour(gen_server).
 
 -include("../include/kafe.hrl").
-%-define(SERVER, ?MODULE).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
-%% ------------------------------------------------------------------
-%% API Function Exports
-%% ------------------------------------------------------------------
-
 -export([start_link/2]).
-
-%% ------------------------------------------------------------------
-%% gen_server Function Exports
-%% ------------------------------------------------------------------
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
-%% ------------------------------------------------------------------
-%% API Function Definitions
-%% ------------------------------------------------------------------
-
 start_link(Addr, Port) ->
   gen_server:start_link(?MODULE, {Addr, Port}, []).
-
-%% ------------------------------------------------------------------
-%% gen_server Function Definitions
-%% ------------------------------------------------------------------
 
 init({Addr, Port}) ->
   SndBuf = doteki:get_env([kafe, socket, sndbuf], ?DEFAULT_SOCKET_SNDBUF),
@@ -45,7 +28,8 @@ init({Addr, Port}) ->
                                     {recbuf, RecBuf},
                                     {buffer, Buffer}]) of
     {ok, Socket} ->
-      lager:debug("Connect to broker @ ~s:~p", [bucinet:ip_to_string(Addr), Port]),
+      {ok, {LocalAddr, LocalPort}} = inet:sockname(Socket),
+      lager:info("Connected to broker ~s:~p from ~s:~p", [bucinet:ip_to_string(Addr), Port, bucinet:ip_to_string(LocalAddr), LocalPort]),
       ApiVersion = doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION),
       CorrelationID = doteki:get_env([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
       ClientID = doteki:get_env([kafe, client_id], ?DEFAULT_CLIENT_ID),
@@ -59,7 +43,7 @@ init({Addr, Port}) ->
          requests => orddict:new()
         }};
     {error, Reason} ->
-      lager:debug("Connection faild to ~p:~p : ~p", [bucinet:ip_to_string(Addr), Port, Reason]),
+      lager:debug("Connection failed to ~s:~p : ~p", [bucinet:ip_to_string(Addr), Port, Reason]),
       {stop, Reason}
   end.
 
@@ -90,13 +74,11 @@ handle_info({tcp, _Socket, Packet}, State) ->
     {error, _} = Reason ->
       {stop, Reason, State}
   end;
-
-handle_info({tcp_closed, Socket}, State) ->
-  lager:debug("Connections close ~p ...", [Socket]),
+handle_info({tcp_closed, _Socket}, #{ip := Addr, port := Port} = State) ->
+  lager:info("Connection to broker ~s:~p closed", [bucinet:ip_to_string(Addr), Port]),
   {stop, normal, State};
-
 handle_info(Info, State) ->
-  lager:debug("Invalid message : ~p", [Info]),
+  lager:warning("Invalid message : ~p", [Info]),
   lager:debug("--- State ~p", [State]),
   {noreply, State}.
 
@@ -107,10 +89,6 @@ terminate(_Reason, #{socket := Socket}) ->
 
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
-
-%% ------------------------------------------------------------------
-%% Internal Function Definitions
-%% ------------------------------------------------------------------
 
 send_request(#{packet := Packet, state := State2, api_version := ApiVersion},
              From,
