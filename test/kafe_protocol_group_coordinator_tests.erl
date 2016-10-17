@@ -19,15 +19,15 @@ teardown(_) ->
 
 t_request() ->
   ?assertEqual(#{api_version => 0,
-                 packet => <<0, 0, 0, 21, 0, 10, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 5, 104, 101, 108, 108, 111>>,
+                 packet => <<0, 10, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 5, 104, 101, 108, 108, 111>>,
                  state => ?REQ_STATE2(1, 0)},
                kafe_protocol_group_coordinator:request(<<"hello">>, ?REQ_STATE2(0, 0))),
   ?assertEqual(#{api_version => 0,
-                 packet => <<0, 0, 0, 21, 0, 10, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 5, 104, 101, 108, 108, 111>>,
+                 packet => <<0, 10, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 5, 104, 101, 108, 108, 111>>,
                  state => ?REQ_STATE2(1, 1)},
                kafe_protocol_group_coordinator:request(<<"hello">>, ?REQ_STATE2(0, 1))),
   ?assertEqual(#{api_version => 0,
-                 packet => <<0, 0, 0, 21, 0, 10, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 5, 104, 101, 108, 108, 111>>,
+                 packet => <<0, 10, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 5, 104, 101, 108, 108, 111>>,
                  state => ?REQ_STATE2(1, 2)},
                kafe_protocol_group_coordinator:request(<<"hello">>, ?REQ_STATE2(0, 2))).
 

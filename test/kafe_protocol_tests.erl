@@ -22,25 +22,25 @@ teardown(_) ->
 
 t_protocol_request() ->
   ?assertEqual(#{api_version => 0,
-                 packet => <<0, 0, 0, 14, 0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
+                 packet => <<0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
                  state => ?REQ_STATE2(1, 0)},
                kafe_protocol:request(1, <<>>, ?REQ_STATE2(0, 0))),
   ?assertEqual(#{api_version => 1,
-                 packet => <<0, 0, 0, 14, 0, 1, 0, 1, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
+                 packet => <<0, 1, 0, 1, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
                  state => ?REQ_STATE2(1, 1)},
                kafe_protocol:request(1, <<>>, ?REQ_STATE2(0, 1))),
   ?assertEqual(#{api_version => 2,
-                 packet => <<0, 0, 0, 14, 0, 1, 0, 2, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
+                 packet => <<0, 1, 0, 2, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
                  state => ?REQ_STATE2(1, 2)},
                kafe_protocol:request(1, <<>>, ?REQ_STATE2(0, 2))).
 
 t_protocol_request_force_api_version() ->
   ?assertEqual(#{api_version => 0,
-                 packet => <<0, 0, 0, 14, 0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
+                 packet => <<0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
                  state => ?REQ_STATE2(1, 1)},
                kafe_protocol:request(1, <<>>, ?REQ_STATE2(0, 1), 0)),
   ?assertEqual(#{api_version => 0,
-                 packet => <<0, 0, 0, 14, 0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
+                 packet => <<0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
                  state => ?REQ_STATE2(1, 2)},
                kafe_protocol:request(1, <<>>, ?REQ_STATE2(0, 2), 0)).
 
