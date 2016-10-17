@@ -69,7 +69,7 @@
                                          ?DEFAULT_GROUP_PROTOCOL_TOPICS,
                                          ?DEFAULT_GROUP_USER_DATA)]).
 
--define(DEFAULT_CONSUMER_FETCH_INTERVAL, 1000).
+-define(DEFAULT_CONSUMER_FETCH_INTERVAL, 10).
 -define(DEFAULT_CONSUMER_AUTOCOMMIT, true).
 -define(DEFAULT_CONSUMER_ALLOW_UNORDERED_COMMIT, false).
 -define(DEFAULT_CONSUMER_COMMIT_RETRY, 0).

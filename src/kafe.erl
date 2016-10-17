@@ -740,7 +740,7 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberID must be
 % empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberID from the previous generation.</li>
 % <li><tt>topics :: [binary() | {binary(), [integer()]}]</tt> : List or topics (and partitions).</li>
-% <li><tt>fetch_interval :: integer()</tt> : Fetch interval in ms (default : 1000)</li>
+% <li><tt>fetch_interval :: integer()</tt> : Fetch interval in ms (default : 10)</li>
 % <li><tt>max_bytes :: integer()</tt> : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 % 1024*1024)</li>
 % <li><tt>min_bytes :: integer()</tt> : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0

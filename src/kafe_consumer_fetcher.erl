@@ -22,7 +22,7 @@
 -record(state, {
           topic = undefined,
           partition = undefined,
-          fetch_interval = undefined,
+          fetch_interval = ?DEFAULT_CONSUMER_FETCH_INTERVAL,
           timer = undefined,
           offset = -1,
           group_id = undefined,
