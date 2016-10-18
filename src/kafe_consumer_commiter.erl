@@ -143,7 +143,7 @@ lcs(Last, [First|_] = List, _Attempt) when Last + 1 == First ->
 lcs(_, _, Attempt) when Attempt < ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS ->
   [];
 lcs(_, List, _) ->
-  List.
+  do_lcs(List, lists:min(List) - 1, []).
 
 do_lcs([], _, Res) ->
   Res;
@@ -408,7 +408,9 @@ info_commit_hole_commit_test() ->
 lcs_test() ->
   ?assertMatch([2, 1, 0], lcs(-1, [0, 1, 2], 0)),
   ?assertMatch([], lcs(-1, [1, 2, 3], 0)),
-  ?assertMatch([1, 2, 3], lcs(-1, [1, 2, 3], ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS)),
+  ?assertMatch([3, 2, 1], lcs(-1, [1, 2, 3], ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS)),
+  ?assertMatch([], lcs(-1, [1, 2, 3, 6, 7, 8], 0)),
+  ?assertMatch([3, 2, 1], lcs(-1, [1, 2, 3, 6, 7, 8], ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS)),
   ?assertMatch([2, 1, 0], lcs(-1, [0, 1, 2, 4, 5], 0)).
 -endif.
 
