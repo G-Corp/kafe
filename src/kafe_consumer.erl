@@ -46,6 +46,7 @@
 % <pre>
 % -module(my_consumer).
 % -behaviour(kafe_consumer_subscriber).
+% -include_lib("kafe/include/kafe_consumer.hrl").
 %
 % -export([init/4, handle_message/2]).
 %
@@ -193,7 +194,7 @@ commit(GroupID, Topic, Partition, Offset) ->
 % @doc
 % Commit the offset for the given message
 % @end
--spec commit(Message :: message()) -> ok | {error, term()}.
+-spec commit(Message :: kafe_consumer_subscriber:message()) -> ok | {error, term()}.
 commit(#message{group_id = GroupID, topic = Topic, partition = Partition, offset = Offset}) ->
   commit(GroupID, Topic, Partition, Offset).
 

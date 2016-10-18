@@ -4,6 +4,7 @@
 -behaviour(gen_server).
 
 -include("../include/kafe.hrl").
+-include("../include/kafe_consumer.hrl").
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
@@ -225,9 +226,25 @@ perform_fetch([#{offset := Offset,
       end
   end.
 
-call_subscriber(Callback, GroupID, Topic, Partition, Offset, Key, Value) when is_function(Callback) ->
+call_subscriber(Callback, GroupID, Topic, Partition, Offset, Key, Value) when is_function(Callback, 6) ->
   try
     erlang:apply(Callback, [GroupID, Topic, Partition, Offset, Key, Value])
+  catch
+    Class:Reason0 ->
+      lager:error(
+        "Callback for message ~p of topic ~s, partition ~p crash:~s",
+        [Offset, Topic, Partition, lager:pr_stacktrace(erlang:get_stacktrace(), {Class, Reason0})]),
+      callback_exception
+  end;
+call_subscriber(Callback, GroupID, Topic, Partition, Offset, Key, Value) when is_function(Callback, 1) ->
+  try
+    erlang:apply(Callback, [#message{
+                               group_id = GroupID,
+                               topic = Topic,
+                               partition = Partition,
+                               offset = Offset,
+                               key = Key,
+                               value = Value}])
   catch
     Class:Reason0 ->
       lager:error(

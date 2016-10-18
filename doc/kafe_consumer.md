@@ -66,6 +66,7 @@ You can also use a `kafe_consumer_subscriber` behaviour instead of a function :
 
  -module(my_consumer).
  -behaviour(kafe_consumer_subscriber).
+ -include_lib("kafe/include/kafe_consumer.hrl").
 
  -export([init/4, handle_message/2]).
 
@@ -151,7 +152,7 @@ Return the list of {topic, partition} for the consumer group.</td></tr></table>
 ### commit/1 ###
 
 <pre><code>
-commit(Message::<a href="#type-message">message()</a>) -&gt; ok | {error, term()}
+commit(Message::<a href="kafe_consumer_subscriber.md#type-message">kafe_consumer_subscriber:message()</a>) -&gt; ok | {error, term()}
 </code></pre>
 <br />
 

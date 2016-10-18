@@ -6,5 +6,3 @@
           key,
           value}).
 
--type message() :: #message{}.
-

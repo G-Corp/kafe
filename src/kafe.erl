@@ -751,7 +751,7 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait up to 100ms to try to accumulate 64k of data before responding) (default :
 % 1).</li>
 % <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
-% at the time the request is issued (default : 1).</li>
+% at the time the request is issued (default : 100).</li>
 % <li><tt>commit :: commit()</tt> : Commit configuration (default: [after_processing, {interval, 1000}]).</li>
 % <li><tt>on_start_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher start/restart fetching. (default: undefined).</li>
 % <li><tt>on_stop_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher stop fetching. (default: undefined).</li>
@@ -769,10 +769,12 @@ delete_offset_for_partition(PartitionID, Offsets) ->
                                       Offset :: integer(),
                                       Key :: binary(),
                                       Value :: binary()) -> ok | {error, term()})
-                                   | atom()
-                                   | {atom(), list(term())},
-                     Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
+                                   | fun((Message :: kafe_consumer_subscriber:message()) -> ok | {error, term()})
+                                       | atom()
+                                       | {atom(), list(term())},
+                                       Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
 start_consumer(GroupID, Callback, Options) when is_function(Callback, 6);
+                                                is_function(Callback, 1);
                                                 is_atom(Callback);
                                                 is_tuple(Callback) ->
   kafe_consumer_sup:start_child(GroupID, Options#{callback => Callback}).

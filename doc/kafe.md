@@ -841,7 +841,7 @@ Start kafe application
 ### start_consumer/3 ###
 
 <pre><code>
-start_consumer(GroupID::binary(), Callback::fun((GroupID::binary(), Topic::binary(), PartitionID::integer(), Offset::integer(), Key::binary(), Value::binary()) -&gt; ok | {error, term()}) | atom() | {atom(), [term()]}, Options::<a href="#type-consumer_options">consumer_options()</a>) -&gt; {ok, GroupPID::pid()} | {error, term()}
+start_consumer(GroupID::binary(), Callback::fun((GroupID::binary(), Topic::binary(), PartitionID::integer(), Offset::integer(), Key::binary(), Value::binary()) -&gt; ok | {error, term()}) | fun((Message::<a href="kafe_consumer_subscriber.md#type-message">kafe_consumer_subscriber:message()</a>) -&gt; ok | {error, term()}) | atom() | {atom(), [term()]}, Options::<a href="#type-consumer_options">consumer_options()</a>) -&gt; {ok, GroupPID::pid()} | {error, term()}
 </code></pre>
 <br />
 
@@ -870,7 +870,7 @@ MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait
 1).
 
 * `max_wait_time :: integer()` : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
-at the time the request is issued (default : 1).
+at the time the request is issued (default : 100).
 
 * `commit :: commit()` : Commit configuration (default: [after_processing, {interval, 1000}]).
 

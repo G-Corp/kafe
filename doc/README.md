@@ -136,6 +136,7 @@ kafe:stop_consumer(my_group),
 -behaviour(kafe_consumer_subscriber).
 
 -export([init/4, handle_message/2]).
+-include_lib("kafe/include/kafe_consumer.hrl").
 
 -record(state, {
                }).

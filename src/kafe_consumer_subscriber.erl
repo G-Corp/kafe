@@ -26,6 +26,10 @@
 
 -export([message/2]).
 
+-export_type([message/0]).
+
+-type message() :: #message{}.
+
 -record(state, {
           group_id,
           topic,
