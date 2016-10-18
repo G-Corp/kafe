@@ -120,6 +120,10 @@
          , stop/1
          , commit/4
          , commit/1
+         , remove_commits/3
+         , remove_commits/1
+         , pending_commits/3
+         , pending_commits/1
          , describe/1
          , topics/1
          , member_id/1
@@ -197,6 +201,53 @@ commit(GroupID, Topic, Partition, Offset) ->
 -spec commit(Message :: kafe_consumer_subscriber:message()) -> ok | {error, term()}.
 commit(#message{group_id = GroupID, topic = Topic, partition = Partition, offset = Offset}) ->
   commit(GroupID, Topic, Partition, Offset).
+
+% @doc
+% Remove pending commits for the given consumer group, topic and partition.
+% @end
+-spec remove_commits(GroupID :: binary(), Topic :: binary(), Partition :: integer()) -> ok | {error, Reason :: term()}.
+remove_commits(GroupID, Topic, Partition) ->
+  CommiterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
+  case erlang:is_process_alive(CommiterPID) of
+    true ->
+      gen_server:call(CommiterPID, remove_commits);
+    false ->
+      {error, dead_commiter}
+  end.
+
+% @doc
+% Remove pending commits for the given consumer group
+% @end
+-spec remove_commits(GroupID :: binary()) -> ok.
+remove_commits(GroupID) ->
+  [[remove_commits(GroupID, Topic, Partition)
+    || Partition <- Partitions]
+   || {Topic, Partitions} <- kafe_consumer_store:value(GroupID, topics, [])],
+  ok.
+
+% @doc
+% Return the number or pending commits for the given consumer group, topic and partition.
+% @end
+-spec pending_commits(GroupID :: binary(), Topic :: binary(), Partition :: integer()) -> integer().
+pending_commits(GroupID, Topic, Partition) ->
+  CommiterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
+  case erlang:is_process_alive(CommiterPID) of
+    true ->
+      gen_server:call(CommiterPID, pending_commits);
+    false ->
+      0
+  end.
+
+% @doc
+% Return the number of pending commits for the given consumer group
+% @end
+-spec pending_commits(GroupID :: binary()) -> ok.
+pending_commits(GroupID) ->
+  lists:sum(
+    lists:flatten(
+      [[pending_commits(GroupID, Topic, Partition)
+        || Partition <- Partitions]
+       || {Topic, Partitions} <- kafe_consumer_store:value(GroupID, topics, [])])).
 
 % @hidden
 start_link(GroupID, Options) ->

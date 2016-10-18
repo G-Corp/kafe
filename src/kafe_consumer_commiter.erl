@@ -29,6 +29,7 @@
           commit_timer = undefined,
           last_offset = -1,
           group_id,
+          attempt = 0,
           commits = []
          }).
 
@@ -50,6 +51,10 @@ init([Topic, Partition, GroupID, Commit]) ->
          })}.
 
 % @hidden
+handle_call(pending_commits, _From, #state{commits = Commits} = State) ->
+  {reply, erlang:length(Commits), State};
+handle_call(remove_commits, _From, State) ->
+  {reply, ok, State#state{commits = []}};
 handle_call({offset, Offset}, _From, State) ->
   {reply, ok, State#state{last_offset = Offset}};
 handle_call({commit, Offset}, _From, #state{group_id = GroupID,
@@ -75,11 +80,11 @@ handle_cast(_Msg, State) ->
 
 % @hidden
 handle_info(commit, #state{commits = []} = State) ->
-  {noreply, start_commit_timer(State)};
-handle_info(commit, #state{last_offset = LastOffset, commits = Commits, group_id = GroupID, topic = Topic, partition = Partition} = State) ->
-  case lcs(LastOffset, Commits) of
+  {noreply, start_commit_timer(State#state{attempt = 0})};
+handle_info(commit, #state{last_offset = LastOffset, commits = Commits, group_id = GroupID, topic = Topic, partition = Partition, attempt = Attempt} = State) ->
+  case lcs(LastOffset, Commits, Attempt) of
     [] ->
-      {noreply, start_commit_timer(State)};
+      {noreply, start_commit_timer(State#state{attempt = Attempt + 1})};
     LIS ->
       CommitOffset = lists:max(LIS),
       GenerationID = kafe_consumer_store:value(GroupID, generation_id),
@@ -93,7 +98,8 @@ handle_info(commit, #state{last_offset = LastOffset, commits = Commits, group_id
           RemainingCommits = Commits -- LIS,
           kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(RemainingCommits)),
           {noreply, start_commit_timer(State#state{last_offset = CommitOffset,
-                                                   commits = RemainingCommits})};
+                                                   commits = RemainingCommits,
+                                                   attempt = 0})};
         {ok, [#{name := Topic,
                 partitions := [#{error_code := Error,
                                  partition := Partition}]}]} ->
@@ -132,16 +138,18 @@ start_commit_timer(#state{commit_interval = undefined} = State) ->
 start_commit_timer(#state{commit_interval = Interval, commit_timer = undefined} = State) ->
   State#state{commit_timer = erlang:send_after(Interval, self(), commit)}.
 
-lcs(Last, [First|_] = List) when Last + 1 == First ->
-  lcs(List, Last, []);
-lcs(_, _) ->
-  [].
+lcs(Last, [First|_] = List, _Attempt) when Last + 1 == First ->
+  do_lcs(List, Last, []);
+lcs(_, _, Attempt) when Attempt < ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS ->
+  [];
+lcs(_, List, _) ->
+  List.
 
-lcs([], _, Res) ->
+do_lcs([], _, Res) ->
   Res;
-lcs([E|Rest], Last, Res) when E == Last + 1 ->
-  lcs(Rest, E, [E|Res]);
-lcs(_, _, Res) ->
+do_lcs([E|Rest], Last, Res) when E == Last + 1 ->
+  do_lcs(Rest, E, [E|Res]);
+do_lcs(_, _, Res) ->
   Res.
 
 -ifdef(TEST).
@@ -398,8 +406,9 @@ info_commit_hole_commit_test() ->
   meck:unload(kafe_consumer_store).
 
 lcs_test() ->
-  ?assertMatch([2, 1, 0], lcs(-1, [0, 1, 2])),
-  ?assertMatch([], lcs(-1, [1, 2, 3])),
-  ?assertMatch([2, 1, 0], lcs(-1, [0, 1, 2, 4, 5])).
+  ?assertMatch([2, 1, 0], lcs(-1, [0, 1, 2], 0)),
+  ?assertMatch([], lcs(-1, [1, 2, 3], 0)),
+  ?assertMatch([1, 2, 3], lcs(-1, [1, 2, 3], ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS)),
+  ?assertMatch([2, 1, 0], lcs(-1, [0, 1, 2, 4, 5], 0)).
 -endif.
 

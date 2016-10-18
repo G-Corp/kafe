@@ -139,7 +139,11 @@ Commit the offset for the given message.</td></tr><tr><td valign="top"><a href="
 Commit the <tt>Offset</tt> for the given <tt>GroupID</tt>, <tt>Topic</tt> and <tt>Partition</tt>.</td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
 Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#generation_id-1">generation_id/1</a></td><td>
 Return the consumer group generation ID.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
-Return the consumer group member ID.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupID, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupID)</tt></a>.</td></tr><tr><td valign="top"><a href="#topics-1">topics/1</a></td><td>
+Return the consumer group member ID.</td></tr><tr><td valign="top"><a href="#pending_commits-1">pending_commits/1</a></td><td>
+Return the number of pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#pending_commits-3">pending_commits/3</a></td><td>
+Return the number or pending commits for the given consumer group, topic and partition.</td></tr><tr><td valign="top"><a href="#remove_commits-1">remove_commits/1</a></td><td>
+Remove pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#remove_commits-3">remove_commits/3</a></td><td>
+Remove pending commits for the given consumer group, topic and partition.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupID, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupID)</tt></a>.</td></tr><tr><td valign="top"><a href="#topics-1">topics/1</a></td><td>
 Return the list of {topic, partition} for the consumer group.</td></tr></table>
 
 
@@ -201,6 +205,50 @@ member_id(GroupID::binary()) -&gt; binary()
 <br />
 
 Return the consumer group member ID
+
+<a name="pending_commits-1"></a>
+
+### pending_commits/1 ###
+
+<pre><code>
+pending_commits(GroupID::binary()) -&gt; ok
+</code></pre>
+<br />
+
+Return the number of pending commits for the given consumer group
+
+<a name="pending_commits-3"></a>
+
+### pending_commits/3 ###
+
+<pre><code>
+pending_commits(GroupID::binary(), Topic::binary(), Partition::integer()) -&gt; integer()
+</code></pre>
+<br />
+
+Return the number or pending commits for the given consumer group, topic and partition.
+
+<a name="remove_commits-1"></a>
+
+### remove_commits/1 ###
+
+<pre><code>
+remove_commits(GroupID::binary()) -&gt; ok
+</code></pre>
+<br />
+
+Remove pending commits for the given consumer group
+
+<a name="remove_commits-3"></a>
+
+### remove_commits/3 ###
+
+<pre><code>
+remove_commits(GroupID::binary(), Topic::binary(), Partition::integer()) -&gt; ok | {error, Reason::term()}
+</code></pre>
+<br />
+
+Remove pending commits for the given consumer group, topic and partition.
 
 <a name="start-3"></a>
 

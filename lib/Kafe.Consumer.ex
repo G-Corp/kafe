@@ -27,4 +27,16 @@ defmodule Kafe.Consumer do
   def unquote(:"commit")(arg1) do
     :erlang.apply(:"kafe_consumer", :"commit", [arg1])
   end
+  def unquote(:"remove_commits")(arg1, arg2, arg3) do
+    :erlang.apply(:"kafe_consumer", :"remove_commits", [arg1, arg2, arg3])
+  end
+  def unquote(:"remove_commits")(arg1) do
+    :erlang.apply(:"kafe_consumer", :"remove_commits", [arg1])
+  end
+  def unquote(:"pending_commits")(arg1, arg2, arg3) do
+    :erlang.apply(:"kafe_consumer", :"pending_commits", [arg1, arg2, arg3])
+  end
+  def unquote(:"pending_commits")(arg1) do
+    :erlang.apply(:"kafe_consumer", :"pending_commits", [arg1])
+  end
 end
