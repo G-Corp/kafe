@@ -13,15 +13,12 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 [![License](https://img.shields.io/hexpm/l/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![Build Status](https://travis-ci.org/botsunit/kafe.svg?branch=master)](https://travis-ci.org/botsunit/kafe)
 
-<blockquote>
-Version 2.0.0 cause changes in the following APIs :
+__Version 2.0.0 cause changes in the following APIs :__
 
 * [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/2.0.0/doc/kafe.md#start_consumer-3)
 
 * [`kafe:fetch/3`](https://github.com/botsunit/kafe/blob/2.0.0/doc/kafe.md#fetch-3)
 
-
-</blockquote>
 
 __Kafe__ has been tested with Kafka 0.9 and 0.10
 

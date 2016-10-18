@@ -11,13 +11,12 @@
 [![License](https://img.shields.io/hexpm/l/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![Build Status](https://travis-ci.org/botsunit/kafe.svg?branch=master)](https://travis-ci.org/botsunit/kafe)
 
-<blockquote>
-Version 2.0.0 cause changes in the following APIs :
+
+<b>Version 2.0.0 cause changes in the following APIs :</b>
 <ul>
 <li>{@link kafe:start_consumer/3}</li>
 <li>{@link kafe:fetch/3}</li>
 </ul>
-</blockquote>
 
 <b>Kafe</b> has been tested with Kafka 0.9 and 0.10
 
