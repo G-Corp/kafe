@@ -28,7 +28,7 @@ To create a consumer, create a function with 6 parameters :
 
  -export([consume/6]).
 
- consume(CommitID, Topic, Partition, Offset, Key, Value) ->
+ consume(GroupID, Topic, Partition, Offset, Key, Value) ->
    % Do something with Topic/Partition/Offset/Key/Value
    ok.
 ```
@@ -48,6 +48,9 @@ Then start a new consumer :
 
 See [`kafe:start_consumer/3`](kafe.md#start_consumer-3) for the available `Options`.
 
+In the `consume` function, if you didn't start the consumer in autocommit mode (using `before_processing | after_processing` in the `commit` options),
+you need to commit manually when you have finished to treat the message. To do so, use [`kafe_consumer:commit/4`](kafe_consumer.md#commit-4).
+
 When you are done with your consumer, stop it :
 
 ```
@@ -56,6 +59,43 @@ When you are done with your consumer, stop it :
  kafe:stop_consumer(my_group),
  ...
 ```
+
+You can also use a `kafe_consumer_subscriber` behaviour instead of a function :
+
+```
+
+ -module(my_consumer).
+ -behaviour(kafe_consumer_subscriber).
+
+ -export([init/4, handle_message/2]).
+
+ -record(state, {
+                }).
+
+ init(Group, Topic, Partition, Args) ->
+   % Do something with Group, Topic, Partition, Args
+   {ok, #state{}}.
+
+ handle_message(Message, State) ->
+   % Do something with Message
+   % And update your State (if needed)
+   {ok, NewState}.
+```
+
+Then start a new consumer :
+
+```
+
+ ...
+ kafe:start().
+ ...
+ kafe:start_consumer(my_group, {my_consumer, Args}, Options).
+ % Or
+ kafe:start_consumer(my_group, my_consumer, Options).
+ ...
+```
+
+To commit a message (if you need to), use [`kafe_consumer:commit/4`](kafe_consumer.md#commit-4).
 
 __Internal :__
 

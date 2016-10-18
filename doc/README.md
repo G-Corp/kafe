@@ -4,7 +4,7 @@
 
 Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 BotsUnit
 
-__Version:__ 1.5.2
+__Version:__ 2.0.0
 
 __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire.lejeune@finexkap.com)), Gregoire Lejeune ([`greg@g-corp.io`](mailto:greg@g-corp.io)), Gregoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire.lejeune@botsunit.com)).
 
@@ -12,6 +12,16 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 [![Hex.pm downloads](https://img.shields.io/hexpm/dt/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![License](https://img.shields.io/hexpm/l/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![Build Status](https://travis-ci.org/botsunit/kafe.svg?branch=master)](https://travis-ci.org/botsunit/kafe)
+
+<blockquote>
+Version 2.0.0 cause changes in the following APIs :
+
+* [`kafe:start_consumer/3`](kafe.md#start_consumer-3)
+
+* [`kafe:fetch/3`](kafe.md#fetch-3)
+
+
+</blockquote>
 
 __Kafe__ has been tested with Kafka 0.9 and 0.10
 
@@ -107,8 +117,8 @@ kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
 
 See [`kafe:start_consumer/3`](kafe.md#start_consumer-3) for the available `Options`.
 
-In the `consume` function, if you didn't start the consumer with `autocommit` set to `true`, you need to commit manually when you
-have finished to treat the message. To do so, use [`kafe_consumer:commit/1`](kafe_consumer.md#commit-1) with the `CommitID` as parameter.
+In the `consume` function, if you didn't start the consumer in autocommit mode (using `before_processing | after_processing` in the `commit` options),
+you need to commit manually when you have finished to treat the message. To do so, use [`kafe_consumer:commit/4`](kafe_consumer.md#commit-4).
 
 When you are done with your consumer, stop it :
 
@@ -157,6 +167,8 @@ kafe:start_consumer(my_group, my_consumer, Options).
 ...
 
 ```
+
+To commit a message (if you need to), use [`kafe_consumer:commit/4`](kafe_consumer.md#commit-4).
 
 
 ### Using with Elixir ###
