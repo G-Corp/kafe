@@ -90,6 +90,16 @@ terminate(_Reason, #{socket := Socket}) ->
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
+send_request(#{packet := Packet},
+             _From,
+             {undefined, []},
+             #{socket := Socket} = State1) ->
+  case gen_tcp:send(Socket, Packet) of
+    ok ->
+      {reply, ok, State1};
+    {error, _} = Error ->
+      {stop, abnormal, Error, State1}
+  end;
 send_request(#{packet := Packet, state := State2, api_version := ApiVersion},
              From,
              Handler,

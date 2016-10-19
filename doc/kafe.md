@@ -786,7 +786,7 @@ Equivalent to [`produce(Topic, Message, #{})`](#produce-3).
 ### produce/3 ###
 
 <pre><code>
-produce(Topic::binary(), Message::<a href="#type-message">message()</a>, Options::<a href="#type-produce_options">produce_options()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()}
+produce(Topic::binary(), Message::<a href="#type-message">message()</a>, Options::<a href="#type-produce_options">produce_options()</a>) -&gt; ok | {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -802,10 +802,10 @@ terminate a local write so if the local write time exceeds this timeout it will 
 socket timeout. (default: 5000)
 
 * `required_acks :: integer()` : This field indicates how many acknowledgements the servers should receive before responding to the request. If it is
-0 the server will not send any response (this is the only case where the server will not reply to a request). If it is 1, the server will wait the data is
-written to the local log before sending a response. If it is -1 the server will block until the message is committed by all in sync replicas before sending a
-response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server will never wait for more
-acknowledgements than there are in-sync replicas). (default: 0)
+0 the server will not send any response (this is the only case where the server will not reply to a request) and this function will return ok.
+If it is 1, the server will wait the data is written to the local log before sending a response. If it is -1 the server will block until the message is committed
+by all in sync replicas before sending a response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server
+will never wait for more acknowledgements than there are in-sync replicas). (default: -1)
 
 * `partition :: integer()` : The partition that data is being published to.
 

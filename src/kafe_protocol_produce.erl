@@ -17,10 +17,18 @@ run(Topic, Message, Options) ->
                 _ ->
                   maps:get(partition, Options, kafe_rr:next(Topic))
               end,
-  kafe_protocol:run({topic_and_partition, Topic, Partition},
-                    {call,
-                     fun ?MODULE:request/5, [bucs:to_binary(Topic), Partition, Message, Options],
-                     fun ?MODULE:response/2}).
+  case maps:get(required_acks, Options, ?DEFAULT_PRODUCE_REQUIRED_ACKS) of
+    0 ->
+      kafe_protocol:run({topic_and_partition, Topic, Partition},
+                        {call,
+                         fun ?MODULE:request/5, [bucs:to_binary(Topic), Partition, Message, Options],
+                         undefined});
+    _ ->
+      kafe_protocol:run({topic_and_partition, Topic, Partition},
+                        {call,
+                         fun ?MODULE:request/5, [bucs:to_binary(Topic), Partition, Message, Options],
+                         fun ?MODULE:response/2})
+  end.
 
 %% Produce Request (Version: 0) => acks timeout [topic_data]
 %%   acks => INT16

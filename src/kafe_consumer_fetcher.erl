@@ -255,7 +255,7 @@ call_subscriber(Callback, GroupID, Topic, Partition, Offset, Key, Value) when is
 call_subscriber(Callback, GroupID, Topic, Partition, Offset, Key, Value) when is_atom(Callback);
                                                                               is_tuple(Callback) ->
   SubscriberPID = kafe_consumer_store:value(GroupID, {subscriber_pid, {Topic, Partition}}),
-  gen_server:call(SubscriberPID, {message, GroupID, Topic, Partition, Offset, Key, Value}).
+  gen_server:call(SubscriberPID, {message, GroupID, Topic, Partition, Offset, Key, Value}, infinity).
 
 commit(Offset, Topic, Partition, GroupID, Processing, Processing) when Processing == before_processing;
                                                                        Processing == after_processing ->
