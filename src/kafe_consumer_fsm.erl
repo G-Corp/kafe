@@ -389,11 +389,11 @@ kafe_consumer_fsm_dead_stable_test_() ->
                member_id = <<"member">>,
                leader_id = <<"member">>,
                generation_id = 1,
-               topics = [{<<"topic">>,[0,1,2]}],
+               topics = [{<<"topic">>, [0, 1, 2]}],
                session_timeout =100,
                members = [#{member_assignment => #{
                     partition_assignment => [#{
-                      partitions => [0,1,2],
+                      partitions => [0, 1, 2],
                       topic => <<"topic">>}],
                     version => 1}}],
                protocol_group = protocol_group},
@@ -443,7 +443,7 @@ kafe_consumer_fsm_dead_stable_join_group_unknown_member_id_test_() ->
                member_id = <<>>,
                leader_id = undefined,
                generation_id = undefined,
-               topics = [{<<"topic">>,[0,1,2]}],
+               topics = [{<<"topic">>, [0, 1, 2]}],
                session_timeout = 100,
                members = [],
                protocol_group = undefined},
@@ -493,7 +493,7 @@ kafe_consumer_fsm_dead_stable_join_group_kafka_error_test_() ->
                member_id = <<"member">>,
                leader_id = undefined,
                generation_id = undefined,
-               topics = [{<<"topic">>,[0,1,2]}],
+               topics = [{<<"topic">>, [0, 1, 2]}],
                session_timeout = 100,
                members = [],
                protocol_group = undefined},
@@ -543,11 +543,11 @@ kafe_consumer_fsm_dead_stable_join_group_kafka_internal_error_test_() ->
                member_id = <<"member">>,
                leader_id = undefined,
                generation_id = undefined,
-               topics = [{<<"topic">>,[0,1,2]}],
+               topics = [{<<"topic">>, [0, 1, 2]}],
                session_timeout = 100,
                members = [#{member_assignment => #{
                     partition_assignment => [#{
-                      partitions => [0,1,2],
+                      partitions => [0, 1, 2],
                       topic => <<"topic">>}],
                     version => 1}}],
                protocol_group = undefined},
@@ -601,11 +601,11 @@ kafe_consumer_fsm_dead_awaiting_sync_test_() ->
                member_id = <<"member">>,
                leader_id = <<"member">>,
                generation_id = 1,
-               topics = [{<<"topic">>,[0,1,2]}],
+               topics = [{<<"topic">>, [0, 1, 2]}],
                session_timeout =100,
                members = [#{member_assignment => #{
                     partition_assignment => [#{
-                      partitions => [0,1,2],
+                      partitions => [0, 1, 2],
                       topic => <<"topic">>}],
                     version => 1}}],
                protocol_group = protocol_group},
@@ -659,11 +659,11 @@ kafe_consumer_fsm_dead_dead_test_() ->
                member_id = <<"member">>,
                leader_id = <<"member">>,
                generation_id = 1,
-               topics = [{<<"topic">>,[0,1,2]}],
+               topics = [{<<"topic">>, [0, 1, 2]}],
                session_timeout =100,
                members = [#{member_assignment => #{
                     partition_assignment => [#{
-                      partitions => [0,1,2],
+                      partitions => [0, 1, 2],
                       topic => <<"topic">>}],
                     version => 1}}],
                protocol_group = protocol_group},
@@ -717,11 +717,11 @@ kafe_consumer_fsm_dead_preparing_rebalance_test_() ->
                member_id = <<"member">>,
                leader_id = <<"member">>,
                generation_id = 1,
-               topics = [{<<"topic">>,[0,1,2]}],
+               topics = [{<<"topic">>, [0, 1, 2]}],
                session_timeout =100,
                members = [#{member_assignment => #{
                     partition_assignment => [#{
-                      partitions => [0,1,2],
+                      partitions => [0, 1, 2],
                       topic => <<"topic">>}],
                     version => 1}}],
                protocol_group = protocol_group},
@@ -769,11 +769,11 @@ kafe_consumer_fsm_awaiting_sync_test_() ->
                member_id = <<"member">>,
                leader_id = <<"member">>,
                generation_id = 1,
-               topics = [{<<"topic">>,[0,1,2]}],
+               topics = [{<<"topic">>, [0, 1, 2]}],
                session_timeout =100,
                members = [#{member_assignment => #{
                               partition_assignment => [#{
-                                partitions => [0,1,2],
+                                partitions => [0, 1, 2],
                                 topic => <<"topic">>}],
                               version => 1},
                             member_id => <<"member">>}]},
@@ -829,11 +829,11 @@ kafe_consumer_fsm_awaiting_sync_kafe_error_test_() ->
                member_id = <<"member">>,
                leader_id = <<"member">>,
                generation_id = 1,
-               topics = [{<<"topic">>,[0,1,2]}],
+               topics = [{<<"topic">>, [0, 1, 2]}],
                session_timeout =100,
                members = [#{member_assignment => #{
                               partition_assignment => [#{
-                                partitions => [0,1,2],
+                                partitions => [0, 1, 2],
                                 topic => <<"topic">>}],
                               version => 1},
                             member_id => <<"member">>}]},
@@ -889,11 +889,11 @@ kafe_consumer_fsm_awaiting_sync_kafe_internal_error_test_() ->
                member_id = <<"member">>,
                leader_id = <<"member">>,
                generation_id = 1,
-               topics = [{<<"topic">>,[0,1,2]}],
+               topics = [{<<"topic">>, [0, 1, 2]}],
                session_timeout =100,
                members = [#{member_assignment => #{
                               partition_assignment => [#{
-                                partitions => [0,1,2],
+                                partitions => [0, 1, 2],
                                 topic => <<"topic">>}],
                               version => 1},
                             member_id => <<"member">>}]},
@@ -947,7 +947,7 @@ kafe_consumer_fsm_stable_test_() ->
                         session_timeout = 100,
                         members = [#{member_assignment => #{
                                        partition_assignment => [#{
-                                         partitions => [0,1,2],
+                                         partitions => [0, 1, 2],
                                          topic => <<"topic">>}],
                                        version => 1},
                                      member_id => <<"member">>}]},
@@ -991,7 +991,7 @@ kafe_consumer_fsm_stable_kafka_error_test_() ->
                         session_timeout = 100,
                         members = [#{member_assignment => #{
                                        partition_assignment => [#{
-                                         partitions => [0,1,2],
+                                         partitions => [0, 1, 2],
                                          topic => <<"topic">>}],
                                        version => 1},
                                      member_id => <<"member">>}]},
@@ -1035,7 +1035,7 @@ kafe_consumer_fsm_stable_kafe_internal_error_test_() ->
                         session_timeout = 100,
                         members = [#{member_assignment => #{
                                        partition_assignment => [#{
-                                         partitions => [0,1,2],
+                                         partitions => [0, 1, 2],
                                          topic => <<"topic">>}],
                                        version => 1},
                                      member_id => <<"member">>}]},
