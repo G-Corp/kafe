@@ -6,3 +6,4 @@
                               correlation_id => CID,
                               client_id => <<"test">>}).
 
+-define(D(Call), ?debugFmt("~n---> ~p~n", [Call])).

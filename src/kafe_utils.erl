@@ -2,8 +2,10 @@
 -module(kafe_utils).
 
 -export([
-         broker_id/2,
-         broker_name/2
+         broker_id/2
+         , broker_name/2
+
+         , gen_server_call/2
         ]).
 
 broker_id(Host, Port) ->
@@ -18,3 +20,5 @@ broker_name(Host, Port) ->
           end,
   string:join([bucs:to_string(Host1), bucs:to_string(Port)], ":").
 
+gen_server_call(PID, Request) ->
+  gen_server:call(PID, Request).

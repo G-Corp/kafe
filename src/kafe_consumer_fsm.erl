@@ -3,8 +3,10 @@
 -module(kafe_consumer_fsm).
 -compile([{parse_transform, lager_transform}]).
 -behaviour(gen_fsm).
-
 -include("../include/kafe.hrl").
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
 
 %% API.
 -export([start_link/2]).
@@ -189,8 +191,8 @@ next_state(#state{group_id = GroupID,
         [] ->
           ok;
         [Topics] ->
-          gen_server:call(kafe_consumer_store:value(GroupID, server_pid),
-                          {topics, [{T, P} || #{partitions := P, topic := T} <- Topics]})
+          kafe_utils:gen_server_call(kafe_consumer_store:value(GroupID, server_pid),
+                                     {topics, [{T, P} || #{partitions := P, topic := T} <- Topics]})
       end,
       {NextState, Timeout} = group_state(State, GroupState),
       {next_state, NextState, State#state{members = Members}, Timeout};
@@ -212,7 +214,7 @@ group_state(_State, preparing_rebalance) ->
 group_state(#state{group_id = GroupID} = _State, dead) ->
   case kafe_consumer_store:lookup(GroupID, server_pid) of
     {ok, PID} ->
-      _ = gen_server:call(PID, stop_fetch);
+      _ = kafe_utils:gen_server_call(PID, stop_fetch);
     _ ->
       erlang:exit(group_is_dead)
   end,
@@ -220,7 +222,7 @@ group_state(#state{group_id = GroupID} = _State, dead) ->
 group_state(#state{group_id = GroupID} = _State, awaiting_sync) ->
   case kafe_consumer_store:lookup(GroupID, server_pid) of
     {ok, PID} ->
-      _ = gen_server:call(PID, stop_fetch);
+      _ = kafe_utils:gen_server_call(PID, stop_fetch);
     _ ->
       erlang:exit(group_is_dead)
   end,
@@ -228,7 +230,7 @@ group_state(#state{group_id = GroupID} = _State, awaiting_sync) ->
 group_state(#state{group_id = GroupID} = State, stable) ->
   case kafe_consumer_store:lookup(GroupID, server_pid) of
     {ok, PID} ->
-      _ = gen_server:call(PID, start_fetch);
+      _ = kafe_utils:gen_server_call(PID, start_fetch);
     _ ->
       erlang:exit(group_is_dead)
   end,
@@ -283,3 +285,764 @@ assign_zip([], [], Acc) ->
 assign_zip([L|RL], [E|RE], Acc) ->
   assign_zip(RL, RE, [[E|L]|Acc]).
 
+-ifdef(TEST).
+kafe_consumer_fsm_init_default_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, insert, 3, ok),
+       meck:new(kafe),
+       meck:expect(kafe, topics, 0,
+                   #{<<"topic">> => #{0 => "localhost:9093",
+                                      1 => "localhost:9094",
+                                      2 => "localhost:9092"}}),
+       meck:expect(kafe, partitions, 1, [0, 1, 2])
+   end,
+   fun(_) ->
+       meck:unload(kafe),
+       meck:unload(kafe_consumer_store)
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {ok, dead,
+            #state{
+               group_id = <<"group">>,
+               member_id = <<>>,
+               topics = [{<<"topic">>, [0, 1, 2]}],
+               session_timeout = 30000}, 10},
+           init([<<"group">>, #{}]))
+    end
+   ]}.
+
+kafe_consumer_fsm_init_custom_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, insert, 3, ok),
+       meck:new(kafe),
+       meck:expect(kafe, topics, 0,
+                   #{<<"topic">> => #{0 => "localhost:9093",
+                                      1 => "localhost:9094",
+                                      2 => "localhost:9092"}}),
+       meck:expect(kafe, partitions, 1, [0, 1, 2])
+   end,
+   fun(_) ->
+       meck:unload(kafe),
+       meck:unload(kafe_consumer_store)
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {ok, dead,
+            #state{
+               group_id = <<"group">>,
+               member_id = <<"member">>,
+               topics = [{<<"test1">>, [0, 1, 2]},
+                         {<<"test2">>, [0, 3]}],
+               session_timeout = 1000}, 10},
+           init([<<"group">>, #{session_timeout => 1000,
+                                member_id => <<"member">>,
+                                topics => [<<"test1">>, {<<"test2">>, [0, 3]}]}]))
+    end
+   ]}.
+
+kafe_consumer_fsm_dead_stable_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, join_group, 2,
+                   {ok, #{error_code => none,
+                          generation_id => 1,
+                          leader_id => <<"member">>,
+                          member_id => <<"member">>,
+                          protocol_group => protocol_group}}),
+       meck:expect(kafe, default_protocol, 4, default_protocol),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"Stable">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1}}
+                                      ]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, insert, 3, ok),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {next_state,
+            stable,
+            #state{
+               group_id = <<"group">>,
+               member_id = <<"member">>,
+               leader_id = <<"member">>,
+               generation_id = 1,
+               topics = [{<<"topic">>,[0,1,2]}],
+               session_timeout =100,
+               members = [#{member_assignment => #{
+                    partition_assignment => [#{
+                      partitions => [0,1,2],
+                      topic => <<"topic">>}],
+                    version => 1}}],
+               protocol_group = protocol_group},
+            90},
+           dead(timeout, #state{group_id = <<"group">>,
+                                member_id = <<"member">>,
+                                topics = [{<<"topic">>, [0, 1, 2]}],
+                                session_timeout = 100}))
+    end
+   ]}.
+
+kafe_consumer_fsm_dead_stable_join_group_unknown_member_id_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, join_group, 2,
+                   {ok, #{error_code => unknown_member_id}}),
+       meck:expect(kafe, default_protocol, 4, default_protocol),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"Stable">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1}}
+                                      ]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, insert, 3, ok),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {next_state,
+            dead,
+            #state{
+               group_id = <<"group">>,
+               member_id = <<>>,
+               leader_id = undefined,
+               generation_id = undefined,
+               topics = [{<<"topic">>,[0,1,2]}],
+               session_timeout = 100,
+               members = [],
+               protocol_group = undefined},
+            10},
+           dead(timeout, #state{group_id = <<"group">>,
+                                member_id = <<"member">>,
+                                topics = [{<<"topic">>, [0, 1, 2]}],
+                                session_timeout = 100}))
+    end
+   ]}.
+
+kafe_consumer_fsm_dead_stable_join_group_kafka_error_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, join_group, 2,
+                   {ok, #{error_code => unknown}}),
+       meck:expect(kafe, default_protocol, 4, default_protocol),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"Stable">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1}}
+                                      ]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, insert, 3, ok),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {next_state,
+            dead,
+            #state{
+               group_id = <<"group">>,
+               member_id = <<"member">>,
+               leader_id = undefined,
+               generation_id = undefined,
+               topics = [{<<"topic">>,[0,1,2]}],
+               session_timeout = 100,
+               members = [],
+               protocol_group = undefined},
+            10},
+           dead(timeout, #state{group_id = <<"group">>,
+                                member_id = <<"member">>,
+                                topics = [{<<"topic">>, [0, 1, 2]}],
+                                session_timeout = 100}))
+    end
+   ]}.
+
+kafe_consumer_fsm_dead_stable_join_group_kafka_internal_error_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, join_group, 2,
+                   {error, test_error}),
+       meck:expect(kafe, default_protocol, 4, default_protocol),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"Stable">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1}}
+                                      ]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, insert, 3, ok),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {next_state,
+            stable,
+            #state{
+               group_id = <<"group">>,
+               member_id = <<"member">>,
+               leader_id = undefined,
+               generation_id = undefined,
+               topics = [{<<"topic">>,[0,1,2]}],
+               session_timeout = 100,
+               members = [#{member_assignment => #{
+                    partition_assignment => [#{
+                      partitions => [0,1,2],
+                      topic => <<"topic">>}],
+                    version => 1}}],
+               protocol_group = undefined},
+            90},
+           dead(timeout, #state{group_id = <<"group">>,
+                                member_id = <<"member">>,
+                                topics = [{<<"topic">>, [0, 1, 2]}],
+                                session_timeout = 100}))
+    end
+   ]}.
+
+kafe_consumer_fsm_dead_awaiting_sync_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, join_group, 2,
+                   {ok, #{error_code => none,
+                          generation_id => 1,
+                          leader_id => <<"member">>,
+                          member_id => <<"member">>,
+                          protocol_group => protocol_group}}),
+       meck:expect(kafe, default_protocol, 4, default_protocol),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"AwaitingSync">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1}}
+                                      ]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, insert, 3, ok),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {next_state,
+            awaiting_sync,
+            #state{
+               group_id = <<"group">>,
+               member_id = <<"member">>,
+               leader_id = <<"member">>,
+               generation_id = 1,
+               topics = [{<<"topic">>,[0,1,2]}],
+               session_timeout =100,
+               members = [#{member_assignment => #{
+                    partition_assignment => [#{
+                      partitions => [0,1,2],
+                      topic => <<"topic">>}],
+                    version => 1}}],
+               protocol_group = protocol_group},
+            10},
+           dead(timeout, #state{group_id = <<"group">>,
+                                member_id = <<"member">>,
+                                topics = [{<<"topic">>, [0, 1, 2]}],
+                                session_timeout = 100}))
+    end
+   ]}.
+
+kafe_consumer_fsm_dead_dead_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, join_group, 2,
+                   {ok, #{error_code => none,
+                          generation_id => 1,
+                          leader_id => <<"member">>,
+                          member_id => <<"member">>,
+                          protocol_group => protocol_group}}),
+       meck:expect(kafe, default_protocol, 4, default_protocol),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"Dead">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1}}
+                                      ]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, insert, 3, ok),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {next_state,
+            dead,
+            #state{
+               group_id = <<"group">>,
+               member_id = <<"member">>,
+               leader_id = <<"member">>,
+               generation_id = 1,
+               topics = [{<<"topic">>,[0,1,2]}],
+               session_timeout =100,
+               members = [#{member_assignment => #{
+                    partition_assignment => [#{
+                      partitions => [0,1,2],
+                      topic => <<"topic">>}],
+                    version => 1}}],
+               protocol_group = protocol_group},
+            10},
+           dead(timeout, #state{group_id = <<"group">>,
+                                member_id = <<"member">>,
+                                topics = [{<<"topic">>, [0, 1, 2]}],
+                                session_timeout = 100}))
+    end
+   ]}.
+
+kafe_consumer_fsm_dead_preparing_rebalance_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, join_group, 2,
+                   {ok, #{error_code => none,
+                          generation_id => 1,
+                          leader_id => <<"member">>,
+                          member_id => <<"member">>,
+                          protocol_group => protocol_group}}),
+       meck:expect(kafe, default_protocol, 4, default_protocol),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"PreparingRebalance">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1}}
+                                      ]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, insert, 3, ok),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {next_state,
+            stable,
+            #state{
+               group_id = <<"group">>,
+               member_id = <<"member">>,
+               leader_id = <<"member">>,
+               generation_id = 1,
+               topics = [{<<"topic">>,[0,1,2]}],
+               session_timeout =100,
+               members = [#{member_assignment => #{
+                    partition_assignment => [#{
+                      partitions => [0,1,2],
+                      topic => <<"topic">>}],
+                    version => 1}}],
+               protocol_group = protocol_group},
+            10},
+           dead(timeout, #state{group_id = <<"group">>,
+                                member_id = <<"member">>,
+                                topics = [{<<"topic">>, [0, 1, 2]}],
+                                session_timeout = 100}))
+    end
+   ]}.
+
+kafe_consumer_fsm_awaiting_sync_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, sync_group, 4,
+                   {ok, #{error_code => none}}),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"Stable">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1},
+                                        member_id => <<"member">>}]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {next_state,
+            stable,
+            #state{
+               group_id = <<"group">>,
+               member_id = <<"member">>,
+               leader_id = <<"member">>,
+               generation_id = 1,
+               topics = [{<<"topic">>,[0,1,2]}],
+               session_timeout =100,
+               members = [#{member_assignment => #{
+                              partition_assignment => [#{
+                                partitions => [0,1,2],
+                                topic => <<"topic">>}],
+                              version => 1},
+                            member_id => <<"member">>}]},
+            90},
+           awaiting_sync(timeout, #state{group_id = <<"group">>,
+                                         generation_id = 1,
+                                         member_id = <<"member">>,
+                                         leader_id = <<"member">>,
+                                         topics = [{<<"topic">>, [0, 1, 2]}],
+                                         members = [#{member_assignment =>
+                                                      #{partition_assignment =>
+                                                        [#{partitions => [0, 1, 2],
+                                                           topic => <<"topic">>}],
+                                                        version => 1},
+                                                      member_id => <<"member">>}],
+                                         session_timeout = 100}))
+    end
+   ]}.
+
+kafe_consumer_fsm_awaiting_sync_kafe_error_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, sync_group, 4,
+                   {ok, #{error_code => unknown}}),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"Stable">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1},
+                                        member_id => <<"member">>}]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {next_state,
+            stable,
+            #state{
+               group_id = <<"group">>,
+               member_id = <<"member">>,
+               leader_id = <<"member">>,
+               generation_id = 1,
+               topics = [{<<"topic">>,[0,1,2]}],
+               session_timeout =100,
+               members = [#{member_assignment => #{
+                              partition_assignment => [#{
+                                partitions => [0,1,2],
+                                topic => <<"topic">>}],
+                              version => 1},
+                            member_id => <<"member">>}]},
+            90},
+           awaiting_sync(timeout, #state{group_id = <<"group">>,
+                                         generation_id = 1,
+                                         member_id = <<"member">>,
+                                         leader_id = <<"member">>,
+                                         topics = [{<<"topic">>, [0, 1, 2]}],
+                                         members = [#{member_assignment =>
+                                                      #{partition_assignment =>
+                                                        [#{partitions => [0, 1, 2],
+                                                           topic => <<"topic">>}],
+                                                        version => 1},
+                                                      member_id => <<"member">>}],
+                                         session_timeout = 100}))
+    end
+   ]}.
+
+kafe_consumer_fsm_awaiting_sync_kafe_internal_error_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, sync_group, 4,
+                   {error, test_error}),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"Stable">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1},
+                                        member_id => <<"member">>}]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {next_state,
+            stable,
+            #state{
+               group_id = <<"group">>,
+               member_id = <<"member">>,
+               leader_id = <<"member">>,
+               generation_id = 1,
+               topics = [{<<"topic">>,[0,1,2]}],
+               session_timeout =100,
+               members = [#{member_assignment => #{
+                              partition_assignment => [#{
+                                partitions => [0,1,2],
+                                topic => <<"topic">>}],
+                              version => 1},
+                            member_id => <<"member">>}]},
+            90},
+           awaiting_sync(timeout, #state{group_id = <<"group">>,
+                                         generation_id = 1,
+                                         member_id = <<"member">>,
+                                         leader_id = <<"member">>,
+                                         topics = [{<<"topic">>, [0, 1, 2]}],
+                                         members = [#{member_assignment =>
+                                                      #{partition_assignment =>
+                                                        [#{partitions => [0, 1, 2],
+                                                           topic => <<"topic">>}],
+                                                        version => 1},
+                                                      member_id => <<"member">>}],
+                                         session_timeout = 100}))
+    end
+   ]}.
+
+kafe_consumer_fsm_stable_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, heartbeat, 3,
+                   {ok, #{error_code => none}}),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"Stable">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1},
+                                        member_id => <<"member">>}]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+     fun() ->
+         State = #state{group_id = <<"group">>,
+                        member_id = <<"member">>,
+                        generation_id = <<"generation_id">>,
+                        session_timeout = 100,
+                        members = [#{member_assignment => #{
+                                       partition_assignment => [#{
+                                         partitions => [0,1,2],
+                                         topic => <<"topic">>}],
+                                       version => 1},
+                                     member_id => <<"member">>}]},
+         ?assertEqual(
+            {next_state, stable, State, 90},
+            stable(timeout, State))
+     end
+   ]}.
+
+kafe_consumer_fsm_stable_kafka_error_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, heartbeat, 3,
+                   {ok, #{error_code => unknown}}),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"Stable">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1},
+                                        member_id => <<"member">>}]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+     fun() ->
+         State = #state{group_id = <<"group">>,
+                        member_id = <<"member">>,
+                        generation_id = <<"generation_id">>,
+                        session_timeout = 100,
+                        members = [#{member_assignment => #{
+                                       partition_assignment => [#{
+                                         partitions => [0,1,2],
+                                         topic => <<"topic">>}],
+                                       version => 1},
+                                     member_id => <<"member">>}]},
+         ?assertEqual(
+            {next_state, dead, State, 10},
+            stable(timeout, State))
+     end
+   ]}.
+
+kafe_consumer_fsm_stable_kafe_internal_error_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe),
+       meck:expect(kafe, heartbeat, 3,
+                   {error, test_error}),
+       meck:expect(kafe, describe_group, 1,
+                   {ok, [#{error_code => none,
+                           state => <<"Stable">>,
+                           members => [#{member_assignment =>
+                                         #{partition_assignment =>
+                                           [#{partitions => [0, 1, 2],
+                                              topic => <<"topic">>}],
+                                           version => 1},
+                                        member_id => <<"member">>}]}]}),
+       meck:new(kafe_consumer_store),
+       meck:expect(kafe_consumer_store, value, 2, ok),
+       meck:expect(kafe_consumer_store, lookup, 2, {ok, c:pid(0, 0, 0)}),
+       meck:new(kafe_utils),
+       meck:expect(kafe_utils, gen_server_call, 2, ok)
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       meck:unload(kafe_consumer_store),
+       meck:unload(kafe)
+   end,
+   [
+     fun() ->
+         State = #state{group_id = <<"group">>,
+                        member_id = <<"member">>,
+                        generation_id = <<"generation_id">>,
+                        session_timeout = 100,
+                        members = [#{member_assignment => #{
+                                       partition_assignment => [#{
+                                         partitions => [0,1,2],
+                                         topic => <<"topic">>}],
+                                       version => 1},
+                                     member_id => <<"member">>}]},
+         ?assertEqual(
+            {next_state, stable, State, 90},
+            stable(timeout, State))
+     end
+   ]}.
+
+-endif.
