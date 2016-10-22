@@ -124,62 +124,50 @@ fetch(#state{fetch_interval = FetchInterval,
              callback = Callback} = State) ->
   OffsetFetch = case kafe_consumer:can_fetch(GroupID) of
                   true ->
-                    case kafe:offset([{Topic, [{Partition, -1, 1}]}]) of
-                      {ok, [#{name := Topic,
-                              partitions := [#{error_code := none,
-                                               id := Partition,
-                                               offsets := [MaxOffset]}]}]} ->
-                        case (Offset + 1 =< MaxOffset - 1) of
-                          true ->
-                            OffsetOutOfRange = kafe_error:code(1),
-                            case kafe:fetch(-1, Topic, #{partition => Partition,
-                                                         offset => Offset + 1,
-                                                         max_bytes => MaxBytes,
-                                                         min_bytes => MinBytes,
-                                                         max_wait_time => MaxWaitTime}) of
-                              {ok, #{topics :=
-                                     [#{name := Topic,
-                                        partitions :=
-                                        [#{error_code := ErrorCode,
-                                           messages := Messages,
-                                           partition := Partition}]}]}} when ErrorCode == none ->
-                                kafe_metrics:consumer_messages(GroupID, length(Messages)),
-                                kafe_metrics:consumer_partition_messages(GroupID, Topic, Partition, length(Messages)),
-                                perform_fetch(Messages, Topic, Partition, Commit, GroupID, Callback, Offset, erlang:system_time(milli_seconds));
-                              {ok, #{topics :=
-                                     [#{name := Topic,
-                                        partitions :=
-                                        [#{error_code := ErrorCode,
-                                           high_watermark_offset := -1,
-                                           partition := Partition}]}]}} when ErrorCode == OffsetOutOfRange ->
-                                % REMARK: this must never append...
-                                Offset;
-                              {ok, #{topics :=
-                                     [#{name := Topic,
-                                        partitions :=
-                                        [#{error_code := ErrorCode,
-                                           partition := Partition}]}]}} when ErrorCode == OffsetOutOfRange ->
-                                Offset + 1; % TODO verify if we still have messages
-                              {ok, #{topics :=
-                                     [#{name := Topic,
-                                        partitions :=
-                                        [#{error_code := ErrorCode,
-                                           partition := Partition}]}]}} ->
-                                lager:error("Error fetching offset ~p of topic ~s, partition ~p: ~s", [Offset + 1, Topic, Partition, kafe_error:message(ErrorCode)]),
-                                Offset;
-                              Error ->
-                                lager:error("Error fetching offset ~p of topic ~s, partition ~p: ~p", [Offset + 1, Topic, Partition, Error]),
-                                Offset
-                            end;
-                          false ->
-                            Offset
-                        end;
-                      {ok, [#{name := Topic,
-                              partitions := [#{error_code := Error}]}]} ->
-                        lager:error("Error getting offset for topic ~s, partition ~p: ~s", [Topic, Partition, kafe_error:message(Error)]),
+                    case kafe:fetch(-1, Topic, #{partition => Partition,
+                                                 offset => Offset + 1,
+                                                 max_bytes => MaxBytes,
+                                                 min_bytes => MinBytes,
+                                                 max_wait_time => MaxWaitTime}) of
+                      {ok, #{topics :=
+                             [#{name := Topic,
+                                partitions :=
+                                [#{error_code := none,
+                                   messages := [],
+                                   partition := Partition}]}]}} ->
                         Offset;
-                      {error, Error} ->
-                        lager:error("Error getting offset for topic ~s, partition ~p: ~p", [Topic, Partition, Error]),
+                      {ok, #{topics :=
+                             [#{name := Topic,
+                                partitions :=
+                                [#{error_code := none,
+                                   messages := Messages,
+                                   partition := Partition}]}]}} ->
+                        kafe_metrics:consumer_messages(GroupID, length(Messages)),
+                        kafe_metrics:consumer_partition_messages(GroupID, Topic, Partition, length(Messages)),
+                        perform_fetch(Messages, Topic, Partition, Commit, GroupID, Callback, Offset, erlang:system_time(milli_seconds));
+                      {ok, #{topics :=
+                             [#{name := Topic,
+                                partitions :=
+                                [#{error_code := offset_out_of_range,
+                                   high_watermark_offset := -1,
+                                   partition := Partition}]}]}} ->
+                        % REMARK: this must never append...
+                        Offset;
+                      {ok, #{topics :=
+                             [#{name := Topic,
+                                partitions :=
+                                [#{error_code := offset_out_of_range,
+                                   partition := Partition}]}]}} ->
+                        Offset + 1; % TODO verify if we still have messages
+                      {ok, #{topics :=
+                             [#{name := Topic,
+                                partitions :=
+                                [#{error_code := ErrorCode,
+                                   partition := Partition}]}]}} ->
+                        lager:error("Error fetching offset ~p of topic ~s, partition ~p: ~s", [Offset + 1, Topic, Partition, kafe_error:message(ErrorCode)]),
+                        Offset;
+                      Error ->
+                        lager:error("Error fetching offset ~p of topic ~s, partition ~p: ~p", [Offset + 1, Topic, Partition, Error]),
                         Offset
                     end;
                   false ->
@@ -309,20 +297,20 @@ fetch_without_error_test() ->
                             end),
   meck:expect(kafe, fetch, fun(_, Topic, #{partition := Partition,
                                            offset := Offset}) ->
-                              {ok, #{topics =>
-                                     [#{name => Topic,
-                                        partitions =>
-                                        [#{error_code => none,
-                                           high_watermark_offset => Offset + 2,
-                                           messages => [
-                                                        #{offset => Offset,
-                                                          key => <<"key100">>,
-                                                          value => <<"value100">>},
-                                                        #{offset => Offset + 1,
-                                                          key => <<"key101">>,
-                                                          value => <<"value101">>}
-                                                       ],
-                                           partition => Partition}]}]}}
+                               {ok, #{topics =>
+                                      [#{name => Topic,
+                                         partitions =>
+                                         [#{error_code => none,
+                                            high_watermark_offset => Offset + 2,
+                                            messages => [
+                                                         #{offset => Offset,
+                                                           key => <<"key100">>,
+                                                           value => <<"value100">>},
+                                                         #{offset => Offset + 1,
+                                                           key => <<"key101">>,
+                                                           value => <<"value101">>}
+                                                        ],
+                                            partition => Partition}]}]}}
                            end),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, consumer_messages, 2, ok),
@@ -387,122 +375,17 @@ can_not_fetch_test() ->
 
   meck:unload(kafe_consumer).
 
-nothing_to_fetch_test() ->
-  meck:new(kafe_consumer),
-  meck:expect(kafe_consumer, can_fetch, fun(_) -> true end),
-  meck:new(kafe),
-  meck:expect(kafe, offset, fun([{Topic, [{Partition, -1, 1}]}]) ->
-                                {ok, [#{name => Topic,
-                                        partitions => [#{error_code => none,
-                                                         id => Partition,
-                                                         offsets => [100]}]}]}
-                            end),
-  meck:new(kafe_metrics, [passthrough]),
-  meck:expect(kafe_metrics, consumer_messages, 2, ok),
-  meck:expect(kafe_metrics, consumer_partition_messages, 4, ok),
-  meck:expect(kafe_metrics, consumer_partition_duration, 4, ok),
-
-  ?assertMatch(#state{fetch_interval = 100,
-                      topic = <<"topic">>,
-                      partition = 10,
-                      offset = 99,
-                      commit = after_processing,
-                      min_bytes = 1,
-                      max_bytes = 10000,
-                      max_wait_time = 10,
-                      callback = _},
-               fetch(#state{fetch_interval = 100,
-                            topic = <<"topic">>,
-                            partition = 10,
-                            offset = 99,
-                            commit = after_processing,
-                            min_bytes = 1,
-                            max_bytes = 10000,
-                            max_wait_time = 10,
-                            callback = fun(_, _, _, _, _, _) -> ok end})),
-
-  meck:unload(kafe_metrics),
-  meck:unload(kafe),
-  meck:unload(kafe_consumer).
-
-kafka_offset_error_on_fetch_test() ->
-  meck:new(kafe_consumer),
-  meck:expect(kafe_consumer, can_fetch, fun(_) -> true end),
-  meck:new(kafe),
-  meck:expect(kafe, offset, fun([{Topic, [{_Partition, -1, 1}]}]) ->
-                                {ok, [#{name => Topic,
-                                        partitions => [#{error_code => unknown_topic_or_partition}]}]}
-                            end),
-
-  ?assertMatch(#state{fetch_interval = 100,
-                      topic = <<"topic">>,
-                      partition = 10,
-                      offset = 99,
-                      commit = after_processing,
-                      min_bytes = 1,
-                      max_bytes = 10000,
-                      max_wait_time = 10,
-                      callback = _},
-               fetch(#state{fetch_interval = 100,
-                            topic = <<"topic">>,
-                            partition = 10,
-                            offset = 99,
-                            commit = after_processing,
-                            min_bytes = 1,
-                            max_bytes = 10000,
-                            max_wait_time = 10,
-                            callback = fun(_, _, _, _, _, _) -> ok end})),
-
-  meck:unload(kafe),
-  meck:unload(kafe_consumer).
-
-offset_error_on_fetch_test() ->
-  meck:new(kafe_consumer),
-  meck:expect(kafe_consumer, can_fetch, fun(_) -> true end),
-  meck:new(kafe),
-  meck:expect(kafe, offset, fun([{_Topic, [{_Partition, -1, 1}]}]) ->
-                                {error, test_error}
-                            end),
-
-  ?assertMatch(#state{fetch_interval = 100,
-                      topic = <<"topic">>,
-                      partition = 10,
-                      offset = 99,
-                      commit = undefined,
-                      min_bytes = 1,
-                      max_bytes = 10000,
-                      max_wait_time = 10,
-                      callback = _},
-               fetch(#state{fetch_interval = 100,
-                            topic = <<"topic">>,
-                            partition = 10,
-                            offset = 99,
-                            commit = undefined,
-                            min_bytes = 1,
-                            max_bytes = 10000,
-                            max_wait_time = 10,
-                            callback = fun(_, _, _, _, _, _) -> ok end})),
-
-  meck:unload(kafe),
-  meck:unload(kafe_consumer).
-
 kafka_fetch_error_test() ->
   meck:new(kafe_consumer),
   meck:expect(kafe_consumer, can_fetch, fun(_) -> true end),
   meck:new(kafe),
-  meck:expect(kafe, offset, fun([{Topic, [{Partition, -1, 1}]}]) ->
-                                {ok, [#{name => Topic,
-                                        partitions => [#{error_code => none,
-                                                         id => Partition,
-                                                         offsets => [102]}]}]}
-                            end),
   meck:expect(kafe, fetch, fun(_, Topic, #{partition := Partition,
                                            offset := _Offset}) ->
-                              {ok, #{topics =>
-                                     [#{name => Topic,
-                                        partitions =>
-                                        [#{error_code => unknown_topic_or_partition,
-                                           partition => Partition}]}]}}
+                               {ok, #{topics =>
+                                      [#{name => Topic,
+                                         partitions =>
+                                         [#{error_code => unknown_topic_or_partition,
+                                            partition => Partition}]}]}}
                            end),
 
   ?assertMatch(#state{fetch_interval = 100,
@@ -531,20 +414,14 @@ kafka_fetch_offset_out_of_range_error_test() ->
   meck:new(kafe_consumer),
   meck:expect(kafe_consumer, can_fetch, fun(_) -> true end),
   meck:new(kafe),
-  meck:expect(kafe, offset, fun([{Topic, [{Partition, -1, 1}]}]) ->
-                                {ok, [#{name => Topic,
-                                        partitions => [#{error_code => none,
-                                                         id => Partition,
-                                                         offsets => [102]}]}]}
-                            end),
   meck:expect(kafe, fetch, fun(_, Topic, #{partition := Partition,
                                            offset := _Offset}) ->
-                              {ok, #{topics =>
-                                     [#{name => Topic,
-                                        partitions =>
-                                        [#{error_code => offset_out_of_range,
-                                           high_watermark_offset => -1,
-                                           partition => Partition}]}]}}
+                               {ok, #{topics =>
+                                      [#{name => Topic,
+                                         partitions =>
+                                         [#{error_code => offset_out_of_range,
+                                            high_watermark_offset => -1,
+                                            partition => Partition}]}]}}
                            end),
 
   ?assertMatch(#state{fetch_interval = 100,
@@ -573,12 +450,6 @@ fetch_error_test() ->
   meck:new(kafe_consumer),
   meck:expect(kafe_consumer, can_fetch, fun(_) -> true end),
   meck:new(kafe),
-  meck:expect(kafe, offset, fun([{Topic, [{Partition, -1, 1}]}]) ->
-                                {ok, [#{name => Topic,
-                                        partitions => [#{error_code => none,
-                                                         id => Partition,
-                                                         offsets => [102]}]}]}
-                            end),
   meck:expect(kafe, fetch, fun(_, _, _) ->
                                {error, test_error}
                            end),
