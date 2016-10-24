@@ -86,7 +86,7 @@ handle_info(commit, #state{last_offset = LastOffset, commits = Commits, group_id
     [] ->
       {noreply, start_commit_timer(State#state{attempt = Attempt + 1})};
     LIS ->
-      CommitOffset = lists:max(LIS),
+      CommitOffset = lists:max(LIS) + 1,
       GenerationID = kafe_consumer_store:value(GroupID, generation_id),
       MemberID = kafe_consumer_store:value(GroupID, member_id),
       case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
@@ -243,7 +243,7 @@ info_commit_test() ->
                             commit_interval = 1000,
                             commit_messages = 1000,
                             commit_timer = _,
-                            last_offset = 5,
+                            last_offset = 6,
                             group_id = <<"group">>,
                             commits = []}},
                handle_info(commit, #state{
@@ -389,7 +389,7 @@ info_commit_hole_commit_test() ->
                             commit_interval = 1000,
                             commit_messages = 1000,
                             commit_timer = _,
-                            last_offset = 3,
+                            last_offset = 4,
                             group_id = <<"group">>,
                             commits = [5, 6, 7]}},
                handle_info(commit, #state{
