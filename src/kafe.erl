@@ -197,6 +197,11 @@
                               max_bytes => integer(),
                               min_bytes => integer(),
                               max_wait_time => integer(),
+                              on_start_fetching => fun((binary()) -> any()) | undefined,
+                              on_stop_fetching => fun((binary()) -> any()) | undefined,
+                              on_assignment_change => fun((binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any()) | undefined,
+                              can_fetch => fun(() -> true | false) | undefined,
+                              from_beginning => true | false,
                               commit => [commit()]}.
 -type commit() :: processing() | {interval, integer()} | {message, integer()}.
 -type processing() :: before_processing | after_processing.
@@ -755,6 +760,7 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % <li><tt>commit :: commit()</tt> : Commit configuration (default: [after_processing, {interval, 1000}]).</li>
 % <li><tt>on_start_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher start/restart fetching. (default: undefined).</li>
 % <li><tt>on_stop_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher stop fetching. (default: undefined).</li>
+% <li><tt>can_fetch :: fun(() -> true | false)</tt> : Messages are fetched, only if this function is defined and returns <tt>true</tt>. (default: undefined).</li>
 % <li><tt>on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any())</tt> : Function called when the
 % partitions' assignments change. The first parameter is the consumer group ID, the second is the list of {topic, partition} that were unassigned, the third
 % parameter is the list of {topic, partition} that were reassigned. (default: undefined).</li>
@@ -770,9 +776,9 @@ delete_offset_for_partition(PartitionID, Offsets) ->
                                       Key :: binary(),
                                       Value :: binary()) -> ok | {error, term()})
                                    | fun((Message :: kafe_consumer_subscriber:message()) -> ok | {error, term()})
-                                       | atom()
-                                       | {atom(), list(term())},
-                                       Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
+                                   | atom()
+                                   | {atom(), list(term())},
+                     Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
 start_consumer(GroupID, Callback, Options) when is_function(Callback, 6);
                                                 is_function(Callback, 1);
                                                 is_atom(Callback);

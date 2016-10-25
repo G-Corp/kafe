@@ -40,7 +40,8 @@
           commits = #{},
           on_start_fetching = ?DEFAULT_CONSUMER_ON_START_FETCHING,
           on_stop_fetching = ?DEFAULT_CONSUMER_ON_STOP_FETCHING,
-          on_assignment_change = ?DEFAULT_CONSUMER_ON_ASSIGNMENT_CHANGE
+          on_assignment_change = ?DEFAULT_CONSUMER_ON_ASSIGNMENT_CHANGE,
+          can_fetch = ?DEFAULT_CONSUMER_CAN_FETCH
          }).
 
 %% API.
@@ -68,6 +69,8 @@ init([GroupID, Options]) ->
   OnStartFetching = maps:get(on_start_fetching, Options, ?DEFAULT_CONSUMER_ON_START_FETCHING),
   OnStopFetching = maps:get(on_stop_fetching, Options, ?DEFAULT_CONSUMER_ON_STOP_FETCHING),
   OnAssignmentChange = maps:get(on_assignment_change, Options, ?DEFAULT_CONSUMER_ON_ASSIGNMENT_CHANGE),
+  CanFetch = maps:get(can_fetch, Options, ?DEFAULT_CONSUMER_CAN_FETCH),
+  kafe_consumer_store:insert(GroupID, can_fetch_fun, CanFetch),
   {ok, #state{
           group_id = bucs:to_binary(GroupID),
           callback = maps:get(callback, Options),
@@ -80,7 +83,8 @@ init([GroupID, Options]) ->
           allow_unordered_commit = AllowUnorderedCommit,
           on_start_fetching = OnStartFetching,
           on_stop_fetching = OnStopFetching,
-          on_assignment_change = OnAssignmentChange
+          on_assignment_change = OnAssignmentChange,
+          can_fetch = CanFetch
          }}.
 
 % @hidden

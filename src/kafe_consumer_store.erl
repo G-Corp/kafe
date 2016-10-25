@@ -6,6 +6,7 @@
 % - member_id : the kafka member ID
 % - generation_id : the Kafka generation ID
 % - can_fetch : boolean
+% - can_fetch_fun : fun(() -> true | false) | {Module :: atom(), Function :: atom()} | undefined
 % - topics : a list of {topic, partition} for the consumer group
 % - allow_unordered_commit : boolean
 % - {commit_pid, {Topic, Partition}} : PID of the kafe_consumer_committer for the {Topic, Partition}

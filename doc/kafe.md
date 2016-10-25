@@ -52,7 +52,7 @@ commit() = <a href="#type-processing">processing()</a> | {interval, integer()} |
 
 
 <pre><code>
-consumer_options() = #{session_timeout =&gt; integer(), member_id =&gt; binary(), topics =&gt; [binary() | {binary(), [integer()]}], fetch_interval =&gt; integer(), fetch_size =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), commit =&gt; [<a href="#type-commit">commit()</a>]}
+consumer_options() = #{session_timeout =&gt; integer(), member_id =&gt; binary(), topics =&gt; [binary() | {binary(), [integer()]}], fetch_interval =&gt; integer(), fetch_size =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), on_start_fetching =&gt; fun((binary()) -&gt; any()) | undefined, on_stop_fetching =&gt; fun((binary()) -&gt; any()) | undefined, on_assignment_change =&gt; fun((binary(), [{binary(), integer()}], [{binary(), integer()}]) -&gt; any()) | undefined, can_fetch =&gt; fun(() -&gt; true | false) | undefined, from_beginning =&gt; true | false, commit =&gt; [<a href="#type-commit">commit()</a>]}
 </code></pre>
 
 
@@ -877,6 +877,8 @@ at the time the request is issued (default : 100).
 * `on_start_fetching :: fun((GroupID :: binary()) -> any())` : Function called when the fetcher start/restart fetching. (default: undefined).
 
 * `on_stop_fetching :: fun((GroupID :: binary()) -> any())` : Function called when the fetcher stop fetching. (default: undefined).
+
+* `can_fetch :: fun(() -> true | false)` : Messages are fetched, only if this function is defined and returns `true`. (default: undefined).
 
 * `on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any())` : Function called when the
 partitions' assignments change. The first parameter is the consumer group ID, the second is the list of {topic, partition} that were unassigned, the third

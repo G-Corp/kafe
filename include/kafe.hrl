@@ -78,6 +78,7 @@
 -define(DEFAULT_CONSUMER_ON_START_FETCHING, undefined).
 -define(DEFAULT_CONSUMER_ON_STOP_FETCHING, undefined).
 -define(DEFAULT_CONSUMER_ON_ASSIGNMENT_CHANGE, undefined).
+-define(DEFAULT_CONSUMER_CAN_FETCH, undefined).
 -define(DEFAULT_CONSUMER_START_FROM_BEGINNING, true).
 
 -define(TRY(M, F, A, D),

@@ -1,6 +1,7 @@
 -module(kafe_consumer_tests).
-
 -include_lib("eunit/include/eunit.hrl").
+
+-export([can_fetch/0]).
 
 kafe_consumer_topics_test_() ->
   {setup,
@@ -65,10 +66,72 @@ kafe_consumer_can_fetch_test_() ->
     end
    ]}.
 
+kafe_consumer_can_fetch_undefined_test_() ->
+  {setup,
+   fun() ->
+       kafe_consumer_store:insert(<<"test_cg">>, can_fetch, true),
+       kafe_consumer_store:insert(<<"test_cg">>, can_fetch_fun, undefined)
+   end,
+   fun(_) ->
+       kafe_consumer_store:delete(<<"test_cg">>)
+   end,
+   [
+    fun() ->
+        ?assert(kafe_consumer:can_fetch(<<"test_cg">>))
+    end
+   ]}.
+
+kafe_consumer_can_fetch_fun_test_() ->
+  {setup,
+   fun() ->
+       kafe_consumer_store:insert(<<"test_cg">>, can_fetch, true),
+       kafe_consumer_store:insert(<<"test_cg">>, can_fetch_fun, fun() -> true end)
+   end,
+   fun(_) ->
+       kafe_consumer_store:delete(<<"test_cg">>)
+   end,
+   [
+    fun() ->
+        ?assert(kafe_consumer:can_fetch(<<"test_cg">>))
+    end
+   ]}.
+
+can_fetch() -> true.
+kafe_consumer_can_fetch_mod_test_() ->
+  {setup,
+   fun() ->
+       kafe_consumer_store:insert(<<"test_cg">>, can_fetch, true),
+       kafe_consumer_store:insert(<<"test_cg">>, can_fetch_fun, {?MODULE, can_fetch})
+   end,
+   fun(_) ->
+       kafe_consumer_store:delete(<<"test_cg">>)
+   end,
+   [
+    fun() ->
+        ?assert(kafe_consumer:can_fetch(<<"test_cg">>))
+    end
+   ]}.
+
 kafe_consumer_can_not_fetch_test_() ->
   {setup,
    fun() ->
-       kafe_consumer_store:insert(<<"test_cg">>, can_fetch, false)
+       kafe_consumer_store:insert(<<"test_cg">>, can_fetch, false),
+       kafe_consumer_store:insert(<<"test_cg">>, can_fetch_fun, fun() -> true end)
+   end,
+   fun(_) ->
+       kafe_consumer_store:delete(<<"test_cg">>)
+   end,
+   [
+    fun() ->
+        ?assertNot(kafe_consumer:can_fetch(<<"test_cg">>))
+    end
+   ]}.
+
+kafe_consumer_can_not_fetch_fun_test_() ->
+  {setup,
+   fun() ->
+       kafe_consumer_store:insert(<<"test_cg">>, can_fetch, true),
+       kafe_consumer_store:insert(<<"test_cg">>, can_fetch_fun, fun() -> false end)
    end,
    fun(_) ->
        kafe_consumer_store:delete(<<"test_cg">>)
@@ -83,6 +146,21 @@ kafe_consumer_can_not_fetch_undef_test_() ->
   {setup,
    fun() ->
        kafe_consumer_store:new(<<"test_cg">>)
+   end,
+   fun(_) ->
+       kafe_consumer_store:delete(<<"test_cg">>)
+   end,
+   [
+    fun() ->
+        ?assertNot(kafe_consumer:can_fetch(<<"test_cg">>))
+    end
+   ]}.
+
+kafe_consumer_can_not_fetch_exception_test_() ->
+  {setup,
+   fun() ->
+       kafe_consumer_store:insert(<<"test_cg">>, can_fetch, true),
+       kafe_consumer_store:insert(<<"test_cg">>, can_fetch_fun, fun() -> throw(test_error) end)
    end,
    fun(_) ->
        kafe_consumer_store:delete(<<"test_cg">>)

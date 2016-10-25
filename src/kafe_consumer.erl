@@ -281,7 +281,31 @@ init([GroupID, Options]) ->
 can_fetch(GroupID) ->
   case kafe_consumer_store:lookup(GroupID, can_fetch) of
     {ok, true} ->
-      true;
+      case kafe_consumer_store:lookup(GroupID, can_fetch_fun) of
+        {ok, Fun} when is_function(Fun, 0) ->
+          try erlang:apply(Fun, []) of
+            true -> true;
+            _ -> false
+          catch
+            Class:Error ->
+              lager:error("can_fetch function error: ~p:~p", [Class, Error]),
+              false
+          end;
+        {ok, {Module, Function}} when is_atom(Module),
+                                      is_atom(Function) ->
+          try erlang:apply(Module, Function, []) of
+            true ->
+              true;
+            _ ->
+              false
+          catch
+            Class:Error ->
+              lager:error("can_fetch function error: ~p:~p", [Class, Error]),
+              false
+          end;
+        _ ->
+          true
+      end;
     _ ->
       false
   end.
