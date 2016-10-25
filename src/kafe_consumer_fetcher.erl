@@ -73,8 +73,8 @@ init([Topic, Partition, FetchInterval,
                               undefined
                           end
                       end,
-      CommiterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
-      gen_server:call(CommiterPID, {offset, Offset}),
+      CommitterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
+      gen_server:call(CommitterPID, {offset, Offset}),
       {ok, #state{
               topic = Topic,
               partition = Partition,

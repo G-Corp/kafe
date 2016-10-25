@@ -117,7 +117,7 @@ __Internal :__
                                                   o                                                                |
                                                   |                                  +--> kafe_consumer_fetcher <--+
                                                   +--> kafe_consumer_tp_group_sup +--+
-                                                                                     +--> kafe_consumer_commiter
+                                                                                     +--> kafe_consumer_committer
                                                                                      |
                                                                                      +--> kafe_consumer_subscriber
 

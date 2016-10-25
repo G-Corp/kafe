@@ -1,5 +1,5 @@
 % @hidden
--module(kafe_consumer_commiter).
+-module(kafe_consumer_committer).
 -compile([{parse_transform, lager_transform}]).
 -behaviour(gen_server).
 
@@ -27,7 +27,7 @@
           commit_interval,
           commit_messages,
           commit_timer = undefined,
-          last_offset = -1,
+          last_offset = 0,
           group_id,
           attempt = 0,
           commits = []
@@ -62,7 +62,7 @@ handle_call({commit, Offset}, _From, #state{group_id = GroupID,
                                             partition = Partition,
                                             last_offset = MaxOffset,
                                             commits = Commits} = State) ->
-  case (not lists:member(Offset, Commits)) andalso (Offset > MaxOffset) of
+  case (not lists:member(Offset, Commits)) andalso (Offset >= MaxOffset) of
     true ->
       Commits0 = lists:sort([Offset|Commits]),
       kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(Commits0)),
@@ -138,17 +138,17 @@ start_commit_timer(#state{commit_interval = undefined} = State) ->
 start_commit_timer(#state{commit_interval = Interval, commit_timer = undefined} = State) ->
   State#state{commit_timer = erlang:send_after(Interval, self(), commit)}.
 
-lcs(Last, [First|_] = List, _Attempt) when Last + 1 == First ->
+lcs(Last, [First|_] = List, _Attempt) when Last == First ->
   do_lcs(List, Last, []);
 lcs(_, _, Attempt) when Attempt < ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS ->
   [];
 lcs(_, List, _) ->
-  do_lcs(List, lists:min(List) - 1, []).
+  do_lcs(List, lists:min(List), []).
 
 do_lcs([], _, Res) ->
   Res;
-do_lcs([E|Rest], Last, Res) when E == Last + 1 ->
-  do_lcs(Rest, E, [E|Res]);
+do_lcs([E|Rest], Last, Res) when E == Last ->
+  do_lcs(Rest, E + 1, [E|Res]);
 do_lcs(_, _, Res) ->
   Res.
 
@@ -162,7 +162,7 @@ call_commit_test() ->
                               commit_interval = 1000,
                               commit_messages = 1000,
                               commit_timer = _,
-                              last_offset = -1,
+                              last_offset = 0,
                               group_id = <<"group">>,
                               commits = [0, 1]}},
                handle_call({commit, 1}, from, #state{
@@ -171,7 +171,7 @@ call_commit_test() ->
                                                  commit_interval = 1000,
                                                  commit_messages = 1000,
                                                  commit_timer = undefined,
-                                                 last_offset = -1,
+                                                 last_offset = 0,
                                                  group_id = <<"group">>,
                                                  commits = [0]})),
   meck:unload(kafe_metrics).
@@ -185,7 +185,7 @@ call_commit_already_stored_offset_test() ->
                               commit_interval = 1000,
                               commit_messages = 1000,
                               commit_timer = undefined,
-                              last_offset = -1,
+                              last_offset = 0,
                               group_id = <<"group">>,
                               commits = [0, 1, 2, 3, 4]}},
                handle_call({commit, 2}, from, #state{
@@ -194,7 +194,7 @@ call_commit_already_stored_offset_test() ->
                                                  commit_interval = 1000,
                                                  commit_messages = 1000,
                                                  commit_timer = undefined,
-                                                 last_offset = -1,
+                                                 last_offset = 0,
                                                  group_id = <<"group">>,
                                                  commits = [0, 1, 2, 3, 4]})),
   meck:unload(kafe_metrics).
@@ -252,7 +252,7 @@ info_commit_test() ->
                                       commit_interval = 1000,
                                       commit_messages = 1000,
                                       commit_timer = undefined,
-                                      last_offset = -1,
+                                      last_offset = 0,
                                       group_id = <<"group">>,
                                       commits = [0, 1, 2, 3, 4, 5]})),
   meck:unload(kafe_metrics),
@@ -280,7 +280,7 @@ info_commit_kafka_error_test() ->
                             commit_interval = 1000,
                             commit_messages = 1000,
                             commit_timer = _,
-                            last_offset = -1,
+                            last_offset = 0,
                             group_id = <<"group">>,
                             commits = [0, 1, 2, 3, 4, 5]}},
                handle_info(commit, #state{
@@ -289,7 +289,7 @@ info_commit_kafka_error_test() ->
                                       commit_interval = 1000,
                                       commit_messages = 1000,
                                       commit_timer = undefined,
-                                      last_offset = -1,
+                                      last_offset = 0,
                                       group_id = <<"group">>,
                                       commits = [0, 1, 2, 3, 4, 5]})),
   meck:unload(kafe_metrics),
@@ -315,7 +315,7 @@ info_commit_error_test() ->
                             commit_interval = 1000,
                             commit_messages = 1000,
                             commit_timer = _,
-                            last_offset = -1,
+                            last_offset = 0,
                             group_id = <<"group">>,
                             commits = [0, 1, 2, 3, 4, 5]}},
                handle_info(commit, #state{
@@ -324,7 +324,7 @@ info_commit_error_test() ->
                                       commit_interval = 1000,
                                       commit_messages = 1000,
                                       commit_timer = undefined,
-                                      last_offset = -1,
+                                      last_offset = 0,
                                       group_id = <<"group">>,
                                       commits = [0, 1, 2, 3, 4, 5]})),
   meck:unload(kafe_metrics),
@@ -352,7 +352,7 @@ info_commit_hole_test() ->
                             commit_interval = 1000,
                             commit_messages = 1000,
                             commit_timer = _,
-                            last_offset = -1,
+                            last_offset = 0,
                             group_id = <<"group">>,
                             commits = [1, 2, 3, 4, 5]}},
                handle_info(commit, #state{
@@ -361,7 +361,7 @@ info_commit_hole_test() ->
                                       commit_interval = 1000,
                                       commit_messages = 1000,
                                       commit_timer = undefined,
-                                      last_offset = -1,
+                                      last_offset = 0,
                                       group_id = <<"group">>,
                                       commits = [1, 2, 3, 4, 5]})),
   meck:unload(kafe_metrics),
@@ -398,7 +398,7 @@ info_commit_hole_commit_test() ->
                                       commit_interval = 1000,
                                       commit_messages = 1000,
                                       commit_timer = undefined,
-                                      last_offset = -1,
+                                      last_offset = 0,
                                       group_id = <<"group">>,
                                       commits = [0, 1, 2, 3, 5, 6, 7]})),
   meck:unload(kafe_metrics),
@@ -406,11 +406,11 @@ info_commit_hole_commit_test() ->
   meck:unload(kafe_consumer_store).
 
 lcs_test() ->
-  ?assertMatch([2, 1, 0], lcs(-1, [0, 1, 2], 0)),
-  ?assertMatch([], lcs(-1, [1, 2, 3], 0)),
-  ?assertMatch([3, 2, 1], lcs(-1, [1, 2, 3], ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS)),
-  ?assertMatch([], lcs(-1, [1, 2, 3, 6, 7, 8], 0)),
-  ?assertMatch([3, 2, 1], lcs(-1, [1, 2, 3, 6, 7, 8], ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS)),
-  ?assertMatch([2, 1, 0], lcs(-1, [0, 1, 2, 4, 5], 0)).
+  ?assertMatch([2, 1, 0], lcs(0, [0, 1, 2], 0)),
+  ?assertMatch([], lcs(0, [1, 2, 3], 0)),
+  ?assertMatch([3, 2, 1], lcs(0, [1, 2, 3], ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS)),
+  ?assertMatch([], lcs(0, [1, 2, 3, 6, 7, 8], 0)),
+  ?assertMatch([3, 2, 1], lcs(0, [1, 2, 3, 6, 7, 8], ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS)),
+  ?assertMatch([2, 1, 0], lcs(0, [0, 1, 2, 4, 5], 0)).
 -endif.
 

@@ -95,7 +95,7 @@
 %                                                  o                                                                |
 %                                                  |                                  +--&gt; kafe_consumer_fetcher &lt;--+
 %                                                  +--&gt; kafe_consumer_tp_group_sup +--+
-%                                                                                     +--&gt; kafe_consumer_commiter
+%                                                                                     +--&gt; kafe_consumer_committer
 %                                                                                     |
 %                                                                                     +--&gt; kafe_consumer_subscriber
 %
@@ -187,10 +187,10 @@ member_id(GroupID) ->
 % @end
 -spec commit(GroupID :: binary(), Topic :: binary(), Partition :: integer(), Offset :: integer()) -> ok | {error, term()}.
 commit(GroupID, Topic, Partition, Offset) ->
-  CommiterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
-  case erlang:is_process_alive(CommiterPID) of
+  CommitterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
+  case erlang:is_process_alive(CommitterPID) of
     true ->
-      gen_server:call(CommiterPID, {commit, Offset});
+      gen_server:call(CommitterPID, {commit, Offset});
     false ->
       {error, dead_commit}
   end.
@@ -207,12 +207,12 @@ commit(#message{group_id = GroupID, topic = Topic, partition = Partition, offset
 % @end
 -spec remove_commits(GroupID :: binary(), Topic :: binary(), Partition :: integer()) -> ok | {error, Reason :: term()}.
 remove_commits(GroupID, Topic, Partition) ->
-  CommiterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
-  case erlang:is_process_alive(CommiterPID) of
+  CommitterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
+  case erlang:is_process_alive(CommitterPID) of
     true ->
-      gen_server:call(CommiterPID, remove_commits);
+      gen_server:call(CommitterPID, remove_commits);
     false ->
-      {error, dead_commiter}
+      {error, dead_committer}
   end.
 
 % @doc
@@ -230,10 +230,10 @@ remove_commits(GroupID) ->
 % @end
 -spec pending_commits(GroupID :: binary(), Topic :: binary(), Partition :: integer()) -> integer().
 pending_commits(GroupID, Topic, Partition) ->
-  CommiterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
-  case erlang:is_process_alive(CommiterPID) of
+  CommitterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
+  case erlang:is_process_alive(CommitterPID) of
     true ->
-      gen_server:call(CommiterPID, pending_commits);
+      gen_server:call(CommitterPID, pending_commits);
     false ->
       0
   end.
