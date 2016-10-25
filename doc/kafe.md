@@ -878,7 +878,7 @@ at the time the request is issued (default : 100).
 
 * `on_stop_fetching :: fun((GroupID :: binary()) -> any())` : Function called when the fetcher stop fetching. (default: undefined).
 
-* `can_fetch :: fun(() -> true | false)` : Messages are fetched, only if this function is defined and returns `true`. (default: undefined).
+* `can_fetch :: fun(() -> true | false)` : Messages are fetched, only if this function returns `true` or is undefined. (default: undefined).
 
 * `on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any())` : Function called when the
 partitions' assignments change. The first parameter is the consumer group ID, the second is the list of {topic, partition} that were unassigned, the third
