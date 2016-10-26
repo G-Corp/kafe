@@ -293,15 +293,20 @@ can_fetch(GroupID) ->
           end;
         {ok, {Module, Function}} when is_atom(Module),
                                       is_atom(Function) ->
-          try erlang:apply(Module, Function, []) of
+          case bucs:function_exists(Module, Function, 0) of
             true ->
-              true;
+              try erlang:apply(Module, Function, []) of
+                true ->
+                  true;
+                _ ->
+                  false
+              catch
+                Class:Error ->
+                  lager:error("can_fetch function error: ~p:~p", [Class, Error]),
+                  false
+              end;
             _ ->
-              false
-          catch
-            Class:Error ->
-              lager:error("can_fetch function error: ~p:~p", [Class, Error]),
-              false
+              ok
           end;
         _ ->
           true

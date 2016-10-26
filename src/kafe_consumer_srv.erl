@@ -105,6 +105,14 @@ handle_call(start_fetch, _From, #state{group_id = GroupID, on_start_fetching = O
       case OnStartFetching of
         Fun when is_function(Fun, 1) ->
           _ = erlang:spawn(fun() -> erlang:apply(Fun, [GroupID]) end);
+        {Module, Function} when is_atom(Module),
+                                is_atom(Function) ->
+          case bucs:function_exists(Module, Function, 1) of
+            true ->
+              _ = erlang:spawn(fun() -> erlang:apply(Module, Function, [GroupID]) end);
+            _ ->
+              ok
+          end;
         _ ->
           ok
       end
@@ -117,6 +125,14 @@ handle_call(stop_fetch, _From, #state{group_id = GroupID, on_stop_fetching = OnS
       case OnStopFetching of
         Fun when is_function(Fun, 1) ->
           _ = erlang:spawn(fun() -> erlang:apply(Fun, [GroupID]) end);
+        {Module, Function} when is_atom(Module),
+                                is_atom(Function) ->
+          case bucs:function_exists(Module, Function, 1) of
+            true ->
+              _ = erlang:spawn(fun() -> erlang:apply(Module, Function, [GroupID]) end);
+            _ ->
+              ok
+          end;
         _ ->
           ok
       end;
@@ -168,6 +184,14 @@ update_fetchers(Topics, #state{fetchers = Fetchers,
   case OnAssignmentChange of
     Fun when is_function(Fun, 3) ->
       _ = erlang:spawn(fun() -> erlang:apply(Fun, [GroupID, FetchersToStop, FetchersToSart]) end);
+    {Module, Function} when is_atom(Module),
+                            is_atom(Function) ->
+      case bucs:function_exists(Module, Function, 3) of
+        true ->
+          _ = erlang:spawn(fun() -> erlang:apply(Module, Function, [GroupID, FetchersToStop, FetchersToSart]) end);
+        _ ->
+          ok
+      end;
     _ ->
       ok
   end,

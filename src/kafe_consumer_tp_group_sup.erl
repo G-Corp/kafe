@@ -40,7 +40,7 @@ init([Topic, Partition, FetchInterval,
       GroupID, Commit, FromBeginning,
       MinBytes, MaxBytes, MaxWaitTime,
       Callback]) when is_atom(Callback);
-                      is_tuple(Callback)->
+                      is_tuple(Callback) ->
   {ok, {
     #{strategy => one_for_all,
       intensity => 1,

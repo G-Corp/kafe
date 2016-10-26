@@ -197,10 +197,10 @@
                               max_bytes => integer(),
                               min_bytes => integer(),
                               max_wait_time => integer(),
-                              on_start_fetching => fun((binary()) -> any()) | undefined,
-                              on_stop_fetching => fun((binary()) -> any()) | undefined,
-                              on_assignment_change => fun((binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any()) | undefined,
-                              can_fetch => fun(() -> true | false) | undefined,
+                              on_start_fetching => fun((binary()) -> any()) | {atom(), atom()} | undefined,
+                              on_stop_fetching => fun((binary()) -> any()) | {atom(), atom()} | undefined,
+                              on_assignment_change => fun((binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any()) | {atom(), atom()} | undefined,
+                              can_fetch => fun(() -> true | false) | {atom(), atom()} | undefined,
                               from_beginning => true | false,
                               commit => [commit()]}.
 -type commit() :: processing() | {interval, integer()} | {message, integer()}.
@@ -758,10 +758,11 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
 % at the time the request is issued (default : 100).</li>
 % <li><tt>commit :: commit()</tt> : Commit configuration (default: [after_processing, {interval, 1000}]).</li>
-% <li><tt>on_start_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher start/restart fetching. (default: undefined).</li>
-% <li><tt>on_stop_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher stop fetching. (default: undefined).</li>
-% <li><tt>can_fetch :: fun(() -> true | false)</tt> : Messages are fetched, only if this function returns <tt>true</tt> or is undefined. (default: undefined).</li>
-% <li><tt>on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any())</tt> : Function called when the
+% <li><tt>on_start_fetching :: fun((GroupID :: binary()) -> any()) | {atom(), atom()}</tt> : Function called when the fetcher start/restart fetching. (default: undefined).</li>
+% <li><tt>on_stop_fetching :: fun((GroupID :: binary()) -> any()) | {atom(), atom()}</tt> : Function called when the fetcher stop fetching. (default: undefined).</li>
+% <li><tt>can_fetch :: fun(() -> true | false) | {atom(), atom()}</tt> : Messages are fetched, only if this function returns <tt>true</tt> or is undefined.
+% (default: undefined).</li>
+% <li><tt>on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any()) | {atom(), atom()}</tt> : Function called when the
 % partitions' assignments change. The first parameter is the consumer group ID, the second is the list of {topic, partition} that were unassigned, the third
 % parameter is the list of {topic, partition} that were reassigned. (default: undefined).</li>
 % <li><tt>from_beginning :: true | false</tt> : Start consuming method. If it's set to <tt>true</tt>, the consumer will start to consume from the offset next to the
