@@ -82,33 +82,38 @@ handle_cast(_Msg, State) ->
 handle_info(commit, #state{commits = []} = State) ->
   {noreply, start_commit_timer(State#state{attempt = 0})};
 handle_info(commit, #state{last_offset = LastOffset, commits = Commits, group_id = GroupID, topic = Topic, partition = Partition, attempt = Attempt} = State) ->
-  case lcs(LastOffset, Commits, Attempt) of
-    [] ->
-      {noreply, start_commit_timer(State#state{attempt = Attempt + 1})};
-    LIS ->
-      CommitOffset = lists:max(LIS) + 1,
-      GenerationID = kafe_consumer_store:value(GroupID, generation_id),
-      MemberID = kafe_consumer_store:value(GroupID, member_id),
-      case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
-                              [{Topic, [{Partition, CommitOffset, <<>>}]}]) of
-        {ok, [#{name := Topic,
-                partitions := [#{error_code := none,
-                                 partition := Partition}]}]} ->
-          lager:debug("Committed offset ~p for topic ~s, partition ~p", [CommitOffset, Topic, Partition]),
-          RemainingCommits = Commits -- LIS,
-          kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(RemainingCommits)),
-          {noreply, start_commit_timer(State#state{last_offset = CommitOffset,
-                                                   commits = RemainingCommits,
-                                                   attempt = 0})};
-        {ok, [#{name := Topic,
-                partitions := [#{error_code := Error,
-                                 partition := Partition}]}]} ->
-          lager:error("Commit offset ~p for topic ~s, partition ~p error: ~s", [CommitOffset, Topic, Partition, kafe_error:message(Error)]),
-          {noreply, start_commit_timer(State)};
-        Error ->
-          lager:error("Commit offset ~p for topic ~s, partition ~p error: ~p", [CommitOffset, Topic, Partition, Error]),
-          {noreply, start_commit_timer(State)}
-      end
+  case kafe_consumer_store:lookup(GroupID, can_fetch) of
+    {ok, true} ->
+      case lcs(LastOffset, Commits, Attempt) of
+        [] ->
+          {noreply, start_commit_timer(State#state{attempt = Attempt + 1})};
+        LIS ->
+          CommitOffset = lists:max(LIS) + 1,
+          GenerationID = kafe_consumer_store:value(GroupID, generation_id),
+          MemberID = kafe_consumer_store:value(GroupID, member_id),
+          case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
+                                  [{Topic, [{Partition, CommitOffset, <<>>}]}]) of
+            {ok, [#{name := Topic,
+                    partitions := [#{error_code := none,
+                                     partition := Partition}]}]} ->
+              lager:debug("Committed offset ~p for topic ~s, partition ~p", [CommitOffset, Topic, Partition]),
+              RemainingCommits = Commits -- LIS,
+              kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(RemainingCommits)),
+              {noreply, start_commit_timer(State#state{last_offset = CommitOffset,
+                                                       commits = RemainingCommits,
+                                                       attempt = 0})};
+            {ok, [#{name := Topic,
+                    partitions := [#{error_code := Error,
+                                     partition := Partition}]}]} ->
+              lager:error("Commit offset ~p for topic ~s, partition ~p error: ~s", [CommitOffset, Topic, Partition, kafe_error:message(Error)]),
+              {noreply, start_commit_timer(State)};
+            Error ->
+              lager:error("Commit offset ~p for topic ~s, partition ~p error: ~p", [CommitOffset, Topic, Partition, Error]),
+              {noreply, start_commit_timer(State)}
+          end
+      end;
+    _ ->
+      {noreply, start_commit_timer(State)}
   end;
 handle_info(_Info, State) ->
   {noreply, State}.
@@ -228,6 +233,7 @@ info_commit_test() ->
                                             (_, generation_id) -> 0;
                                             (_, member_id) -> <<"member">>
                                           end),
+  meck:expect(kafe_consumer_store, lookup, fun(_, can_fetch) -> {ok, true} end),
   meck:new(kafe),
   meck:expect(kafe, offset_commit,
               fun(_, _, _, _, [{Topic, [{Partition, _, <<>>}]}]) ->
@@ -265,6 +271,7 @@ info_commit_kafka_error_test() ->
                                             (_, generation_id) -> 0;
                                             (_, member_id) -> <<"member">>
                                           end),
+  meck:expect(kafe_consumer_store, lookup, fun(_, can_fetch) -> {ok, true} end),
   meck:new(kafe),
   meck:expect(kafe, offset_commit,
               fun(_, _, _, _, [{Topic, [{Partition, _, <<>>}]}]) ->
@@ -302,6 +309,7 @@ info_commit_error_test() ->
                                             (_, generation_id) -> 0;
                                             (_, member_id) -> <<"member">>
                                           end),
+  meck:expect(kafe_consumer_store, lookup, fun(_, can_fetch) -> {ok, true} end),
   meck:new(kafe),
   meck:expect(kafe, offset_commit,
               fun(_, _, _, _, _) ->
@@ -337,6 +345,7 @@ info_commit_hole_test() ->
                                             (_, generation_id) -> 0;
                                             (_, member_id) -> <<"member">>
                                           end),
+  meck:expect(kafe_consumer_store, lookup, fun(_, can_fetch) -> {ok, true} end),
   meck:new(kafe),
   meck:expect(kafe, offset_commit,
               fun(_, _, _, _, [{Topic, [{Partition, _, <<>>}]}]) ->
@@ -374,6 +383,7 @@ info_commit_hole_commit_test() ->
                                             (_, generation_id) -> 0;
                                             (_, member_id) -> <<"member">>
                                           end),
+  meck:expect(kafe_consumer_store, lookup, fun(_, can_fetch) -> {ok, true} end),
   meck:new(kafe),
   meck:expect(kafe, offset_commit,
               fun(_, _, _, _, [{Topic, [{Partition, _, <<>>}]}]) ->
@@ -403,6 +413,29 @@ info_commit_hole_commit_test() ->
                                       commits = [0, 1, 2, 3, 5, 6, 7]})),
   meck:unload(kafe_metrics),
   meck:unload(kafe),
+  meck:unload(kafe_consumer_store).
+
+info_commit_cannot_fetch_test() ->
+  meck:new(kafe_consumer_store),
+  meck:expect(kafe_consumer_store, lookup, fun(_, can_fetch) -> {ok, false} end),
+  ?assertMatch({noreply, #state{
+                            topic = <<"topic">>,
+                            partition = 1,
+                            commit_interval = 1000,
+                            commit_messages = 1000,
+                            commit_timer = _,
+                            last_offset = 0,
+                            group_id = <<"group">>,
+                            commits = [0, 1, 2]}},
+               handle_info(commit, #state{
+                                      topic = <<"topic">>,
+                                      partition = 1,
+                                      commit_interval = 1000,
+                                      commit_messages = 1000,
+                                      commit_timer = undefined,
+                                      last_offset = 0,
+                                      group_id = <<"group">>,
+                                      commits = [0, 1, 2]})),
   meck:unload(kafe_consumer_store).
 
 lcs_test() ->
