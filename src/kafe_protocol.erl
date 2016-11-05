@@ -24,14 +24,19 @@ run(Request) ->
   end.
 
 run(BrokerPID, Request) when is_pid(BrokerPID) ->
-  try
-    Response = gen_server:call(BrokerPID, Request, ?TIMEOUT),
-    _ = kafe:release_broker(BrokerPID),
-    Response
-  catch
-    Type:Error ->
-      lager:error("Request error: ~p:~p", [Type, Error]),
-      {error, Error}
+  case erlang:is_process_alive(BrokerPID) of
+    true ->
+      try
+        Response = gen_server:call(BrokerPID, Request, ?TIMEOUT),
+        _ = kafe:release_broker(BrokerPID),
+        Response
+      catch
+        Type:Error ->
+          lager:error("Request error: ~p:~p", [Type, Error]),
+          {error, Error}
+      end;
+    false ->
+      {error, broker_not_available}
   end;
 run(BrokerName, Request) when is_list(BrokerName) ->
   case kafe:broker_by_name(BrokerName) of

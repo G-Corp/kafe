@@ -106,8 +106,9 @@ handle_info(fetch, #state{fetch_interval = FetchInterval} = State) ->
       {noreply,
        State#state{timer = erlang:send_after(FetchInterval, self(), fetch),
                    offset = NextOffset}};
-    {error, Reason} ->
-      {stop, Reason, State}
+    _ ->
+      {noreply,
+       State#state{timer = erlang:send_after(FetchInterval, self(), fetch)}}
   end;
 handle_info(_Info, State) ->
   {noreply, State}.

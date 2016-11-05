@@ -969,27 +969,53 @@ update_state_with_metadata(State) ->
     undefined ->
       State;
     _ ->
-      {ok, #{brokers := Brokers,
-             topics := Topics}} = gen_server:call(FirstBroker,
-                                                  {call,
-                                                   fun kafe_protocol_metadata:request/2, [[]],
-                                                   fun kafe_protocol_metadata:response/2},
-                                                  ?TIMEOUT),
-      ok = release_broker(FirstBroker),
-      {Brokers1, State3} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, StateAcc}) ->
-                                           {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
-                                            get_connection([{bucs:to_string(Host), Port}], StateAcc)}
-                                       end, {#{}, State2}, Brokers),
-      State4 = remove_unlisted_brokers(maps:values(Brokers1), State3),
-      Topics1 = lists:foldl(fun(#{name := Topic, partitions := Partitions}, Acc) ->
-                                maps:put(Topic,
-                                         lists:foldl(fun(#{id := ID, leader := Leader}, Acc1) ->
-                                                         maps:put(ID, maps:get(Leader, Brokers1), Acc1)
-                                                     end, #{}, Partitions),
-                                         Acc)
-                            end, #{}, Topics),
-      maps:put(topics, Topics1, State4)
+      case gen_server:call(FirstBroker,
+                           {call,
+                            fun kafe_protocol_metadata:request/2, [[]],
+                            fun kafe_protocol_metadata:response/2},
+                           ?TIMEOUT) of
+        {ok, #{brokers := Brokers,
+               topics := Topics}} ->
+          release_broker(FirstBroker),
+          {Brokers1, State3} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, StateAcc}) ->
+                                               {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
+                                                get_connection([{bucs:to_string(Host), Port}], StateAcc)}
+                                           end, {#{}, State2}, Brokers),
+          State4 = remove_unlisted_brokers(maps:values(Brokers1), State3),
+          case update_topics(Topics, Brokers1) of
+            leader_election ->
+              timer:sleep(1000),
+              update_state_with_metadata(State);
+            Topics1 ->
+              maps:put(topics, Topics1, State4)
+          end;
+        _ ->
+          release_broker(FirstBroker),
+          State2
+      end
   end.
+
+update_topics(Topics, Brokers1) ->
+  update_topics(Topics, Brokers1, #{}).
+update_topics([], _, Acc) ->
+  Acc;
+update_topics([#{name := Topic, partitions := Partitions}|Rest], Brokers1, Acc) ->
+  case brokers_for_partitions(Partitions, Brokers1, Topic, #{}) of
+    leader_election ->
+      leader_election;
+    BrokersForPartitions ->
+      AccUpdate = maps:put(Topic, BrokersForPartitions, Acc),
+      update_topics(Rest, Brokers1, AccUpdate)
+  end.
+
+brokers_for_partitions([], _, _, Acc) ->
+  Acc;
+brokers_for_partitions([#{id := ID, leader := -1}|_], _, Topic, _) ->
+  lager:info("Leader election in progress for topic ~s, partition ~p", [Topic, ID]),
+  leader_election;
+brokers_for_partitions([#{id := ID, leader := Leader}|Rest], Brokers1, Topic, Acc) ->
+  brokers_for_partitions(Rest, Brokers1, Topic,
+                         maps:put(ID, maps:get(Leader, Brokers1), Acc)).
 
 % @hidden
 remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->

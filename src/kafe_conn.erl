@@ -18,6 +18,7 @@ start_link(Addr, Port) ->
   gen_server:start_link(?MODULE, {Addr, Port}, []).
 
 init({Addr, Port}) ->
+  erlang:process_flag(trap_exit, true),
   SndBuf = doteki:get_env([kafe, socket, sndbuf], ?DEFAULT_SOCKET_SNDBUF),
   RecBuf = doteki:get_env([kafe, socker, recbuf], ?DEFAULT_SOCKET_RECBUF),
   Buffer = lists:max([SndBuf, RecBuf, doteki:get_env([kafe, socket, buffer], max(SndBuf, RecBuf))]),
@@ -50,10 +51,16 @@ init({Addr, Port}) ->
 handle_call({call, Request, RequestParams, Response}, From, State) ->
   handle_call({call, Request, RequestParams, Response, []}, From, State);
 handle_call({call, Request, RequestParams, Response, ResponseParams}, From, State) ->
-  send_request(erlang:apply(Request, RequestParams ++ [State]),
-               From,
-               {Response, ResponseParams},
-               State);
+  try
+    send_request(erlang:apply(Request, RequestParams ++ [State]),
+                 From,
+                 {Response, ResponseParams},
+                 State)
+  catch
+    Type:Error ->
+      lager:error("Request error: ~p:~p", [Type, Error]),
+      {reply, {error, Error}, State}
+  end;
 handle_call(alive, _From, #{socket := Socket} = State) ->
   case inet:setopts(Socket, []) of
     ok ->
@@ -82,8 +89,8 @@ handle_info(Info, State) ->
   lager:debug("--- State ~p", [State]),
   {noreply, State}.
 
-terminate(_Reason, #{socket := Socket}) ->
-  lager:debug("Terminate..."),
+terminate(_Reason, #{ip := IP, port := Port, socket := Socket}) ->
+  lager:debug("Close connection to broker ~p:~p", [IP, Port]),
   _ = gen_tcp:close(Socket),
   ok.
 
@@ -98,7 +105,7 @@ send_request(#{packet := Packet},
     ok ->
       {reply, ok, State1};
     {error, _} = Error ->
-      {stop, abnormal, Error, State1}
+      {stop, normal, Error, State1}
   end;
 send_request(#{packet := Packet, state := State2, api_version := ApiVersion},
              From,
@@ -116,7 +123,7 @@ send_request(#{packet := Packet, state := State2, api_version := ApiVersion},
                        Requests),
          State2)};
     {error, _} = Error ->
-      {stop, abnormal, Error, State1}
+      {stop, normal, Error, State1}
   end.
 
 -ifdef(TEST).
