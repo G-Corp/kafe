@@ -241,7 +241,7 @@ You can add a prefix to all metrics by adding a <tt>metrics_prefix</tt> in the <
 <ul>
 <li><tt>./rebar3 compile</tt> to compile Kafe.</li>
 <li><tt>./rebar3 eunit</tt> to run tests.</li>
-<li><tt>./rebar3 as doc edoc</tt> to build documentation.</li>
+<li><tt>./rebar3 edoc</tt> to build documentation.</li>
 <li><tt>./rebar3 elixir generate_mix</tt> to generate <tt>mix.exs</tt> file.</li>
 <li><tt>./rebar3 elixir generate_lib</tt> to generate Elixir bindings.</li>
 </ul>

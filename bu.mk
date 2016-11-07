@@ -127,10 +127,9 @@ compile-ex: elixir clean
 	$(verbose) $(MIX) deps.compile
 	$(verbose) $(MIX) compile
 
-elixir: ## Generate Elixir bindings (mix.exs and libs)
+elixir:: ## Generate Elixir bindings (mix.exs and libs)
 	$(verbose) $(REBAR) elixir generate_mix
 	$(verbose) $(REBAR) elixir generate_lib
-	$(verbose) $(REBAR) elixir generate_record
 
 distclean-ex: clean-ex
 	$(verbose) $(RM_F) mix.lock

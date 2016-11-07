@@ -277,7 +277,7 @@ __Kafe__ use [rebar3](http://www.rebar3.org). So, you can use :
 
 * `./rebar3 eunit` to run tests.
 
-* `./rebar3 as doc edoc` to build documentation.
+* `./rebar3 edoc` to build documentation.
 
 * `./rebar3 elixir generate_mix` to generate `mix.exs` file.
 
