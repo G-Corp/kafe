@@ -1,5 +1,5 @@
 % @hidden
--module(kafe_consumer_fetcher_sup).
+-module(kafe_consumer_group_sup).
 -compile([{parse_transform, lager_transform}]).
 
 -behaviour(supervisor).
@@ -7,7 +7,7 @@
 -export([
          start_link/0
          , stop_child/1
-         , start_child/14
+         , start_child/10
         ]).
 -export([init/1]).
 
@@ -29,16 +29,14 @@ stop_child(Pid) when is_pid(Pid) ->
   end.
 
 
-start_child(Topic, Partition, Srv, FetchInterval,
-            GroupID, GenerationID, MemberID,
-            FetchSize, Autocommit,
+start_child(Topic, Partition, FetchInterval,
+            GroupID, Commit, FromBeginning,
             MinBytes, MaxBytes, MaxWaitTime,
-            Callback, Processing) ->
-  case supervisor:start_child(?MODULE, [Topic, Partition, Srv, FetchInterval,
-                                        GroupID, GenerationID, MemberID,
-                                        FetchSize, Autocommit,
+            Callback) ->
+  case supervisor:start_child(?MODULE, [Topic, Partition, FetchInterval,
+                                        GroupID, Commit, FromBeginning,
                                         MinBytes, MaxBytes, MaxWaitTime,
-                                        Callback, Processing]) of
+                                        Callback]) of
     {ok, Child, _} -> {ok, Child};
     Other -> Other
   end.
@@ -49,7 +47,7 @@ init([]) ->
        intensity => 0,
        period => 1},
      [#{id => kafe_consumer_fetcher,
-        start => {kafe_consumer_fetcher, start_link, []},
+        start => {kafe_consumer_tp_group_sup, start_link, []},
         type => supervisor,
         shutdown => 5000}]
     }}.

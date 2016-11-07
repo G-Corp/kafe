@@ -2,13 +2,21 @@
 @author Gregoire Lejeune <greg@g-corp.io>
 @author Gregoire Lejeune <gregoire.lejeune@botsunit.com>
 @copyright 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 BotsUnit
-@version 1.5.2
+@version 2.0.0
 @title A Kafka client for Erlang and Elixir
 @doc
 
 [![Hex.pm version](https://img.shields.io/hexpm/v/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![Hex.pm downloads](https://img.shields.io/hexpm/dt/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![License](https://img.shields.io/hexpm/l/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
+[![Build Status](https://travis-ci.org/botsunit/kafe.svg?branch=master)](https://travis-ci.org/botsunit/kafe)
+
+
+<b>Version 2.0.0 cause changes in the following APIs :</b>
+<ul>
+<li>{@link kafe:start_consumer/3}</li>
+<li>{@link kafe:fetch/3}</li>
+</ul>
 
 <b>Kafe</b> has been tested with Kafka 0.9 and 0.10
 
@@ -65,6 +73,8 @@ Example :
 
 <h3>Create a consumer</h3>
 
+<h4>Using a function</h4>
+
 To create a consumer, create a function with 6 parameters :
 
 <pre>
@@ -91,8 +101,8 @@ kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
 
 See {@link kafe:start_consumer/3} for the available <tt>Options</tt>.
 
-In the <tt>consume</tt> function, if you didn't start the consumer with <tt>autocommit</tt> set to <tt>true</tt>, you need to commit manually when you
-have finished to treat the message. To do so, use {@link kafe_consumer:commit/1} with the <tt>CommitID</tt> as parameter.
+In the <tt>consume</tt> function, if you didn't start the consumer in autocommit mode (using <tt>before_processing | after_processing</tt> in the <tt>commit</tt> options),
+you need to commit manually when you have finished to treat the message. To do so, use {@link kafe_consumer:commit/4}.
 
 When you are done with your consumer, stop it :
 
@@ -102,15 +112,68 @@ kafe:stop_consumer(my_group),
 ...
 </pre>
 
+<h4>Using the <tt>kafe_consumer_subscriber</tt> behaviour</h4>
+
+<pre>
+-module(my_consumer).
+-behaviour(kafe_consumer_subscriber).
+
+-export([init/4, handle_message/2]).
+-include_lib("kafe/include/kafe_consumer.hrl").
+
+-record(state, {
+               }).
+
+init(Group, Topic, Partition, Args) ->
+  % Do something with Group, Topic, Partition, Args
+  {ok, #state{}}.
+
+handle_message(Message, State) ->
+  % Do something with Message
+  % And update your State (if needed)
+  {ok, NewState}.
+</pre>
+
+Then start a new consumer :
+
+<pre>
+...
+kafe:start().
+...
+kafe:start_consumer(my_group, {my_consumer, Args}, Options).
+% Or
+kafe:start_consumer(my_group, my_consumer, Options).
+...
+</pre>
+
+To commit a message (if you need to), use {@link kafe_consumer:commit/4}.
+
 <h3>Using with Elixir</h3>
 
 Elixir' users can use <tt>Kafe</tt> and <tt>Kafe.Consumer</tt> instead of <tt>:kafe</tt> and <tt>:kafe_consumer</tt>.
 
 <pre>
-defmodule MyConsumer do
+defmodule My.Consumer do
   def consume(commit_id, topic, partition, offset, key, value) do
     # Do something with topic/partition/offset/key/value
     :ok
+  end
+end
+
+defmodule My.Consumer.Subscriber do
+  behaviour Kafe.Consumer.Subscriber
+
+  def init(group, topic, partition, args) do
+    % Do something with group/topic/partition/args
+    % and create the state
+    {:ok, state}
+  end
+
+  def handle_message(message, state) do
+    % Do something with message (record Kafe.Records.message or
+    % function Kafe.Consumer.Subscriber.message/2)
+    % and update (or not)the state
+    {:ok, new_state}
   end
 end
 </pre>
@@ -120,9 +183,55 @@ end
 Kafe.start()
 ...
 Kafe.start_consumer(:my_group, &amp;My.Consumer.consume/6, options)
+# or
+Kafe.start_consumer(:my_group, {My.Consumer.Subscriber, args}, options)
+# or
+Kafe.start_consumer(:my_group, My.Consumer.Subscriber, options)
 ...
 Kafe.stop_consumer(:my_group)
 ...
+</pre>
+
+<h3>Metrics</h3>
+
+You can enable metrics by adding a metrics module in your configuration :
+
+<pre>
+{metrics, [
+  {metrics_mod, metrics_folsom}
+]}
+</pre>
+
+You can choose between <a href="https://github.com/folsom-project/folsom">Folsom</a> (<tt>{metrics_mod, metrics_folsom}</tt>), <a href="https://github.com/Feuerlabs/exometer">Exometer</a> (<tt>{metrics_mod, metrics_exometer}</tt>) or <a href="https://github.com/processone/grapherl">Grapherl</a> (<tt>{metrics_mod, metrics_grapherl}</tt>).
+
+Be sure that's Folsom, Exometer or Grapherl is started before starting Kafe.
+
+<pre>
+application:ensure_all_started(folsom).
+application:ensure_all_started(kafe).
+</pre>
+
+Metrics are disabled by default.
+
+Kafe offers the following metrics :
+
+<table>
+<tr><th>Name</th><th>Type</th><th>Description</th></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.messages.fetch</td><td>gauge</td><td>Number of received messages on the last fetch for the CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.messages.fetch</td><td>gauge</td><td>Number of received messages on the last fetch for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.messages</td><td>counter</td><td>Total number of received messages for the CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.messages</td><td>counter</td><td>Total number of received messages for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.duration.fetch</td><td>gauge</td><td>Fetch duration (ms) per message, for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.pending_commits</td><td>gauge</td><td>Number of pending commits, for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+</table>
+
+You can add a prefix to all metrics by adding a <tt>metrics_prefix</tt> in the <tt>metrics</tt> configuration :
+
+<pre>
+{metrics, [
+  {metrics_mod, metrics_folsom},
+  {metrics_prefix, my_bot}
+]}
 </pre>
 
 <h3>Build</h3>

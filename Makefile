@@ -27,6 +27,9 @@ services:
     environment:
       KAFKA_ZOOKEEPER_CONNECT: zk
       KAFKA_BROKER_ID: 1
+      KAFKA_MESSAGE_MAX_BYTES: 1000000
+      KAFKA_FETCH_MESSAGE_MAX_BYTES: 1048576
+      KAFKA_MEX_MESSAGE_BYTES: 1000000
       KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -40,6 +43,9 @@ services:
     environment:
       KAFKA_ZOOKEEPER_CONNECT: zk
       KAFKA_BROKER_ID: 2
+      KAFKA_MESSAGE_MAX_BYTES: 1000000
+      KAFKA_FETCH_MESSAGE_MAX_BYTES: 1048576
+      KAFKA_MEX_MESSAGE_BYTES: 1000000
       KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -53,6 +59,9 @@ services:
     environment:
       KAFKA_ZOOKEEPER_CONNECT: zk
       KAFKA_BROKER_ID: 3
+      KAFKA_MESSAGE_MAX_BYTES: 1000000
+      KAFKA_FETCH_MESSAGE_MAX_BYTES: 1048576
+      KAFKA_MEX_MESSAGE_BYTES: 1000000
       KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -72,8 +81,8 @@ docker-compose.yml:
 docker-start: docker-stop
 	$(verbose) docker-compose up -d
 	$(verbose) sleep 1
-	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 3 --partitions 3 --topic testone
-	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 3 --partitions 3 --topic testtwo
+	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 1 --partitions 1 --topic testone
+	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 2 --partitions 2 --topic testtwo
 	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 3 --partitions 3 --topic testthree
 
 docker-stop: docker-compose.yml

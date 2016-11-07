@@ -11,7 +11,7 @@
 %
 % -export([consume/6]).
 %
-% consume(CommitID, Topic, Partition, Offset, Key, Value) ->
+% consume(GroupID, Topic, Partition, Offset, Key, Value) ->
 %   % Do something with Topic/Partition/Offset/Key/Value
 %   ok.
 % </pre>
@@ -30,8 +30,8 @@
 %
 % See {@link kafe:start_consumer/3} for the available <tt>Options</tt>.
 %
-% In the <tt>consume</tt> function, if you didn't start the consumer with <tt>autocommit</tt> set to <tt>true</tt>, you need to commit manually when you
-% have finished to treat the message. To do so, use {@link kafe_consumer:commit/1} with the <tt>CommitID</tt> as parameter.
+% In the <tt>consume</tt> function, if you didn't start the consumer in autocommit mode (using <tt>before_processing | after_processing</tt> in the <tt>commit</tt> options),
+% you need to commit manually when you have finished to treat the message. To do so, use {@link kafe_consumer:commit/4}.
 %
 % When you are done with your consumer, stop it :
 %
@@ -41,31 +41,67 @@
 % ...
 % </pre>
 %
+% You can also use a <tt>kafe_consumer_subscriber</tt> behaviour instead of a function :
+%
+% <pre>
+% -module(my_consumer).
+% -behaviour(kafe_consumer_subscriber).
+% -include_lib("kafe/include/kafe_consumer.hrl").
+%
+% -export([init/4, handle_message/2]).
+%
+% -record(state, {
+%                }).
+%
+% init(Group, Topic, Partition, Args) ->
+%   % Do something with Group, Topic, Partition, Args
+%   {ok, #state{}}.
+%
+% handle_message(Message, State) ->
+%   % Do something with Message
+%   % And update your State (if needed)
+%   {ok, NewState}.
+% </pre>
+%
+% Then start a new consumer :
+%
+% <pre>
+% ...
+% kafe:start().
+% ...
+% kafe:start_consumer(my_group, {my_consumer, Args}, Options).
+% % Or
+% kafe:start_consumer(my_group, my_consumer, Options).
+% ...
+% </pre>
+%
+% To commit a message (if you need to), use {@link kafe_consumer:commit/4}.
+%
 % <b>Internal :</b>
 %
 % <pre>
-%                                                                    one per consumer group
-%                                                          +--------------------^--------------------+
-%                                                          |                                         |
+%                                                                 one per consumer group
+%                                                       +--------------------^--------------------+
+%                                                       |                                         |
 %
-%                                                                             +--&gt; kafe_consumer_srv +--+
-%                  +--&gt; kafe_consumer_sup +------so4o------&gt; kafe_consumer +--+                         |
-%                  |                                                          +--&gt; kafe_consumer_fsm    |
-%                  +--&gt; kafe_consumer_fetcher_sup +--+                                                  m
-% kafe_sup +--o4o--+                                 |                                                  o
-%                  +--&gt; kafe_rr                      s                                                  n
-%                  |                                 o                                                  |
-%                  +--&gt; kafe                         4  +--&gt; kafe_consumer_fetcher &lt;--------------------+
-%                                                    o  |                                               |
-%                                                    |  +--&gt; kafe_consumer_fetcher &lt;--------------------+
-%                                                    +--+                                               |
-%                                                       +--&gt; kafe_consumer_fetcher &lt;--------------------+
-%                                                       |                                               .
-%                                                       +--&gt; ...                                        .
-%                                                                                                       .
-%                                                          |                       |
-%                                                          +-----------v-----------+
-%                                                            one/{topic,partition}
+%                                                                          +--&gt; kafe_consumer_srv +-----------------+
+%                  +--&gt; kafe_consumer_sup +------so4o---&gt; kafe_consumer +--+                                        |
+%                  |                                                       +--&gt; kafe_consumer_fsm                   |
+%                  +--&gt; kafe_consumer_group_sup +--+                                                                m
+% kafe_sup +--o4o--+                               |                                                                o
+%                  +--&gt; kafe_rr                    s                                                                n
+%                  |                               o                                                                |
+%                  +--&gt; kafe                       4                                                                |
+%                                                  o                                                                |
+%                                                  |                                  +--&gt; kafe_consumer_fetcher &lt;--+
+%                                                  +--&gt; kafe_consumer_tp_group_sup +--+
+%                                                                                     +--&gt; kafe_consumer_committer
+%                                                                                     |
+%                                                                                     +--&gt; kafe_consumer_subscriber
+%
+%                                                     |                                                            |
+%                                                     +-------------------------------v----------------------------+
+%                                                                           one/{topic,partition}
 %
 % (o4o = one_for_one)
 % (so4o = simple_one_for_one)
@@ -74,33 +110,31 @@
 % @end
 -module(kafe_consumer).
 -include("../include/kafe.hrl").
+-include("../include/kafe_consumer.hrl").
+-compile([{parse_transform, lager_transform}]).
 -behaviour(supervisor).
 
 % API
 -export([
          start/3
          , stop/1
+         , commit/4
          , commit/1
-         , commit/2
+         , remove_commits/3
          , remove_commits/1
-         , remove_commit/1
+         , pending_commits/3
          , pending_commits/1
-         , pending_commits/2
          , describe/1
+         , topics/1
          , member_id/1
          , generation_id/1
-         , topics/1
         ]).
 
 % Private
 -export([
          start_link/2
          , init/1
-         , member_id/2
-         , generation_id/2
-         , topics/2
-         , encode_group_commit_identifier/7
-         , decode_group_commit_identifier/1
+         , can_fetch/1
         ]).
 
 % @equiv kafe:start_consumer(GroupID, Callback, Options)
@@ -114,116 +148,106 @@ stop(GroupID) ->
 % @doc
 % Return consumer group descrition
 % @end
--spec describe(GroupPIDOrID :: atom() | pid() | binary()) -> {ok, kafe:describe_group()} | {error, term()}.
-describe(GroupPIDOrID) ->
-  kafe_consumer_sup:call_srv(GroupPIDOrID, describe).
-
-% @equiv commit(GroupCommitIdentifier, #{})
--spec commit(GroupCommitIdentifier :: kafe:group_commit_identifier()) -> ok | {error, term()} | delayed.
-commit(GroupCommitIdentifier) ->
-  commit(GroupCommitIdentifier, #{}).
+-spec describe(GroupID :: binary()) -> {ok, kafe:describe_group()} | {error, term()}.
+describe(GroupID) ->
+  kafe:describe_group(GroupID).
 
 % @doc
-% Commit the offset (in Kafka) for the given <tt>GroupCommitIdentifier</tt> received in the <tt>Callback</tt> specified when starting the
-% consumer group (see {@link kafe:start_consumer/3}
-%
-% If the <tt>GroupCommitIdentifier</tt> is not the lowerest offset to commit in the group :
-% <ul>
-% <li>If the consumer was created with <tt>allow_unordered_commit</tt>, the commit is delayed</li>
-% <li>Otherwise this function return <tt>{error, cant_commit}</tt></li>
-% </ul>
-%
-% Available options:
-%
-% <ul>
-% <li><tt>retry :: integer()</tt> : max retry (default 0).</li>
-% <li><tt>delay :: integer()</tt> : Time (in ms) between each retry.</li>
-% </ul>
+% Return the list of {topic, partition} for the consumer group
 % @end
--spec commit(GroupCommitIdentifier :: kafe:group_commit_identifier(), Options :: map()) -> ok | {error, term()} | delayed.
-commit(GroupCommitIdentifier, Options) ->
-  case decode_group_commit_identifier(GroupCommitIdentifier) of
-    {Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID} ->
-      gen_server:call(Pid, {commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID, Options});
-    _ ->
-      {error, invalid_group_commit_identifier}
-  end.
-
-% @doc
-% Remove all pending commits for the given consumer group.
-% @end
--spec remove_commits(GroupPIDOrID :: atom() | pid() | binary()) -> ok.
-remove_commits(GroupPIDOrID) ->
-  kafe_consumer_sup:call_srv(GroupPIDOrID, remove_commits).
-
-% @doc
-% Remove the given commit
-% @end
--spec remove_commit(GroupCommitIdentifier :: kafe:group_commit_identifier()) -> ok | {error, term()}.
-remove_commit(GroupCommitIdentifier) ->
-  case decode_group_commit_identifier(GroupCommitIdentifier) of
-    {Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID} ->
-      gen_server:call(Pid, {remove_commit, Topic, Partition, Offset, GroupID, GenerationID, MemberID});
-    _ ->
-      {error, invalid_group_commit_identifier}
-  end.
-
-% @doc
-% Return the list of all pending commits for the given consumer group.
-% @end
--spec pending_commits(GroupPIDOrID :: atom() | pid() | binary()) -> [kafe:group_commit_identifier()].
-pending_commits(GroupPIDOrID) ->
-  Topics = maps:fold(fun
-                       (<<"__consumer_offsets">>, _, Acc) -> Acc;
-                       (T, P, Acc) -> [{T, maps:keys(P)}|Acc]
-                     end, [], kafe:topics()),
-  pending_commits(GroupPIDOrID, Topics).
-
-% @doc
-% Return the list of pending commits for the given topics (and partitions) for the given consumer group.
-% @end
--spec pending_commits(GroupPIDOrID :: atom() | pid() | binary(), [binary() | {binary(), [integer()]}]) -> [kafe:group_commit_identifier()].
-pending_commits(GroupPIDOrID, Topics) ->
-  Topics1 = lists:foldl(fun
-                        (T, Acc) when is_binary(T) ->
-                            lists:append(Acc, [{T, X} || X <- kafe:partitions(T)]);
-                        ({T, P}, Acc) when is_binary(T), is_list(P) ->
-                            lists:append(Acc, [{T, X} || X <- P])
-                      end, [], Topics),
-  kafe_consumer_sup:call_srv(GroupPIDOrID, {pending_commits, Topics1}).
-
-% @hidden
-member_id(GroupID, MemberID) ->
-  kafe_consumer_sup:call_srv(GroupID, {member_id, MemberID}).
-
-% @doc
-% Return the <tt>member_id</tt> for the given consumer group.
-% @end
--spec member_id(GroupPIDOrID :: atom() | pid() | binary()) -> binary().
-member_id(GroupID) ->
-  kafe_consumer_sup:call_srv(GroupID, member_id).
-
-% @hidden
-generation_id(GroupID, GenerationID) ->
-  kafe_consumer_sup:call_srv(GroupID, {generation_id, GenerationID}).
-
-% @doc
-% Return the <tt>generation_id</tt> for the given consumer group.
-% @end
--spec generation_id(GroupPIDOrID :: atom() | pid() | binary()) -> integer().
-generation_id(GroupID) ->
-  kafe_consumer_sup:call_srv(GroupID, generation_id).
-
-% @hidden
-topics(GroupID, Topics) ->
-  kafe_consumer_sup:call_srv(GroupID, {topics, Topics}).
-
-% @doc
-% Return the topics (and partitions) for the given the consumer group.
-% @end
--spec topics(GroupPIDOrID :: atom() | pid() | binary()) -> [{binary(), [integer()]}].
+-spec topics(GroupID :: binary()) -> [{Topic :: binary(), Partition :: integer()}].
 topics(GroupID) ->
-  kafe_consumer_sup:call_srv(GroupID, topics).
+  case kafe_consumer_store:lookup(GroupID, topics) of
+    {ok, Topics} ->
+      lists:foldl(fun({Topic, Partitions}, Acc) ->
+                      Acc ++ lists:zip(
+                               lists:duplicate(length(Partitions), Topic),
+                               Partitions)
+                  end, [], Topics);
+    _ ->
+      []
+  end.
+
+% @doc
+% Return the consumer group generation ID
+% @end
+-spec generation_id(GroupID :: binary()) -> integer().
+generation_id(GroupID) ->
+  kafe_consumer_store:value(GroupID, generation_id).
+
+% @doc
+% Return the consumer group member ID
+% @end
+-spec member_id(GroupID :: binary()) -> binary().
+member_id(GroupID) ->
+  kafe_consumer_store:value(GroupID, member_id).
+
+% @doc
+% Commit the <tt>Offset</tt> for the given <tt>GroupID</tt>, <tt>Topic</tt> and <tt>Partition</tt>.
+% @end
+-spec commit(GroupID :: binary(), Topic :: binary(), Partition :: integer(), Offset :: integer()) -> ok | {error, term()}.
+commit(GroupID, Topic, Partition, Offset) ->
+  CommitterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
+  case erlang:is_process_alive(CommitterPID) of
+    true ->
+      gen_server:call(CommitterPID, {commit, Offset});
+    false ->
+      {error, dead_commit}
+  end.
+
+% @doc
+% Commit the offset for the given message
+% @end
+-spec commit(Message :: kafe_consumer_subscriber:message()) -> ok | {error, term()}.
+commit(#message{group_id = GroupID, topic = Topic, partition = Partition, offset = Offset}) ->
+  commit(GroupID, Topic, Partition, Offset).
+
+% @doc
+% Remove pending commits for the given consumer group, topic and partition.
+% @end
+-spec remove_commits(GroupID :: binary(), Topic :: binary(), Partition :: integer()) -> ok | {error, Reason :: term()}.
+remove_commits(GroupID, Topic, Partition) ->
+  CommitterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
+  case erlang:is_process_alive(CommitterPID) of
+    true ->
+      gen_server:call(CommitterPID, remove_commits);
+    false ->
+      {error, dead_committer}
+  end.
+
+% @doc
+% Remove pending commits for the given consumer group
+% @end
+-spec remove_commits(GroupID :: binary()) -> ok.
+remove_commits(GroupID) ->
+  [[remove_commits(GroupID, Topic, Partition)
+    || Partition <- Partitions]
+   || {Topic, Partitions} <- kafe_consumer_store:value(GroupID, topics, [])],
+  ok.
+
+% @doc
+% Return the number or pending commits for the given consumer group, topic and partition.
+% @end
+-spec pending_commits(GroupID :: binary(), Topic :: binary(), Partition :: integer()) -> integer().
+pending_commits(GroupID, Topic, Partition) ->
+  CommitterPID = kafe_consumer_store:value(GroupID, {commit_pid, {Topic, Partition}}),
+  case erlang:is_process_alive(CommitterPID) of
+    true ->
+      gen_server:call(CommitterPID, pending_commits);
+    false ->
+      0
+  end.
+
+% @doc
+% Return the number of pending commits for the given consumer group
+% @end
+-spec pending_commits(GroupID :: binary()) -> ok.
+pending_commits(GroupID) ->
+  lists:sum(
+    lists:flatten(
+      [[pending_commits(GroupID, Topic, Partition)
+        || Partition <- Partitions]
+       || {Topic, Partitions} <- kafe_consumer_store:value(GroupID, topics, [])])).
 
 % @hidden
 start_link(GroupID, Options) ->
@@ -231,7 +255,8 @@ start_link(GroupID, Options) ->
 
 % @hidden
 init([GroupID, Options]) ->
-  _ = kafe_cst:attach_sup(GroupID),
+  kafe_consumer_store:new(GroupID),
+  kafe_consumer_store:insert(GroupID, sup_pid, self()),
   {ok, {
      #{strategy => one_for_one,
        intensity => 1,
@@ -253,10 +278,40 @@ init([GroupID, Options]) ->
     }}.
 
 % @hidden
-encode_group_commit_identifier(Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID) ->
-  base64:encode(erlang:term_to_binary({Pid, Topic, Partition, Offset, GroupID, GenerationID, MemberID}, [compressed])).
-
-% @hidden
-decode_group_commit_identifier(GroupCommitIdentifier) ->
-  erlang:binary_to_term(base64:decode(GroupCommitIdentifier)).
+can_fetch(GroupID) ->
+  case kafe_consumer_store:lookup(GroupID, can_fetch) of
+    {ok, true} ->
+      case kafe_consumer_store:lookup(GroupID, can_fetch_fun) of
+        {ok, Fun} when is_function(Fun, 0) ->
+          try erlang:apply(Fun, []) of
+            true -> true;
+            _ -> false
+          catch
+            Class:Error ->
+              lager:error("can_fetch function error: ~p:~p", [Class, Error]),
+              false
+          end;
+        {ok, {Module, Function}} when is_atom(Module),
+                                      is_atom(Function) ->
+          case bucs:function_exists(Module, Function, 0) of
+            true ->
+              try erlang:apply(Module, Function, []) of
+                true ->
+                  true;
+                _ ->
+                  false
+              catch
+                Class:Error ->
+                  lager:error("can_fetch function error: ~p:~p", [Class, Error]),
+                  false
+              end;
+            _ ->
+              ok
+          end;
+        _ ->
+          true
+      end;
+    _ ->
+      false
+  end.
 

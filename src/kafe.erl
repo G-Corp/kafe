@@ -58,6 +58,7 @@
 
 % Internal API
 -export([
+         number_of_brokers/0,
          start_link/0,
          first_broker/0,
          release_broker/1,
@@ -118,14 +119,17 @@
                            offset => integer(),
                            max_bytes => integer(),
                            min_bytes => integer(),
-                           max_wait_time => integer()}.
+                           max_wait_time => integer(),
+                           retrieve => first | all}.
 -type message_set() :: #{name => binary(),
                          partitions => [#{partition => integer(),
                                           error_code => error_code(),
-                                          high_watermaker_offset => integer(),
-                                          message => [#{offset => integer(),
+                                          high_watermark_offset => integer(),
+                                          messages => [#{offset => integer(),
                                                         crc => integer(),
+                                                        magic_byte => 0 | 1,
                                                         attributes => integer(),
+                                                        timestamp => integer(),
                                                         key => binary(),
                                                         value => binary()}]}]}.
 -type group_coordinator() :: #{error_code => error_code(),
@@ -193,8 +197,14 @@
                               max_bytes => integer(),
                               min_bytes => integer(),
                               max_wait_time => integer(),
-                              autocommit => boolean(),
-                              allow_unordered_commit => boolean()}.
+                              on_start_fetching => fun((binary()) -> any()) | {atom(), atom()} | undefined,
+                              on_stop_fetching => fun((binary()) -> any()) | {atom(), atom()} | undefined,
+                              on_assignment_change => fun((binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any()) | {atom(), atom()} | undefined,
+                              can_fetch => fun(() -> true | false) | {atom(), atom()} | undefined,
+                              from_beginning => true | false,
+                              commit => [commit()]}.
+-type commit() :: processing() | {interval, integer()} | {message, integer()}.
+-type processing() :: before_processing | after_processing.
 -type group_commit_identifier() :: binary().
 
 % @hidden
@@ -206,11 +216,15 @@ first_broker() ->
   gen_server:call(?SERVER, first_broker, ?TIMEOUT).
 
 % @hidden
+number_of_brokers() ->
+  gen_server:call(?SERVER, number_of_brokers, ?TIMEOUT).
+
+% @hidden
 release_broker(Broker) ->
   case poolgirl:checkin(Broker) of
     ok -> ok;
     {error, Error} ->
-      lager:debug("Checkin broker ~p faild: ~p", [Broker, Error]),
+      lager:error("Checkin broker ~p failed: ~p", [Broker, Error]),
       ok
   end.
 
@@ -360,10 +374,10 @@ produce(Topic, Message) ->
 % terminate a local write so if the local write time exceeds this timeout it will not be respected. To get a hard timeout of this type the client should use the
 % socket timeout. (default: 5000)</li>
 % <li><tt>required_acks :: integer()</tt> : This field indicates how many acknowledgements the servers should receive before responding to the request. If it is
-% 0 the server will not send any response (this is the only case where the server will not reply to a request). If it is 1, the server will wait the data is
-% written to the local log before sending a response. If it is -1 the server will block until the message is committed by all in sync replicas before sending a
-% response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server will never wait for more
-% acknowledgements than there are in-sync replicas). (default: 0)</li>
+% 0 the server will not send any response (this is the only case where the server will not reply to a request) and this function will return ok.
+% If it is 1, the server will wait the data is written to the local log before sending a response. If it is -1 the server will block until the message is committed
+% by all in sync replicas before sending a response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server
+% will never wait for more acknowledgements than there are in-sync replicas). (default: -1)</li>
 % <li><tt>partition :: integer()</tt> : The partition that data is being published to.</li>
 % <li><tt>key_to_partition :: fun((binary(), term()) -&gt; integer())</tt> : Hash function to do partition assignment from the message key. (default:
 % kafe:default_key_to_partition/2)</li>
@@ -382,7 +396,7 @@ produce(Topic, Message) ->
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI">Kafka protocol documentation</a>.
 % @end
--spec produce(binary(), message(), produce_options()) -> {ok, [topic_partition_info()]} | {error,  term()}.
+-spec produce(binary(), message(), produce_options()) -> ok | {ok, [topic_partition_info()]} | {error,  term()}.
 produce(Topic, Message, Options) ->
   kafe_protocol_produce:run(Topic, Message, Options).
 
@@ -411,7 +425,7 @@ fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_
 % Options:
 % <ul>
 % <li><tt>partition :: integer()</tt> : The id of the partition the fetch is for (default : partition with the highiest offset).</li>
-% <li><tt>offset :: integer()</tt> : The offset to begin this fetch from (default : last offset for the partition)</li>
+% <li><tt>offset :: integer()</tt> : The offset to begin this fetch from (default : next offset for the partition)</li>
 % <li><tt>max_bytes :: integer()</tt> : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 % 1024*1024)</li>
 % <li><tt>min_bytes :: integer()</tt> : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0
@@ -421,7 +435,9 @@ fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_
 % MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait up to 100ms to try to accumulate 64k of data before responding) (default :
 % 1).</li>
 % <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
-% at the time the request is issued (default : 1).</li>
+% at the time the request is issued (default : 100).</li>
+% <li><tt>retrieve :: all | first</tt> : if the Kafka's response buffer contains more than one complete message ; with <tt>first</tt> we will ignore the
+% remaining data ; with <tt>all</tt> we will parse all complete messages in the buffer (default : first).</li>
 % </ul>
 %
 % ReplicatID must <b>always</b> be -1.
@@ -435,7 +451,7 @@ fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI">Kafka protocol documentation</a>.
 % @end
--spec fetch(integer(), binary(), fetch_options()) -> {ok, [message_set()]} | {error, term()}.
+-spec fetch(integer(), binary(), fetch_options()) -> {ok, [message_set()]} | {ok, #{topics => [message_set()], throttle_time => integer()}} | {error, term()}.
 fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), (is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName)), is_map(Options) ->
   kafe_protocol_fetch:run(ReplicatID, TopicName, Options).
 
@@ -644,14 +660,13 @@ offset_fetch(ConsumerGroup, Options) when is_list(Options) ->
 offsets(TopicName, ConsumerGroup, Nth) when is_binary(TopicName) ->
   offsets({TopicName, partitions(TopicName)}, ConsumerGroup, Nth);
 offsets({TopicName, PartitionsList}, ConsumerGroup, Nth) ->
-  NoError = kafe_error:code(0),
   case offset([TopicName]) of
     {ok, [#{name := TopicName, partitions := Partitions}]} ->
       {Offsets, PartitionsID} = lists:foldl(fun
                                               (#{id := PartitionID,
                                                  offsets := [Offset|_],
-                                                 error_code := NoError1},
-                                               {AccOffs, AccParts} = Acc) when NoError1 =:= NoError ->
+                                                 error_code := none},
+                                               {AccOffs, AccParts} = Acc) ->
                                                 case lists:member(PartitionID, PartitionsList) of
                                                   true ->
                                                     {[{PartitionID, Offset - 1}|AccOffs], [PartitionID|AccParts]};
@@ -684,18 +699,18 @@ offsets({TopicName, PartitionsList}, ConsumerGroup, Nth) ->
                                              [{TopicName, [{PartitionID, NewOffset, <<>>}]}]) of
                             {ok, [#{name := TopicName,
                                     partitions := [#{partition := PartitionID,
-                                                     error_code := ErrorCode}]}]} when ErrorCode =:= NoError ->
+                                                     error_code := none}]}]} ->
                               Acc;
                             _ ->
                               delete_offset_for_partition(PartitionID, Acc)
                           end
                       end, Result, NewOffsets);
         _ ->
-          lager:debug("Can't retrieve offsets for consumer group ~p on topic ~p", [ConsumerGroup, TopicName]),
+          lager:error("Can't retrieve offsets for consumer group ~s on topic ~s", [ConsumerGroup, TopicName]),
           error
       end;
     _ ->
-      lager:debug("Can't retrieve offsets for topic ~p", [TopicName]),
+      lager:error("Can't retrieve offsets for topic ~s", [TopicName]),
       error
   end.
 
@@ -731,8 +746,7 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberID must be
 % empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberID from the previous generation.</li>
 % <li><tt>topics :: [binary() | {binary(), [integer()]}]</tt> : List or topics (and partitions).</li>
-% <li><tt>fetch_interval :: integer()</tt> : Fetch interval in ms (default : 1000)</li>
-% <li><tt>fetch_size :: integer()</tt> : Maximum number of offset to fetch(default : 1)</li>
+% <li><tt>fetch_interval :: integer()</tt> : Fetch interval in ms (default : 10)</li>
 % <li><tt>max_bytes :: integer()</tt> : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 % 1024*1024)</li>
 % <li><tt>min_bytes :: integer()</tt> : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0
@@ -742,38 +756,42 @@ delete_offset_for_partition(PartitionID, Offsets) ->
 % MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait up to 100ms to try to accumulate 64k of data before responding) (default :
 % 1).</li>
 % <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
-% at the time the request is issued (default : 1).</li>
-% <li><tt>autocommit :: boolean()</tt> : Autocommit offset (default: true).</li>
-% <li><tt>allow_unordered_commit :: boolean()</tt> : Allow unordered commit (default: false).</li>
-% <li><tt>processing :: at_least_once | at_most_once : </tt> When using <tt>at_most_once</tt>, the message offset will be commited before passing the message to the
-% callback. With <tt>at_least_once</tt> the commit is executed after passing the message to the callback and only if it return <tt>ok</tt>. If the callback
-% return an error, with <tt>at_least_once</tt>, the process will stop fetching messages for the partition until you manually commit the offset
-% (see {@link kafe_consumer:commit/2}), or remove it (see {@link kafe_consumer:remove_commit/1} or {@link kafe_consumer:remove_commits/1})). This options has
-% no effect when <tt>autocommit</tt> is set to false.  (default: at_most_once).</li>
-% <li><tt>on_start_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher start/restart fetching. (default: undefined).</li>
-% <li><tt>on_stop_fetching :: fun((GroupID :: binary()) -> any())</tt> : Function called when the fetcher stop fetching. (default: undefined).</li>
-% <li><tt>on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any())</tt> : Function called when the
+% at the time the request is issued (default : 100).</li>
+% <li><tt>commit :: commit()</tt> : Commit configuration (default: [after_processing, {interval, 1000}]).</li>
+% <li><tt>on_start_fetching :: fun((GroupID :: binary()) -> any()) | {atom(), atom()}</tt> : Function called when the fetcher start/restart fetching. (default: undefined).</li>
+% <li><tt>on_stop_fetching :: fun((GroupID :: binary()) -> any()) | {atom(), atom()}</tt> : Function called when the fetcher stop fetching. (default: undefined).</li>
+% <li><tt>can_fetch :: fun(() -> true | false) | {atom(), atom()}</tt> : Messages are fetched, only if this function returns <tt>true</tt> or is undefined.
+% (default: undefined).</li>
+% <li><tt>on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any()) | {atom(), atom()}</tt> : Function called when the
 % partitions' assignments change. The first parameter is the consumer group ID, the second is the list of {topic, partition} that were unassigned, the third
 % parameter is the list of {topic, partition} that were reassigned. (default: undefined).</li>
+% <li><tt>from_beginning :: true | false</tt> : Start consuming method. If it's set to <tt>true</tt>, the consumer will start to consume from the offset next to the
+% last committed one. If it's set to <tt>false</tt>, the consumer will start to consume next to the last offset. (default: true).</li>
 % </ul>
 % @end
 -spec start_consumer(GroupID :: binary(),
-                     Callback :: fun((CommitID :: group_commit_identifier(),
+                     Callback :: fun((GroupID :: binary(),
                                       Topic :: binary(),
                                       PartitionID :: integer(),
                                       Offset :: integer(),
                                       Key :: binary(),
-                                      Value :: binary()) -> ok | {error, term()}),
+                                      Value :: binary()) -> ok | {error, term()})
+                                   | fun((Message :: kafe_consumer_subscriber:message()) -> ok | {error, term()})
+                                   | atom()
+                                   | {atom(), list(term())},
                      Options :: consumer_options()) -> {ok, GroupPID :: pid()} | {error, term()}.
-start_consumer(GroupID, Callback, Options) when is_function(Callback, 6) ->
+start_consumer(GroupID, Callback, Options) when is_function(Callback, 6);
+                                                is_function(Callback, 1);
+                                                is_atom(Callback);
+                                                is_tuple(Callback) ->
   kafe_consumer_sup:start_child(GroupID, Options#{callback => Callback}).
 
 % @doc
 % Stop the given consumer
 % @end
--spec stop_consumer(GroupPIDOrID :: binary() | atom() | pid()) -> ok | {error, not_found | simple_one_for_one | detached}.
-stop_consumer(GroupPIDOrID) ->
-  kafe_consumer_sup:stop_child(GroupPIDOrID).
+-spec stop_consumer(GroupID :: binary()) -> ok | {error, not_found | simple_one_for_one | detached}.
+stop_consumer(GroupID) ->
+  kafe_consumer_sup:stop_child(GroupID).
 
 % Private
 
@@ -802,6 +820,8 @@ init(_) ->
   {ok, State1}.
 
 % @hidden
+handle_call(number_of_brokers, _From, #{brokers_list := Brokers} = State) ->
+  {reply, length(Brokers), State};
 handle_call(first_broker, _From, State) ->
   {reply, get_first_broker(State), State};
 handle_call({broker_id_by_topic_and_partition, Topic, Partition}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
@@ -888,7 +908,7 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                     h_addr_list = AddrsList}} ->
         case get_host(AddrsList, Hostname, AddrType) of
           undefined ->
-            lager:debug("Can't retrieve host for ~p:~p", [Host, Port]),
+            lager:error("Can't retrieve host for ~s:~p", [Host, Port]),
             get_connection(Rest, State);
           {BrokerAddr, BrokerHostList} ->
             case lists:foldl(fun(E, Acc) ->
@@ -899,14 +919,14 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                                  end
                              end, [], BrokerHostList) of
               [] ->
-                lager:debug("All host already registered for ~p:~p", [bucinet:ip_to_string(BrokerAddr), Port]),
+                lager:debug("All hosts already registered for ~s:~p", [bucinet:ip_to_string(BrokerAddr), Port]),
                 get_connection(Rest, State);
               BrokerHostList1 ->
                 IP = bucinet:ip_to_string(BrokerAddr),
                 BrokerID = kafe_utils:broker_id(IP, Port),
                 case poolgirl:size(BrokerID) of
                   {ok, N, A} when N > 0 ->
-                    lager:debug("Pool ~p size ~p/~p", [BrokerID, N, A]),
+                    lager:debug("Pool ~s size ~p/~p", [BrokerID, N, A]),
                     get_connection(Rest, State);
                   _ ->
                     case poolgirl:add_pool(BrokerID,
@@ -914,26 +934,26 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                                            #{size => PoolSize,
                                              chunk_size => ChunkPoolSize}) of
                       {ok, PoolSize1} ->
-                        lager:info("Broker pool ~p (size ~p) reference ~p", [BrokerID, PoolSize1, BrokerHostList1]),
+                        lager:info("Broker pool ~s (size ~p) reference ~p", [BrokerID, PoolSize1, BrokerHostList1]),
                         Brokers1 = lists:foldl(fun(BrokerHost, Acc) ->
                                                    maps:put(BrokerHost, BrokerID, Acc)
                                                end, Brokers, BrokerHostList1),
                         get_connection(Rest, State#{brokers => Brokers1,
                                                     brokers_list => BrokerHostList1 ++ BrokersList});
                       {error, Reason} ->
-                        lager:debug("Connection faild to ~p:~p : ~p", [bucinet:ip_to_string(BrokerAddr), Port, Reason]),
+                        lager:error("Connection failed to ~p:~p : ~p", [bucinet:ip_to_string(BrokerAddr), Port, Reason]),
                         get_connection(Rest, State)
                     end
                 end
             end
         end;
       {error, Reason} ->
-        lager:debug("Can't retrieve host by name for ~p:~p : ~p", [Host, Port, Reason]),
+        lager:error("Can't retrieve host by name for ~s:~p : ~p", [Host, Port, Reason]),
         get_connection(Rest, State)
     end
   catch
     Type:Reason1 ->
-      lager:debug("Error while get connection for ~p:~p : ~p:~p", [Host, Port, Type, Reason1]),
+      lager:error("Error while getting connection for ~s:~p : ~p:~p", [Host, Port, Type, Reason1]),
       get_connection(Rest, State)
   end.
 
@@ -947,29 +967,55 @@ update_state_with_metadata(State) ->
                           end,
   case FirstBroker of
     undefined ->
-      State;
+      State2;
     _ ->
-      {ok, #{brokers := Brokers,
-             topics := Topics}} = gen_server:call(FirstBroker,
-                                                  {call,
-                                                   fun kafe_protocol_metadata:request/2, [[]],
-                                                   fun kafe_protocol_metadata:response/2},
-                                                  ?TIMEOUT),
-      ok = release_broker(FirstBroker),
-      {Brokers1, State3} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, StateAcc}) ->
-                                           {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
-                                            get_connection([{bucs:to_string(Host), Port}], StateAcc)}
-                                       end, {#{}, State2}, Brokers),
-      State4 = remove_unlisted_brokers(maps:values(Brokers1), State3),
-      Topics1 = lists:foldl(fun(#{name := Topic, partitions := Partitions}, Acc) ->
-                                maps:put(Topic,
-                                         lists:foldl(fun(#{id := ID, leader := Leader}, Acc1) ->
-                                                         maps:put(ID, maps:get(Leader, Brokers1), Acc1)
-                                                     end, #{}, Partitions),
-                                         Acc)
-                            end, #{}, Topics),
-      maps:put(topics, Topics1, State4)
+      case gen_server:call(FirstBroker,
+                           {call,
+                            fun kafe_protocol_metadata:request/2, [[]],
+                            fun kafe_protocol_metadata:response/2},
+                           ?TIMEOUT) of
+        {ok, #{brokers := Brokers,
+               topics := Topics}} ->
+          release_broker(FirstBroker),
+          {Brokers1, State3} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, StateAcc}) ->
+                                               {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
+                                                get_connection([{bucs:to_string(Host), Port}], StateAcc)}
+                                           end, {#{}, State2}, Brokers),
+          State4 = remove_unlisted_brokers(maps:values(Brokers1), State3),
+          case update_topics(Topics, Brokers1) of
+            leader_election ->
+              timer:sleep(1000),
+              update_state_with_metadata(State3);
+            Topics1 ->
+              maps:put(topics, Topics1, State4)
+          end;
+        _ ->
+          release_broker(FirstBroker),
+          State2
+      end
   end.
+
+update_topics(Topics, Brokers1) ->
+  update_topics(Topics, Brokers1, #{}).
+update_topics([], _, Acc) ->
+  Acc;
+update_topics([#{name := Topic, partitions := Partitions}|Rest], Brokers1, Acc) ->
+  case brokers_for_partitions(Partitions, Brokers1, Topic, #{}) of
+    leader_election ->
+      leader_election;
+    BrokersForPartitions ->
+      AccUpdate = maps:put(Topic, BrokersForPartitions, Acc),
+      update_topics(Rest, Brokers1, AccUpdate)
+  end.
+
+brokers_for_partitions([], _, _, Acc) ->
+  Acc;
+brokers_for_partitions([#{id := ID, leader := -1}|_], _, Topic, _) ->
+  lager:info("Leader election in progress for topic ~s, partition ~p", [Topic, ID]),
+  leader_election;
+brokers_for_partitions([#{id := ID, leader := Leader}|Rest], Brokers1, Topic, Acc) ->
+  brokers_for_partitions(Rest, Brokers1, Topic,
+                         maps:put(ID, maps:get(Leader, Brokers1), Acc)).
 
 % @hidden
 remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->
@@ -1014,7 +1060,7 @@ remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
                             {error, Reason} ->
                               _ = poolgirl:checkin(BrokerPID),
                               _ = poolgirl:remove_pool(BrokerID),
-                              lager:debug("Broker ~p (from ~p) not alive : ~p", [Broker, BrokerID, Reason]),
+                              lager:warning("Broker ~s (from ~s) not alive : ~p", [Broker, BrokerID, Reason]),
                               maps:put(brokers_list,
                                        lists:delete(Broker, BrokersList1),
                                        maps:put(brokers, maps:remove(Broker, Brokers1), State1))
@@ -1053,11 +1099,11 @@ get_first_broker([BrokerID|Rest]) ->
           Broker;
         {error, Reason} ->
           _ = poolgirl:checkin(Broker),
-          lager:debug("Broker ~p is not alive : ~p", [Broker, Reason]),
+          lager:warning("Broker ~s is not alive: ~p", [Broker, Reason]),
           get_first_broker(Rest)
       end;
     {error, Reason} ->
-      lager:debug("Can't checkout broker from pool ~p: ~p", [BrokerID, Reason]),
+      lager:error("Can't checkout broker from pool ~s: ~p", [BrokerID, Reason]),
       get_first_broker(Rest)
   end.
 

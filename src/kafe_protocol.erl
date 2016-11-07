@@ -24,14 +24,19 @@ run(Request) ->
   end.
 
 run(BrokerPID, Request) when is_pid(BrokerPID) ->
-  try
-    Response = gen_server:call(BrokerPID, Request, ?TIMEOUT),
-    _ = kafe:release_broker(BrokerPID),
-    Response
-  catch
-    Type:Error ->
-      lager:info("Request error : ~p:~p", [Type, Error]),
-      {error, Error}
+  case erlang:is_process_alive(BrokerPID) of
+    true ->
+      try
+        Response = gen_server:call(BrokerPID, Request, ?TIMEOUT),
+        _ = kafe:release_broker(BrokerPID),
+        Response
+      catch
+        Type:Error ->
+          lager:error("Request error: ~p:~p", [Type, Error]),
+          {error, Error}
+      end;
+    false ->
+      {error, broker_not_available}
   end;
 run(BrokerName, Request) when is_list(BrokerName) ->
   case kafe:broker_by_name(BrokerName) of
@@ -69,13 +74,13 @@ request(ApiKey, RequestMessage,
         #{correlation_id := CorrelationId,
           client_id := ClientId} = State,
        ApiVersion) ->
-  #{packet => encode_bytes(<<
-                             ApiKey:16/signed,
-                             ApiVersion:16/signed,
-                             CorrelationId:32/signed,
-                             (encode_string(ClientId))/binary,
-                             RequestMessage/binary
-                           >>),
+  #{packet => <<
+                 ApiKey:16/signed,
+                 ApiVersion:16/signed,
+                 CorrelationId:32/signed,
+                 (encode_string(ClientId))/binary,
+                 RequestMessage/binary
+               >>,
     state => maps:update(correlation_id, CorrelationId + 1, State),
     api_version => ApiVersion}.
 
@@ -94,21 +99,12 @@ encode_array(List) ->
   Payload = << <<B/binary>> || B <- List>>,
   <<Len:32/signed, Payload/binary>>.
 
-response(
-  <<Size:32/signed, Packet:Size/bytes>>,
-  #{requests := Requests, sndbuf := SndBuf, recbuf := RecBuf, buffer := Buffer} = State
- ) ->
-  <<CorrelationId:32/signed, Remainder/bytes>> = Packet,
+response(<<CorrelationId:32/signed, Remainder/bytes>>, #{requests := Requests} = State) ->
   case orddict:find(CorrelationId, Requests) of
-    {ok, #{from := From, handler := ResponseHandler, socket := Socket, api_version := ApiVersion}} ->
-      _ = gen_server:reply(From, ResponseHandler(Remainder, ApiVersion)),
-      case inet:setopts(Socket, [{active, once}, {sndbuf, SndBuf}, {recbuf, RecBuf}, {buffer, Buffer}]) of
-        ok ->
-          {noreply, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};
-        {error, _} = Reason ->
-          {stop, Reason, State}
-      end;
+    {ok, #{from := From, handler := {ResponseHandler, ResponseHandlerParams}, api_version := ApiVersion}} ->
+      _ = gen_server:reply(From, erlang:apply(ResponseHandler, [Remainder, ApiVersion|ResponseHandlerParams])),
+      {ok, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};
     error ->
-      {noreply, State} %;
+      {error, request_not_found} %;
   end.
 

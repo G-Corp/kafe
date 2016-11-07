@@ -38,11 +38,21 @@ broker_id() = atom()
 
 
 
+### <a name="type-commit">commit()</a> ###
+
+
+<pre><code>
+commit() = <a href="#type-processing">processing()</a> | {interval, integer()} | {message, integer()}
+</code></pre>
+
+
+
+
 ### <a name="type-consumer_options">consumer_options()</a> ###
 
 
 <pre><code>
-consumer_options() = #{session_timeout =&gt; integer(), member_id =&gt; binary(), topics =&gt; [binary() | {binary(), [integer()]}], fetch_interval =&gt; integer(), fetch_size =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), autocommit =&gt; boolean(), allow_unordered_commit =&gt; boolean()}
+consumer_options() = #{session_timeout =&gt; integer(), member_id =&gt; binary(), topics =&gt; [binary() | {binary(), [integer()]}], fetch_interval =&gt; integer(), fetch_size =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), on_start_fetching =&gt; fun((binary()) -&gt; any()) | {atom(), atom()} | undefined, on_stop_fetching =&gt; fun((binary()) -&gt; any()) | {atom(), atom()} | undefined, on_assignment_change =&gt; fun((binary(), [{binary(), integer()}], [{binary(), integer()}]) -&gt; any()) | {atom(), atom()} | undefined, can_fetch =&gt; fun(() -&gt; true | false) | {atom(), atom()} | undefined, from_beginning =&gt; true | false, commit =&gt; [<a href="#type-commit">commit()</a>]}
 </code></pre>
 
 
@@ -72,7 +82,7 @@ error_code() = no_error | unknown | offset_out_of_range | invalid_message | unkn
 
 
 <pre><code>
-fetch_options() = #{partition =&gt; integer(), offset =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer()}
+fetch_options() = #{partition =&gt; integer(), offset =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), retrieve =&gt; first | all}
 </code></pre>
 
 
@@ -202,7 +212,7 @@ message() = binary() | {binary(), binary()}
 
 
 <pre><code>
-message_set() = #{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integer(), error_code =&gt; <a href="#type-error_code">error_code()</a>, high_watermaker_offset =&gt; integer(), message =&gt; [#{offset =&gt; integer(), crc =&gt; integer(), attributes =&gt; integer(), key =&gt; binary(), value =&gt; binary()}]}]}
+message_set() = #{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integer(), error_code =&gt; <a href="#type-error_code">error_code()</a>, high_watermark_offset =&gt; integer(), messages =&gt; [#{offset =&gt; integer(), crc =&gt; integer(), magic_byte =&gt; 0 | 1, attributes =&gt; integer(), timestamp =&gt; integer(), key =&gt; binary(), value =&gt; binary()}]}]}
 </code></pre>
 
 
@@ -273,6 +283,16 @@ offset_fetch_set() = #{name =&gt; binary(), partitions_offset =&gt; [#{partition
 
 <pre><code>
 partition_assignment() = #{topic =&gt; binary(), partitions =&gt; [integer()]}
+</code></pre>
+
+
+
+
+### <a name="type-processing">processing()</a> ###
+
+
+<pre><code>
+processing() = before_processing | after_processing
 </code></pre>
 
 
@@ -437,7 +457,7 @@ Equivalent to [`fetch(ReplicatID, TopicName, #{})`](#fetch-3).
 ### fetch/3 ###
 
 <pre><code>
-fetch(ReplicatID::integer(), TopicName::binary(), Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {error, term()}
+fetch(ReplicatID::integer(), TopicName::binary(), Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {ok, #{topics =&gt; [<a href="#type-message_set">message_set()</a>], throttle_time =&gt; integer()}} | {error, term()}
 </code></pre>
 <br />
 
@@ -448,7 +468,7 @@ Options:
 
 * `partition :: integer()` : The id of the partition the fetch is for (default : partition with the highiest offset).
 
-* `offset :: integer()` : The offset to begin this fetch from (default : last offset for the partition)
+* `offset :: integer()` : The offset to begin this fetch from (default : next offset for the partition)
 
 * `max_bytes :: integer()` : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 1024*1024)
@@ -461,7 +481,10 @@ MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait
 1).
 
 * `max_wait_time :: integer()` : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
-at the time the request is issued (default : 1).
+at the time the request is issued (default : 100).
+
+* `retrieve :: all | first` : if the Kafka's response buffer contains more than one complete message ; with `first` we will ignore the
+remaining data ; with `all` we will parse all complete messages in the buffer (default : first).
 
 
 ReplicatID must __always__ be -1.
@@ -763,7 +786,7 @@ Equivalent to [`produce(Topic, Message, #{})`](#produce-3).
 ### produce/3 ###
 
 <pre><code>
-produce(Topic::binary(), Message::<a href="#type-message">message()</a>, Options::<a href="#type-produce_options">produce_options()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()}
+produce(Topic::binary(), Message::<a href="#type-message">message()</a>, Options::<a href="#type-produce_options">produce_options()</a>) -&gt; ok | {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -779,10 +802,10 @@ terminate a local write so if the local write time exceeds this timeout it will 
 socket timeout. (default: 5000)
 
 * `required_acks :: integer()` : This field indicates how many acknowledgements the servers should receive before responding to the request. If it is
-0 the server will not send any response (this is the only case where the server will not reply to a request). If it is 1, the server will wait the data is
-written to the local log before sending a response. If it is -1 the server will block until the message is committed by all in sync replicas before sending a
-response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server will never wait for more
-acknowledgements than there are in-sync replicas). (default: 0)
+0 the server will not send any response (this is the only case where the server will not reply to a request) and this function will return ok.
+If it is 1, the server will wait the data is written to the local log before sending a response. If it is -1 the server will block until the message is committed
+by all in sync replicas before sending a response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server
+will never wait for more acknowledgements than there are in-sync replicas). (default: -1)
 
 * `partition :: integer()` : The partition that data is being published to.
 
@@ -818,7 +841,7 @@ Start kafe application
 ### start_consumer/3 ###
 
 <pre><code>
-start_consumer(GroupID::binary(), Callback::fun((CommitID::<a href="#type-group_commit_identifier">group_commit_identifier()</a>, Topic::binary(), PartitionID::integer(), Offset::integer(), Key::binary(), Value::binary()) -&gt; ok | {error, term()}), Options::<a href="#type-consumer_options">consumer_options()</a>) -&gt; {ok, GroupPID::pid()} | {error, term()}
+start_consumer(GroupID::binary(), Callback::fun((GroupID::binary(), Topic::binary(), PartitionID::integer(), Offset::integer(), Key::binary(), Value::binary()) -&gt; ok | {error, term()}) | fun((Message::<a href="kafe_consumer_subscriber.md#type-message">kafe_consumer_subscriber:message()</a>) -&gt; ok | {error, term()}) | atom() | {atom(), [term()]}, Options::<a href="#type-consumer_options">consumer_options()</a>) -&gt; {ok, GroupPID::pid()} | {error, term()}
 </code></pre>
 <br />
 
@@ -834,9 +857,7 @@ empty (i.e. <<>>, default), but a rejoining member should use the same memberID 
 
 * `topics :: [binary() | {binary(), [integer()]}]` : List or topics (and partitions).
 
-* `fetch_interval :: integer()` : Fetch interval in ms (default : 1000)
-
-* `fetch_size :: integer()` : Maximum number of offset to fetch(default : 1)
+* `fetch_interval :: integer()` : Fetch interval in ms (default : 10)
 
 * `max_bytes :: integer()` : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 1024*1024)
@@ -849,25 +870,23 @@ MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait
 1).
 
 * `max_wait_time :: integer()` : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
-at the time the request is issued (default : 1).
+at the time the request is issued (default : 100).
 
-* `autocommit :: boolean()` : Autocommit offset (default: true).
+* `commit :: commit()` : Commit configuration (default: [after_processing, {interval, 1000}]).
 
-* `allow_unordered_commit :: boolean()` : Allow unordered commit (default: false).
+* `on_start_fetching :: fun((GroupID :: binary()) -> any()) | {atom(), atom()}` : Function called when the fetcher start/restart fetching. (default: undefined).
 
-* `processing :: at_least_once | at_most_once :` When using `at_most_once`, the message offset will be commited before passing the message to the
-callback. With `at_least_once` the commit is executed after passing the message to the callback and only if it return `ok`. If the callback
-return an error, with `at_least_once`, the process will stop fetching messages for the partition until you manually commit the offset
-(see [`kafe_consumer:commit/2`](kafe_consumer.md#commit-2)), or remove it (see [`kafe_consumer:remove_commit/1`](kafe_consumer.md#remove_commit-1) or [`kafe_consumer:remove_commits/1`](kafe_consumer.md#remove_commits-1))). This options has
-no effect when `autocommit` is set to false.  (default: at_most_once).
+* `on_stop_fetching :: fun((GroupID :: binary()) -> any()) | {atom(), atom()}` : Function called when the fetcher stop fetching. (default: undefined).
 
-* `on_start_fetching :: fun((GroupID :: binary()) -> any())` : Function called when the fetcher start/restart fetching. (default: undefined).
+* `can_fetch :: fun(() -> true | false) | {atom(), atom()}` : Messages are fetched, only if this function returns `true` or is undefined.
+(default: undefined).
 
-* `on_stop_fetching :: fun((GroupID :: binary()) -> any())` : Function called when the fetcher stop fetching. (default: undefined).
-
-* `on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any())` : Function called when the
+* `on_assignment_change :: fun((GroupID :: binary(), [{binary(), integer()}], [{binary(), integer()}]) -> any()) | {atom(), atom()}` : Function called when the
 partitions' assignments change. The first parameter is the consumer group ID, the second is the list of {topic, partition} that were unassigned, the third
 parameter is the list of {topic, partition} that were reassigned. (default: undefined).
+
+* `from_beginning :: true | false` : Start consuming method. If it's set to `true`, the consumer will start to consume from the offset next to the
+last committed one. If it's set to `false`, the consumer will start to consume next to the last offset. (default: true).
 
 
 <a name="stop_consumer-1"></a>
@@ -875,7 +894,7 @@ parameter is the list of {topic, partition} that were reassigned. (default: unde
 ### stop_consumer/1 ###
 
 <pre><code>
-stop_consumer(GroupPIDOrID::binary() | atom() | pid()) -&gt; ok | {error, not_found | simple_one_for_one | detached}
+stop_consumer(GroupID::binary()) -&gt; ok | {error, not_found | simple_one_for_one | detached}
 </code></pre>
 <br />
 

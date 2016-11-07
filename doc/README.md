@@ -4,13 +4,21 @@
 
 Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 BotsUnit
 
-__Version:__ 1.5.2
+__Version:__ 2.0.0
 
 __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire.lejeune@finexkap.com)), Gregoire Lejeune ([`greg@g-corp.io`](mailto:greg@g-corp.io)), Gregoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire.lejeune@botsunit.com)).
 
 [![Hex.pm version](https://img.shields.io/hexpm/v/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![Hex.pm downloads](https://img.shields.io/hexpm/dt/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![License](https://img.shields.io/hexpm/l/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
+[![Build Status](https://travis-ci.org/botsunit/kafe.svg?branch=master)](https://travis-ci.org/botsunit/kafe)
+
+__Version 2.0.0 cause changes in the following APIs :__
+
+* [`kafe:start_consumer/3`](kafe.md#start_consumer-3)
+
+* [`kafe:fetch/3`](kafe.md#fetch-3)
+
 
 __Kafe__ has been tested with Kafka 0.9 and 0.10
 
@@ -73,6 +81,9 @@ __Kafe__ use [lager](https://github.com/basho/lager) ; see also how to [configur
 
 ### Create a consumer ###
 
+
+#### Using a function ####
+
 To create a consumer, create a function with 6 parameters :
 
 ```
@@ -103,8 +114,8 @@ kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
 
 See [`kafe:start_consumer/3`](kafe.md#start_consumer-3) for the available `Options`.
 
-In the `consume` function, if you didn't start the consumer with `autocommit` set to `true`, you need to commit manually when you
-have finished to treat the message. To do so, use [`kafe_consumer:commit/1`](kafe_consumer.md#commit-1) with the `CommitID` as parameter.
+In the `consume` function, if you didn't start the consumer in autocommit mode (using `before_processing | after_processing` in the `commit` options),
+you need to commit manually when you have finished to treat the message. To do so, use [`kafe_consumer:commit/4`](kafe_consumer.md#commit-4).
 
 When you are done with your consumer, stop it :
 
@@ -117,16 +128,74 @@ kafe:stop_consumer(my_group),
 ```
 
 
+#### Using the `kafe_consumer_subscriber` behaviour ####
+
+```
+
+-module(my_consumer).
+-behaviour(kafe_consumer_subscriber).
+
+-export([init/4, handle_message/2]).
+-include_lib("kafe/include/kafe_consumer.hrl").
+
+-record(state, {
+               }).
+
+init(Group, Topic, Partition, Args) ->
+  % Do something with Group, Topic, Partition, Args
+  {ok, #state{}}.
+
+handle_message(Message, State) ->
+  % Do something with Message
+  % And update your State (if needed)
+  {ok, NewState}.
+
+```
+
+Then start a new consumer :
+
+```
+
+...
+kafe:start().
+...
+kafe:start_consumer(my_group, {my_consumer, Args}, Options).
+% Or
+kafe:start_consumer(my_group, my_consumer, Options).
+...
+
+```
+
+To commit a message (if you need to), use [`kafe_consumer:commit/4`](kafe_consumer.md#commit-4).
+
+
 ### Using with Elixir ###
 
 Elixir' users can use `Kafe` and `Kafe.Consumer` instead of `:kafe` and `:kafe_consumer`.
 
 ```
 
-defmodule MyConsumer do
+defmodule My.Consumer do
   def consume(commit_id, topic, partition, offset, key, value) do
     # Do something with topic/partition/offset/key/value
     :ok
+  end
+end
+
+defmodule My.Consumer.Subscriber do
+  behaviour Kafe.Consumer.Subscriber
+
+  def init(group, topic, partition, args) do
+    % Do something with group/topic/partition/args
+    % and create the state
+    {:ok, state}
+  end
+
+  def handle_message(message, state) do
+    % Do something with message (record Kafe.Records.message or
+    % function Kafe.Consumer.Subscriber.message/2)
+    % and update (or not)the state
+    {:ok, new_state}
   end
 end
 
@@ -138,9 +207,64 @@ end
 Kafe.start()
 ...
 Kafe.start_consumer(:my_group, &My.Consumer.consume/6, options)
+# or
+Kafe.start_consumer(:my_group, {My.Consumer.Subscriber, args}, options)
+# or
+Kafe.start_consumer(:my_group, My.Consumer.Subscriber, options)
 ...
 Kafe.stop_consumer(:my_group)
 ...
+
+```
+
+
+### Metrics ###
+
+You can enable metrics by adding a metrics module in your configuration :
+
+```
+
+{metrics, [
+  {metrics_mod, metrics_folsom}
+]}
+
+```
+
+You can choose between [Folsom](https://github.com/folsom-project/folsom) (`{metrics_mod, metrics_folsom}`), [Exometer](https://github.com/Feuerlabs/exometer) (`{metrics_mod, metrics_exometer}`) or [Grapherl](https://github.com/processone/grapherl) (`{metrics_mod, metrics_grapherl}`).
+
+Be sure that's Folsom, Exometer or Grapherl is started before starting Kafe.
+
+```
+
+application:ensure_all_started(folsom).
+application:ensure_all_started(kafe).
+
+```
+
+Metrics are disabled by default.
+
+Kafe offers the following metrics :
+
+
+<table>
+<tr><th>Name</th><th>Type</th><th>Description</th></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.messages.fetch</td><td>gauge</td><td>Number of received messages on the last fetch for the CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.messages.fetch</td><td>gauge</td><td>Number of received messages on the last fetch for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.messages</td><td>counter</td><td>Total number of received messages for the CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.messages</td><td>counter</td><td>Total number of received messages for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.duration.fetch</td><td>gauge</td><td>Fetch duration (ms) per message, for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.pending_commits</td><td>gauge</td><td>Number of pending commits, for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+</table>
+
+
+You can add a prefix to all metrics by adding a `metrics_prefix` in the `metrics` configuration :
+
+```
+
+{metrics, [
+  {metrics_mod, metrics_folsom},
+  {metrics_prefix, my_bot}
+]}
 
 ```
 
@@ -197,5 +321,6 @@ THIS SOFTWARE IS PROVIDED BY THE AUTHOR `AS IS` AND ANY EXPRESS OR IMPLIED WARRA
 
 <table width="100%" border="0" summary="list of modules">
 <tr><td><a href="kafe.md" class="module">kafe</a></td></tr>
-<tr><td><a href="kafe_consumer.md" class="module">kafe_consumer</a></td></tr></table>
+<tr><td><a href="kafe_consumer.md" class="module">kafe_consumer</a></td></tr>
+<tr><td><a href="kafe_consumer_subscriber.md" class="module">kafe_consumer_subscriber</a></td></tr></table>
 

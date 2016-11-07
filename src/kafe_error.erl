@@ -43,12 +43,18 @@
          {cluster_authorization_failed, 31, false, "Cluster authorization failed."}
         ]).
 
-code(N) ->
-  buclists:keyfind(N, 2, ?ERRORS, 1, ?UNKNOW_ERROR).
+code(N) when is_integer(N) ->
+  buclists:keyfind(N, 2, ?ERRORS, 1, ?UNKNOW_ERROR);
+code(N) when is_atom(N) ->
+  buclists:keyfind(N, 1, ?ERRORS, 1, ?UNKNOW_ERROR).
 
-retry(N) ->
-  buclists:keyfind(N, 2, ?ERRORS, 3, ?UNKNOW_ERROR).
+retry(N) when is_integer(N) ->
+  buclists:keyfind(N, 2, ?ERRORS, 3, ?UNKNOW_ERROR);
+retry(N) when is_atom(N) ->
+  buclists:keyfind(N, 1, ?ERRORS, 3, ?UNKNOW_ERROR).
 
-message(N) ->
-  buclists:keyfind(N, 2, ?ERRORS, 4, ?UNKNOW_ERROR).
+message(N) when is_integer(N) ->
+  buclists:keyfind(N, 2, ?ERRORS, 4, ?UNKNOW_ERROR);
+message(N) when is_atom(N) ->
+  buclists:keyfind(N, 1, ?ERRORS, 4, ?UNKNOW_ERROR).
 

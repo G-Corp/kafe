@@ -28,7 +28,7 @@ To create a consumer, create a function with 6 parameters :
 
  -export([consume/6]).
 
- consume(CommitID, Topic, Partition, Offset, Key, Value) ->
+ consume(GroupID, Topic, Partition, Offset, Key, Value) ->
    % Do something with Topic/Partition/Offset/Key/Value
    ok.
 ```
@@ -48,8 +48,8 @@ Then start a new consumer :
 
 See [`kafe:start_consumer/3`](kafe.md#start_consumer-3) for the available `Options`.
 
-In the `consume` function, if you didn't start the consumer with `autocommit` set to `true`, you need to commit manually when you
-have finished to treat the message. To do so, use [`kafe_consumer:commit/1`](kafe_consumer.md#commit-1) with the `CommitID` as parameter.
+In the `consume` function, if you didn't start the consumer in autocommit mode (using `before_processing | after_processing` in the `commit` options),
+you need to commit manually when you have finished to treat the message. To do so, use [`kafe_consumer:commit/4`](kafe_consumer.md#commit-4).
 
 When you are done with your consumer, stop it :
 
@@ -60,32 +60,70 @@ When you are done with your consumer, stop it :
  ...
 ```
 
+You can also use a `kafe_consumer_subscriber` behaviour instead of a function :
+
+```
+
+ -module(my_consumer).
+ -behaviour(kafe_consumer_subscriber).
+ -include_lib("kafe/include/kafe_consumer.hrl").
+
+ -export([init/4, handle_message/2]).
+
+ -record(state, {
+                }).
+
+ init(Group, Topic, Partition, Args) ->
+   % Do something with Group, Topic, Partition, Args
+   {ok, #state{}}.
+
+ handle_message(Message, State) ->
+   % Do something with Message
+   % And update your State (if needed)
+   {ok, NewState}.
+```
+
+Then start a new consumer :
+
+```
+
+ ...
+ kafe:start().
+ ...
+ kafe:start_consumer(my_group, {my_consumer, Args}, Options).
+ % Or
+ kafe:start_consumer(my_group, my_consumer, Options).
+ ...
+```
+
+To commit a message (if you need to), use [`kafe_consumer:commit/4`](kafe_consumer.md#commit-4).
+
 __Internal :__
 
 ```
 
-                                                                    one per consumer group
-                                                          +--------------------^--------------------+
-                                                          |                                         |
+                                                                 one per consumer group
+                                                       +--------------------^--------------------+
+                                                       |                                         |
 
-                                                                             +--> kafe_consumer_srv +--+
-                  +--> kafe_consumer_sup +------so4o------> kafe_consumer +--+                         |
-                  |                                                          +--> kafe_consumer_fsm    |
-                  +--> kafe_consumer_fetcher_sup +--+                                                  m
- kafe_sup +--o4o--+                                 |                                                  o
-                  +--> kafe_rr                      s                                                  n
-                  |                                 o                                                  |
-                  +--> kafe                         4  +--> kafe_consumer_fetcher <--------------------+
-                                                    o  |                                               |
-                                                    |  +--> kafe_consumer_fetcher <--------------------+
-                                                    +--+                                               |
-                                                       +--> kafe_consumer_fetcher <--------------------+
-                                                       |                                               .
-                                                       +--> ...                                        .
-                                                                                                       .
-                                                          |                       |
-                                                          +-----------v-----------+
-                                                            one/{topic,partition}
+                                                                          +--> kafe_consumer_srv +-----------------+
+                  +--> kafe_consumer_sup +------so4o---> kafe_consumer +--+                                        |
+                  |                                                       +--> kafe_consumer_fsm                   |
+                  +--> kafe_consumer_group_sup +--+                                                                m
+ kafe_sup +--o4o--+                               |                                                                o
+                  +--> kafe_rr                    s                                                                n
+                  |                               o                                                                |
+                  +--> kafe                       4                                                                |
+                                                  o                                                                |
+                                                  |                                  +--> kafe_consumer_fetcher <--+
+                                                  +--> kafe_consumer_tp_group_sup +--+
+                                                                                     +--> kafe_consumer_committer
+                                                                                     |
+                                                                                     +--> kafe_consumer_subscriber
+
+                                                     |                                                            |
+                                                     +-------------------------------v----------------------------+
+                                                                           one/{topic,partition}
 
  (o4o = one_for_one)
  (so4o = simple_one_for_one)
@@ -96,17 +134,17 @@ __Internal :__
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#commit-1">commit/1</a></td><td>Equivalent to <a href="#commit-2"><tt>commit(GroupCommitIdentifier, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#commit-2">commit/2</a></td><td>
-Commit the offset (in Kafka) for the given <tt>GroupCommitIdentifier</tt> received in the <tt>Callback</tt> specified when starting the
-consumer group (see <a href="kafe.md#start_consumer-3"><code>kafe:start_consumer/3</code></a></td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#commit-1">commit/1</a></td><td>
+Commit the offset for the given message.</td></tr><tr><td valign="top"><a href="#commit-4">commit/4</a></td><td>
+Commit the <tt>Offset</tt> for the given <tt>GroupID</tt>, <tt>Topic</tt> and <tt>Partition</tt>.</td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
 Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#generation_id-1">generation_id/1</a></td><td>
-Return the <tt>generation_id</tt> for the given consumer group.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
-Return the <tt>member_id</tt> for the given consumer group.</td></tr><tr><td valign="top"><a href="#pending_commits-1">pending_commits/1</a></td><td>
-Return the list of all pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#pending_commits-2">pending_commits/2</a></td><td>
-Return the list of pending commits for the given topics (and partitions) for the given consumer group.</td></tr><tr><td valign="top"><a href="#remove_commit-1">remove_commit/1</a></td><td>
-Remove the given commit.</td></tr><tr><td valign="top"><a href="#remove_commits-1">remove_commits/1</a></td><td>
-Remove all pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupID, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupID)</tt></a>.</td></tr><tr><td valign="top"><a href="#topics-1">topics/1</a></td><td>
-Return the topics (and partitions) for the given the consumer group.</td></tr></table>
+Return the consumer group generation ID.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
+Return the consumer group member ID.</td></tr><tr><td valign="top"><a href="#pending_commits-1">pending_commits/1</a></td><td>
+Return the number of pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#pending_commits-3">pending_commits/3</a></td><td>
+Return the number or pending commits for the given consumer group, topic and partition.</td></tr><tr><td valign="top"><a href="#remove_commits-1">remove_commits/1</a></td><td>
+Remove pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#remove_commits-3">remove_commits/3</a></td><td>
+Remove pending commits for the given consumer group, topic and partition.</td></tr><tr><td valign="top"><a href="#start-3">start/3</a></td><td>Equivalent to <a href="kafe.md#start_consumer-3"><tt>kafe:start_consumer(GroupID, Callback, Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>Equivalent to <a href="kafe.md#stop_consumer-1"><tt>kafe:stop_consumer(GroupID)</tt></a>.</td></tr><tr><td valign="top"><a href="#topics-1">topics/1</a></td><td>
+Return the list of {topic, partition} for the consumer group.</td></tr></table>
 
 
 <a name="functions"></a>
@@ -118,44 +156,29 @@ Return the topics (and partitions) for the given the consumer group.</td></tr></
 ### commit/1 ###
 
 <pre><code>
-commit(GroupCommitIdentifier::<a href="kafe.md#type-group_commit_identifier">kafe:group_commit_identifier()</a>) -&gt; ok | {error, term()} | delayed
+commit(Message::<a href="kafe_consumer_subscriber.md#type-message">kafe_consumer_subscriber:message()</a>) -&gt; ok | {error, term()}
 </code></pre>
 <br />
 
-Equivalent to [`commit(GroupCommitIdentifier, #{})`](#commit-2).
+Commit the offset for the given message
 
-<a name="commit-2"></a>
+<a name="commit-4"></a>
 
-### commit/2 ###
+### commit/4 ###
 
 <pre><code>
-commit(GroupCommitIdentifier::<a href="kafe.md#type-group_commit_identifier">kafe:group_commit_identifier()</a>, Options::#{}) -&gt; ok | {error, term()} | delayed
+commit(GroupID::binary(), Topic::binary(), Partition::integer(), Offset::integer()) -&gt; ok | {error, term()}
 </code></pre>
 <br />
 
-Commit the offset (in Kafka) for the given `GroupCommitIdentifier` received in the `Callback` specified when starting the
-consumer group (see [`kafe:start_consumer/3`](kafe.md#start_consumer-3)
-
-If the `GroupCommitIdentifier` is not the lowerest offset to commit in the group :
-
-* If the consumer was created with `allow_unordered_commit`, the commit is delayed
-
-* Otherwise this function return `{error, cant_commit}`
-
-
-Available options:
-
-* `retry :: integer()` : max retry (default 0).
-
-* `delay :: integer()` : Time (in ms) between each retry.
-
+Commit the `Offset` for the given `GroupID`, `Topic` and `Partition`.
 
 <a name="describe-1"></a>
 
 ### describe/1 ###
 
 <pre><code>
-describe(GroupPIDOrID::atom() | pid() | binary()) -&gt; {ok, <a href="kafe.md#type-describe_group">kafe:describe_group()</a>} | {error, term()}
+describe(GroupID::binary()) -&gt; {ok, <a href="kafe.md#type-describe_group">kafe:describe_group()</a>} | {error, term()}
 </code></pre>
 <br />
 
@@ -166,66 +189,66 @@ Return consumer group descrition
 ### generation_id/1 ###
 
 <pre><code>
-generation_id(GroupPIDOrID::atom() | pid() | binary()) -&gt; integer()
+generation_id(GroupID::binary()) -&gt; integer()
 </code></pre>
 <br />
 
-Return the `generation_id` for the given consumer group.
+Return the consumer group generation ID
 
 <a name="member_id-1"></a>
 
 ### member_id/1 ###
 
 <pre><code>
-member_id(GroupPIDOrID::atom() | pid() | binary()) -&gt; binary()
+member_id(GroupID::binary()) -&gt; binary()
 </code></pre>
 <br />
 
-Return the `member_id` for the given consumer group.
+Return the consumer group member ID
 
 <a name="pending_commits-1"></a>
 
 ### pending_commits/1 ###
 
 <pre><code>
-pending_commits(GroupPIDOrID::atom() | pid() | binary()) -&gt; [<a href="kafe.md#type-group_commit_identifier">kafe:group_commit_identifier()</a>]
+pending_commits(GroupID::binary()) -&gt; ok
 </code></pre>
 <br />
 
-Return the list of all pending commits for the given consumer group.
+Return the number of pending commits for the given consumer group
 
-<a name="pending_commits-2"></a>
+<a name="pending_commits-3"></a>
 
-### pending_commits/2 ###
+### pending_commits/3 ###
 
 <pre><code>
-pending_commits(GroupPIDOrID::atom() | pid() | binary(), Topics::[binary() | {binary(), [integer()]}]) -&gt; [<a href="kafe.md#type-group_commit_identifier">kafe:group_commit_identifier()</a>]
+pending_commits(GroupID::binary(), Topic::binary(), Partition::integer()) -&gt; integer()
 </code></pre>
 <br />
 
-Return the list of pending commits for the given topics (and partitions) for the given consumer group.
-
-<a name="remove_commit-1"></a>
-
-### remove_commit/1 ###
-
-<pre><code>
-remove_commit(GroupCommitIdentifier::<a href="kafe.md#type-group_commit_identifier">kafe:group_commit_identifier()</a>) -&gt; ok | {error, term()}
-</code></pre>
-<br />
-
-Remove the given commit
+Return the number or pending commits for the given consumer group, topic and partition.
 
 <a name="remove_commits-1"></a>
 
 ### remove_commits/1 ###
 
 <pre><code>
-remove_commits(GroupPIDOrID::atom() | pid() | binary()) -&gt; ok
+remove_commits(GroupID::binary()) -&gt; ok
 </code></pre>
 <br />
 
-Remove all pending commits for the given consumer group.
+Remove pending commits for the given consumer group
+
+<a name="remove_commits-3"></a>
+
+### remove_commits/3 ###
+
+<pre><code>
+remove_commits(GroupID::binary(), Topic::binary(), Partition::integer()) -&gt; ok | {error, Reason::term()}
+</code></pre>
+<br />
+
+Remove pending commits for the given consumer group, topic and partition.
 
 <a name="start-3"></a>
 
@@ -248,9 +271,9 @@ Equivalent to [`kafe:stop_consumer(GroupID)`](kafe.md#stop_consumer-1).
 ### topics/1 ###
 
 <pre><code>
-topics(GroupPIDOrID::atom() | pid() | binary()) -&gt; [{binary(), [integer()]}]
+topics(GroupID::binary()) -&gt; [{Topic::binary(), Partition::integer()}]
 </code></pre>
 <br />
 
-Return the topics (and partitions) for the given the consumer group.
+Return the list of {topic, partition} for the consumer group
 

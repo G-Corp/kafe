@@ -8,8 +8,6 @@
          start_link/0
          , start_child/2
          , stop_child/1
-         , server_pid/1
-         , call_srv/2
         ]).
 -export([init/1]).
 
@@ -17,7 +15,8 @@ start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 start_child(GroupID, Options) ->
-  case kafe_cst:lookup_srvpid(GroupID) of
+  kafe_metrics:init_consumer(GroupID),
+  case kafe_consumer_store:lookup(GroupID, sup_pid) of
     {ok, PID} ->
       {ok, PID};
     _ ->
@@ -30,28 +29,15 @@ start_child(GroupID, Options) ->
 stop_child(GroupPID) when is_pid(GroupPID) ->
   supervisor:terminate_child(?MODULE, GroupPID);
 stop_child(GroupID) ->
-  case kafe_cst:lookup_suppid(GroupID) of
+  kafe_metrics:delete_consumer(GroupID),
+  case kafe_consumer_store:lookup(GroupID, sup_pid) of
     {ok, PID} ->
       stop_child(PID);
     _ ->
       {error, detached}
   end.
 
-call_srv(GroupPID, Request) when is_pid(GroupPID) ->
-  gen_server:call(GroupPID, Request);
-call_srv(GroupID, Request) ->
-  case kafe_cst:lookup_srvpid(GroupID) of
-    {ok, PID} ->
-      call_srv(PID, Request);
-    _ ->
-      {error, server_not_found}
-  end.
-
-server_pid(GroupID) ->
-  kafe_cst:lookup_srvpid(GroupID).
-
 init([]) ->
-  kafe_cst:new(),
   {ok, {
      #{strategy => simple_one_for_one,
        intensity => 0,

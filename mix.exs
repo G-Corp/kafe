@@ -4,7 +4,7 @@ defmodule Kafe.Mixfile do
   def project do
     [
       app: :kafe,
-      version: "1.6.3",
+      version: "2.0.0",
       elixir: "~> 1.2",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
@@ -15,7 +15,7 @@ defmodule Kafe.Mixfile do
 
   def application do
     [
-       applications: [:syntax_tools, :compiler, :poolgirl, :goldrush, :lager, :bucs, :doteki],
+       applications: [:syntax_tools, :compiler, :poolgirl, :goldrush, :lager, :bucs, :doteki, :metrics],
        env: [],
        mod: {:kafe_app, []}
     ]
@@ -27,7 +27,8 @@ defmodule Kafe.Mixfile do
       {:bucs, "~> 0.1.9"},
       {:doteki, "~> 0.1.13"},
       {:poolgirl, git: "https://github.com/botsunit/poolgirl.git", branch: "master"},
-      {:bristow, "~> 0.1.1"}    
+      {:bristow, "~> 0.1.1"},
+      {:metrics, git: "https://github.com/botsunit/erlang-metrics.git", branch: "add_delete"}    
     ]
   end
 
