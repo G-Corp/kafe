@@ -967,7 +967,7 @@ update_state_with_metadata(State) ->
                           end,
   case FirstBroker of
     undefined ->
-      State;
+      State2;
     _ ->
       case gen_server:call(FirstBroker,
                            {call,
@@ -985,7 +985,7 @@ update_state_with_metadata(State) ->
           case update_topics(Topics, Brokers1) of
             leader_election ->
               timer:sleep(1000),
-              update_state_with_metadata(State);
+              update_state_with_metadata(State3);
             Topics1 ->
               maps:put(topics, Topics1, State4)
           end;
