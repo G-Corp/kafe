@@ -1,7 +1,7 @@
 %{"bristow": {:hex, :bristow, "0.1.1", "1f9c1d6f0368e23e34b67908f5578beb3faed9668de8f86bfe4e4047d1f59a86", [:rebar3, :mix, :make], []},
-  "bucs": {:hex, :bucs, "0.1.9", "810fdfeb83adf127e6303fbb1e8139bd575699dee8204f46f162908b5f343cf5", [:rebar3, :mix, :make], []},
-  "doteki": {:hex, :doteki, "0.1.13", "c78ba7b2373371d5319896f462d437456e7c9de75ed79aa433bac8532235057f", [:rebar3, :mix, :make], [{:bucs, "~> 0.1.9", [hex: :bucs, optional: false]}]},
+  "bucs": {:hex, :bucs, "1.0.0", "851b1530f29c9a793f336d47d95967cd77388ed414d71e3c0babd9253ba6ae3b", [:rebar3, :mix, :make], []},
+  "doteki": {:hex, :doteki, "1.0.0", "52cfb4e8d92e85464c4434131215fa27d8b13c992ae3fba572c2478ed55d68a2", [:rebar3, :mix, :make], [{:bucs, "~> 1.0.0", [hex: :bucs, optional: false]}]},
   "goldrush": {:hex, :goldrush, "0.1.8", "2024ba375ceea47e27ea70e14d2c483b2d8610101b4e852ef7f89163cdb6e649", [:rebar3], []},
   "lager": {:hex, :lager, "3.2.1", "eef4e18b39e4195d37606d9088ea05bf1b745986cf8ec84f01d332456fe88d17", [:rebar3], [{:goldrush, "0.1.8", [hex: :goldrush, optional: false]}]},
-  "metrics": {:git, "https://github.com/botsunit/erlang-metrics.git", "acb2181d9e1b18139237ee748ab3b3590dadc5eb", [branch: "add_delete"]},
-  "poolgirl": {:git, "https://github.com/botsunit/poolgirl.git", "b9e52d711bc8dfb55d26c2de0b44cb4e2e774eb3", [branch: "master"]}}
+  "metrics": {:git, "https://github.com/botsunit/erlang-metrics.git", "c9e6f9c894d152d29400a62fb9aeb41f1ec38e14", [tag: "2.2.0"]},
+  "poolgirl": {:hex, :poolgirl, "1.0.1", "fac9e77a4084382977728191338e2958f942560ef2de3f158910db6de49486cb", [:rebar3, :mix, :make], [{:doteki, "~> 1.0.0", [hex: :doteki, optional: false]}]}}
