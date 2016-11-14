@@ -3,8 +3,5 @@
  {<<"doteki">>,{pkg,<<"doteki">>,<<"1.0.0">>},0},
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.8">>},1},
  {<<"lager">>,{pkg,<<"lager">>,<<"3.2.1">>},0},
- {<<"metrics">>,
-  {git,"https://github.com/botsunit/erlang-metrics.git",
-       {ref,"c9e6f9c894d152d29400a62fb9aeb41f1ec38e14"}},
-  0},
+ {<<"metrics">>,{pkg,<<"metrics">>,<<"2.2.0">>},0},
  {<<"poolgirl">>,{pkg,<<"poolgirl">>,<<"1.0.1">>},0}].

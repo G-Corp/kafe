@@ -3,5 +3,5 @@
   "doteki": {:hex, :doteki, "1.0.0", "52cfb4e8d92e85464c4434131215fa27d8b13c992ae3fba572c2478ed55d68a2", [:rebar3, :mix, :make], [{:bucs, "~> 1.0.0", [hex: :bucs, optional: false]}]},
   "goldrush": {:hex, :goldrush, "0.1.8", "2024ba375ceea47e27ea70e14d2c483b2d8610101b4e852ef7f89163cdb6e649", [:rebar3], []},
   "lager": {:hex, :lager, "3.2.1", "eef4e18b39e4195d37606d9088ea05bf1b745986cf8ec84f01d332456fe88d17", [:rebar3], [{:goldrush, "0.1.8", [hex: :goldrush, optional: false]}]},
-  "metrics": {:git, "https://github.com/botsunit/erlang-metrics.git", "c9e6f9c894d152d29400a62fb9aeb41f1ec38e14", [tag: "2.2.0"]},
+  "metrics": {:hex, :metrics, "2.2.0", "709b45a275fde02c9f2950ceab38b29b46d05687de33299e02c03a71be336545", [:rebar3], []},
   "poolgirl": {:hex, :poolgirl, "1.0.1", "fac9e77a4084382977728191338e2958f942560ef2de3f158910db6de49486cb", [:rebar3, :mix, :make], [{:doteki, "~> 1.0.0", [hex: :doteki, optional: false]}]}}
