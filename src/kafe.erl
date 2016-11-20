@@ -932,7 +932,8 @@ get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
                     case poolgirl:add_pool(BrokerID,
                                            {kafe_conn, start_link, [BrokerAddr, Port]},
                                            #{size => PoolSize,
-                                             chunk_size => ChunkPoolSize}) of
+                                             chunk_size => ChunkPoolSize,
+                                             allow_empty_pool => false}) of
                       {ok, PoolSize1} ->
                         lager:info("Broker pool ~s (size ~p) reference ~p", [BrokerID, PoolSize1, BrokerHostList1]),
                         Brokers1 = lists:foldl(fun(BrokerHost, Acc) ->

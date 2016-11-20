@@ -15,7 +15,7 @@
          terminate/2, code_change/3]).
 
 start_link(Addr, Port) ->
-  gen_server:start_link(?MODULE, {Addr, Port}, []).
+  gen_server:start_link(?MODULE, {Addr, Port}, [{timeout, 5000}]).
 
 init({Addr, Port}) ->
   erlang:process_flag(trap_exit, true),
