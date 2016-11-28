@@ -4,7 +4,7 @@ defmodule Kafe.Mixfile do
   def project do
     [
       app: :kafe,
-      version: "2.0.1",
+      version: "2.1.0",
       elixir: "~> 1.2",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
@@ -24,24 +24,30 @@ defmodule Kafe.Mixfile do
   defp deps do
     [
       {:lager, "~> 3.2.0"},
-      {:bucs, "~> 1.0.1"},
-      {:doteki, "~> 1.0.1"},
-      {:poolgirl, "~> 1.0.3"},
-      {:bristow, "~> 0.1.1"},
+      {:bucs, "~> 1.0.2"},
+      {:doteki, "~> 1.0.2"},
+      {:poolgirl, "~> 1.1.0"},
+      {:bristow, "~> 0.2.0"},
       {:metrics, "~> 2.2.0"}    
     ]
   end
 
   defp aliases do
-    [compile: [&pre_compile_hooks/1, "compile", &post_compile_hooks/1]]
+    [compile: &compile_with_hooks/1]
   end
 
-  defp pre_compile_hooks(_) do
+  defp compile_with_hooks(args) do
+    pre_compile_hooks()
+    :ok = Mix.Task.run("compile", args)
+    post_compile_hooks()
+  end
+
+  defp pre_compile_hooks() do
     run_hook_cmd [
     ]
   end
 
-  defp post_compile_hooks(_) do
+  defp post_compile_hooks() do
     run_hook_cmd [
     ]
   end
