@@ -55,7 +55,29 @@ handle_call(pending_commits, _From, #state{commits = Commits} = State) ->
   {reply, erlang:length(Commits), State};
 handle_call(remove_commits, _From, State) ->
   {reply, ok, State#state{commits = []}};
-handle_call({offset, Offset}, _From, State) ->
+handle_call({offset, Offset}, _From, #state{group_id = GroupID,
+                                            topic = Topic,
+                                            partition = Partition} = State) ->
+  case (Offset - 1) of
+    CommitOffset when CommitOffset >= 0 ->
+      GenerationID = kafe_consumer_store:value(GroupID, generation_id),
+      MemberID = kafe_consumer_store:value(GroupID, member_id),
+      case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
+                              [{Topic, [{Partition, CommitOffset, <<>>}]}]) of
+        {ok, [#{name := Topic,
+                partitions := [#{error_code := none,
+                                 partition := Partition}]}]} ->
+          lager:debug("Committed offset ~p for topic ~s, partition ~p", [CommitOffset, Topic, Partition]);
+        {ok, [#{name := Topic,
+                partitions := [#{error_code := Error,
+                                 partition := Partition}]}]} ->
+          lager:error("Commit offset ~p for topic ~s, partition ~p error: ~s", [CommitOffset, Topic, Partition, kafe_error:message(Error)]);
+        Error ->
+          lager:error("Commit offset ~p for topic ~s, partition ~p error: ~p", [CommitOffset, Topic, Partition, Error])
+      end;
+    _ ->
+      lager:debug("Nothing to commit for topic ~s, partition ~p", [Topic, Partition])
+  end,
   {reply, ok, State#state{last_offset = Offset}};
 handle_call({commit, Offset}, _From, #state{group_id = GroupID,
                                             topic = Topic,
