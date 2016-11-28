@@ -23,7 +23,7 @@ request(State) ->
 %   groups => group_id protocol_type
 %     group_id => STRING
 %     protocol_type => STRING
-response(<<ErrorCode:16/signed, GroupsLength:16/signed, Remainder/binary>>, _ApiVersion) ->
+response(<<ErrorCode:16/signed, GroupsLength:32/signed, Remainder/binary>>, _ApiVersion) ->
   {ok, #{error_code => kafe_error:code(ErrorCode),
          groups => response(GroupsLength, Remainder, [])}}.
 
