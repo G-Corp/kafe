@@ -90,7 +90,7 @@ init([Topic, Partition, FetchInterval,
               max_bytes = MaxBytes,
               max_wait_time = MaxWaitTime,
               callback = Callback,
-              errors_actions = maps:get(ErrorsActions, fetch, ?DEFAULT_CONSUMER_FETCH_ERROR_ACTIONS)
+              errors_actions = maps:get(fetch, ErrorsActions, ?DEFAULT_CONSUMER_FETCH_ERROR_ACTIONS)
              }};
     _ ->
       lager:error("Failed to fetch offset for topic ~s, partition ~p in group ~s", [Topic, Partition, GroupID]),
@@ -170,7 +170,7 @@ fetch(#state{topic = Topic,
                   [#{error_code := ErrorCode,
                      partition := Partition}]}]}} ->
           lager:error("Error fetching offset ~p of topic ~s, partition ~p: ~s", [Offset + 1, Topic, Partition, kafe_error:message(ErrorCode)]),
-          get_error_action(ErrorCode, ErrorsActions, Offset);
+          get_error_action(ErrorCode, ErrorsActions, Topic, Partition, Offset);
         Error ->
           lager:error("Error fetching offset ~p of topic ~s, partition ~p: ~p", [Offset + 1, Topic, Partition, Error]),
           Error
@@ -179,24 +179,38 @@ fetch(#state{topic = Topic,
       {ok, Offset}
   end.
 
-get_error_action(ErrorCode, ErrorsActions, Offset) ->
-  case maps:get(ErrorsActions, ErrorCode, maps:get(ErrorsActions, '*', undefined)) of
+get_error_action(ErrorCode, ErrorsActions, Topic, Partition, Offset) ->
+  case maps:get(ErrorCode, ErrorsActions, maps:get('*', ErrorsActions, undefined)) of
     undefined ->
       {error, ErrorCode};
     error ->
       {error, ErrorCode};
     {call, {Module, Function, Args}} ->
       erlang:apply(Module, Function, Args);
-    {wait, Time} ->
+    {retry, Time} ->
       {wait, Time};
     stop ->
       stop;
     exit ->
       exit(ErrorCode);
-    continue ->
+    retry ->
       {ok, Offset};
     next ->
       {ok, Offset + 1};
+    {reset, earliest} ->
+      case get_partition_offset(Topic, Partition, -2) of
+        {ok, _} = Offset1 ->
+          Offset1;
+        _ ->
+          {error, internal_error}
+      end;
+    {reset, latest} ->
+      case get_partition_offset(Topic, Partition, -1) of
+        {ok, _} = Offset1 ->
+          Offset1;
+        _ ->
+          {error, internal_error}
+      end;
     _ ->
       {error, ErrorCode}
   end.
@@ -296,18 +310,21 @@ get_start_offset(GroupID, Topic, Partition, FromBeginning) ->
                    true -> -2;
                    false -> -1
                  end,
-          case kafe:offset(-1, [{Topic, [{Partition, Time, 1}]}]) of
-            {ok, [#{name := Topic,
-                    partitions := [#{error_code := none,
-                                     id := Partition,
-                                     offsets := [Offset0]}]}]} ->
-              {ok, Offset0};
-            _ ->
-              error
-          end;
+          get_partition_offset(Topic, Partition, Time);
         false ->
           {ok, Offset}
       end;
+    _ ->
+      error
+  end.
+
+get_partition_offset(Topic, Partition, Time) ->
+  case kafe:offset(-1, [{Topic, [{Partition, Time, 1}]}]) of
+    {ok, [#{name := Topic,
+            partitions := [#{error_code := none,
+                             id := Partition,
+                             offsets := [Offset]}]}]} ->
+      {ok, Offset};
     _ ->
       error
   end.
