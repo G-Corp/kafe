@@ -1,7 +1,7 @@
-%{"bristow": {:hex, :bristow, "0.2.0", "a3f4310ef290ca585c3fb24e50536a3f70e21b6485ff4c2ac663323b1a176630", [:rebar3, :mix, :make], []},
-  "bucs": {:hex, :bucs, "1.0.2", "25899b634be754239a1d6d1a7ad30b6b0ddd2eadfc75c71d52e20ab922a6ffcc", [:rebar3, :mix, :make], []},
-  "doteki": {:hex, :doteki, "1.0.2", "4155cef3c1b19ccb3848b5a0de92ceed916e5aa630ee1fce464623f7765a9e35", [:rebar3, :mix, :make], [{:bucs, "~> 1.0.2", [hex: :bucs, optional: false]}]},
+%{"bristow": {:hex, :bristow, "0.2.0", "a3f4310ef290ca585c3fb24e50536a3f70e21b6485ff4c2ac663323b1a176630", [:make, :mix, :rebar3], []},
+  "bucs": {:hex, :bucs, "1.0.2", "25899b634be754239a1d6d1a7ad30b6b0ddd2eadfc75c71d52e20ab922a6ffcc", [:make, :mix, :rebar3], []},
+  "doteki": {:hex, :doteki, "1.0.2", "4155cef3c1b19ccb3848b5a0de92ceed916e5aa630ee1fce464623f7765a9e35", [:make, :mix, :rebar3], [{:bucs, "~> 1.0.2", [hex: :bucs, optional: false]}]},
   "goldrush": {:hex, :goldrush, "0.1.8", "2024ba375ceea47e27ea70e14d2c483b2d8610101b4e852ef7f89163cdb6e649", [:rebar3], []},
   "lager": {:hex, :lager, "3.2.1", "eef4e18b39e4195d37606d9088ea05bf1b745986cf8ec84f01d332456fe88d17", [:rebar3], [{:goldrush, "0.1.8", [hex: :goldrush, optional: false]}]},
   "metrics": {:hex, :metrics, "2.2.0", "709b45a275fde02c9f2950ceab38b29b46d05687de33299e02c03a71be336545", [:rebar3], []},
-  "poolgirl": {:hex, :poolgirl, "1.1.0", "429f8f7f897a67d56bd945972e890add9e3b40e275314af2b604ef724dec9034", [:rebar3, :mix, :make], [{:doteki, "~> 1.0.2", [hex: :doteki, optional: false]}]}}
+  "poolgirl": {:hex, :poolgirl, "1.1.0", "429f8f7f897a67d56bd945972e890add9e3b40e275314af2b604ef724dec9034", [:make, :mix, :rebar3], [{:doteki, "~> 1.0.2", [hex: :doteki, optional: false]}]}}

@@ -888,6 +888,8 @@ parameter is the list of {topic, partition} that were reassigned. (default: unde
 * `from_beginning :: true | false` : Start consuming method. If it's set to `true`, the consumer will start to consume from the offset next to the
 last committed one. If it's set to `false`, the consumer will start to consume next to the last offset. (default: true).
 
+* `errors_actions :: map()` :
+
 
 <a name="stop_consumer-1"></a>
 

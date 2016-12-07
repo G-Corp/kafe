@@ -39,8 +39,8 @@ init([Topic, Partition, FetchInterval,
 init([Topic, Partition, FetchInterval,
       GroupID, Commit, FromBeginning,
       MinBytes, MaxBytes, MaxWaitTime,
-      Callback]) when is_atom(Callback);
-                      is_tuple(Callback) ->
+      ErrorsActions, Callback]) when is_atom(Callback);
+                                     is_tuple(Callback) ->
   {ok, {
     #{strategy => one_for_all,
       intensity => 1,
@@ -58,7 +58,7 @@ init([Topic, Partition, FetchInterval,
         start => {kafe_consumer_fetcher, start_link, [Topic, Partition, FetchInterval,
                                                       GroupID, Commit, FromBeginning,
                                                       MinBytes, MaxBytes, MaxWaitTime,
-                                                      Callback]},
+                                                      ErrorsActions, Callback]},
         type => worker,
         shutdown => 5000}
     ]
