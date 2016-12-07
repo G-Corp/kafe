@@ -310,7 +310,7 @@ stop_fetch_with_invalid_fun_test() ->
 
 update_fetchers_create_test() ->
   meck:new(kafe_consumer_group_sup, [passthrough]),
-  meck:expect(kafe_consumer_group_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
@@ -339,7 +339,7 @@ update_fetchers_create_test() ->
 
 update_fetchers_unchange_test() ->
   meck:new(kafe_consumer_group_sup, [passthrough]),
-  meck:expect(kafe_consumer_group_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
 %  meck:new(kafe_metrics, [passthrough]),
 %  meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
@@ -362,7 +362,7 @@ update_fetchers_unchange_test() ->
 
 update_fetchers_add_test() ->
   meck:new(kafe_consumer_group_sup, [passthrough]),
-  meck:expect(kafe_consumer_group_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
 %  meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
@@ -401,7 +401,7 @@ update_fetchers_add_test() ->
 
 update_fetchers_delete_test() ->
   meck:new(kafe_consumer_group_sup, [passthrough]),
-  meck:expect(kafe_consumer_group_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
@@ -432,7 +432,7 @@ update_fetchers_delete_test() ->
 
 update_fetchers_update_test() ->
   meck:new(kafe_consumer_group_sup, [passthrough]),
-  meck:expect(kafe_consumer_group_sup, start_child, 10, {ok, c:pid(0, 0, 0)}),
+  meck:expect(kafe_consumer_group_sup, start_child, 11, {ok, c:pid(0, 0, 0)}),
   meck:expect(kafe_consumer_group_sup, stop_child, 1, ok),
   meck:new(kafe_metrics, [passthrough]),
   meck:expect(kafe_metrics, delete_consumer_partition, 3, ok),
