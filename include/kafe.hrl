@@ -81,6 +81,9 @@
 -define(DEFAULT_CONSUMER_CAN_FETCH, undefined).
 -define(DEFAULT_CONSUMER_START_FROM_BEGINNING, true).
 
+-define(DEFAULT_CONSUMER_FETCH_ERROR_ACTIONS, #{'*' => continue}).
+-define(DEFAULT_CONSUMER_ERRORS_ACTIONS, #{fetch => #{'*' => continue}}).
+
 -define(TRY(M, F, A, D),
         try
           erlang:apply(M, F, A)

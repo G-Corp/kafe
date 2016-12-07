@@ -2,22 +2,22 @@
 -module(kafe_consumer_tp_group_sup).
 -behaviour(supervisor).
 
--export([start_link/10]).
+-export([start_link/11]).
 -export([init/1]).
 
 start_link(Topic, Partition, FetchInterval,
            GroupID, Commit, FromBeginning,
            MinBytes, MaxBytes, MaxWaitTime,
-           Callback) ->
+           ErrorsActions, Callback) ->
   supervisor:start_link(?MODULE, [Topic, Partition, FetchInterval,
                                   GroupID, Commit, FromBeginning,
                                   MinBytes, MaxBytes, MaxWaitTime,
-                                  Callback]).
+                                  ErrorsActions, Callback]).
 
 init([Topic, Partition, FetchInterval,
       GroupID, Commit, FromBeginning,
       MinBytes, MaxBytes, MaxWaitTime,
-      Callback]) when is_function(Callback) ->
+      ErrorsActions, Callback]) when is_function(Callback) ->
   {ok, {
     #{strategy => one_for_all,
       intensity => 1,
@@ -31,7 +31,7 @@ init([Topic, Partition, FetchInterval,
         start => {kafe_consumer_fetcher, start_link, [Topic, Partition, FetchInterval,
                                                       GroupID, Commit, FromBeginning,
                                                       MinBytes, MaxBytes, MaxWaitTime,
-                                                      Callback]},
+                                                      ErrorsActions, Callback]},
         type => worker,
         shutdown => 5000}
     ]

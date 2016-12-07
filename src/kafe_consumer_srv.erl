@@ -41,7 +41,8 @@
           on_start_fetching = ?DEFAULT_CONSUMER_ON_START_FETCHING,
           on_stop_fetching = ?DEFAULT_CONSUMER_ON_STOP_FETCHING,
           on_assignment_change = ?DEFAULT_CONSUMER_ON_ASSIGNMENT_CHANGE,
-          can_fetch = ?DEFAULT_CONSUMER_CAN_FETCH
+          can_fetch = ?DEFAULT_CONSUMER_CAN_FETCH,
+          errors_actions = ?DEFAULT_CONSUMER_ERRORS_ACTIONS
          }).
 
 %% API.
@@ -70,6 +71,7 @@ init([GroupID, Options]) ->
   OnStopFetching = maps:get(on_stop_fetching, Options, ?DEFAULT_CONSUMER_ON_STOP_FETCHING),
   OnAssignmentChange = maps:get(on_assignment_change, Options, ?DEFAULT_CONSUMER_ON_ASSIGNMENT_CHANGE),
   CanFetch = maps:get(can_fetch, Options, ?DEFAULT_CONSUMER_CAN_FETCH),
+  ErrorsActions = maps:get(errors_actions, Options, ?DEFAULT_CONSUMER_ERRORS_ACTIONS),
   kafe_consumer_store:insert(GroupID, can_fetch_fun, CanFetch),
   {ok, #state{
           group_id = bucs:to_binary(GroupID),
@@ -84,7 +86,8 @@ init([GroupID, Options]) ->
           on_start_fetching = OnStartFetching,
           on_stop_fetching = OnStopFetching,
           on_assignment_change = OnAssignmentChange,
-          can_fetch = CanFetch
+          can_fetch = CanFetch,
+          errors_actions = ErrorsActions
          }}.
 
 % @hidden
@@ -228,12 +231,13 @@ start_fetchers([{Topic, Partition}|Rest], #state{fetchers = Fetchers,
                                                  min_bytes = MinBytes,
                                                  max_bytes = MaxBytes,
                                                  max_wait_time = MaxWaitTime,
-                                                 callback = Callback} = State) ->
+                                                 callback = Callback,
+                                                 errors_actions = ErrorsActions} = State) ->
   kafe_metrics:init_consumer_partition(GroupID, Topic, Partition),
   case kafe_consumer_group_sup:start_child(Topic, Partition, FetchInterval,
                                            GroupID, Commit, FromBeginning,
                                            MinBytes, MaxBytes, MaxWaitTime,
-                                           Callback) of
+                                           ErrorsActions, Callback) of
     {ok, Pid} ->
       MRef = erlang:monitor(process, Pid),
       start_fetchers(Rest, State#state{fetchers = [{{Topic, Partition}, Pid, MRef}|Fetchers]});

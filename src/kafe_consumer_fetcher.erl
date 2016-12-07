@@ -10,7 +10,7 @@
 -endif.
 
 %% API.
--export([start_link/10]).
+-export([start_link/11]).
 
 %% gen_server.
 -export([init/1]).
@@ -32,13 +32,14 @@
           min_bytes = ?DEFAULT_FETCH_MIN_BYTES,
           max_bytes = ?DEFAULT_FETCH_MAX_BYTES,
           max_wait_time = ?DEFAULT_FETCH_MAX_WAIT_TIME,
-          callback = undefined
+          callback = undefined,
+          errors_actions = ?DEFAULT_CONSUMER_FETCH_ERROR_ACTIONS
          }).
 
 start_link(Topic, Partition, FetchInterval,
            GroupID, Commit, FromBeginning,
            MinBytes, MaxBytes, MaxWaitTime,
-           Callback) ->
+           ErrorsActions, Callback) ->
   gen_server:start_link(?MODULE, [
                                   Topic
                                   , Partition
@@ -49,6 +50,7 @@ start_link(Topic, Partition, FetchInterval,
                                   , MinBytes
                                   , MaxBytes
                                   , MaxWaitTime
+                                  , ErrorsActions
                                   , Callback
                                  ], []).
 
@@ -57,7 +59,7 @@ start_link(Topic, Partition, FetchInterval,
 init([Topic, Partition, FetchInterval,
       GroupID, Commit, FromBeginning,
       MinBytes, MaxBytes, MaxWaitTime,
-      Callback]) ->
+      ErrorsActions, Callback]) ->
   erlang:process_flag(trap_exit, true),
   case get_start_offset(GroupID, Topic, Partition, FromBeginning) of
     {ok, Offset} ->
@@ -87,7 +89,8 @@ init([Topic, Partition, FetchInterval,
               min_bytes = MinBytes,
               max_bytes = MaxBytes,
               max_wait_time = MaxWaitTime,
-              callback = Callback
+              callback = Callback,
+              errors_actions = maps:get(ErrorsActions, fetch, ?DEFAULT_CONSUMER_FETCH_ERROR_ACTIONS)
              }};
     _ ->
       lager:error("Failed to fetch offset for topic ~s, partition ~p in group ~s", [Topic, Partition, GroupID]),
@@ -100,12 +103,20 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
-handle_info(fetch, #state{fetch_interval = FetchInterval} = State) ->
+handle_info(fetch, #state{group_id = GroupID,
+                          fetch_interval = FetchInterval} = State) ->
   case fetch(State) of
     {ok, NextOffset} ->
       {noreply,
        State#state{timer = erlang:send_after(FetchInterval, self(), fetch),
                    offset = NextOffset}};
+    {wait, Time} ->
+      {noreply,
+       State#state{timer = erlang:send_after(Time, self(), fetch)}};
+    stop ->
+      kafe_consumer_sup:stop_child(GroupID),
+      {noreply,
+       State#state{timer = erlang:send_after(FetchInterval, self(), fetch)}};
     _ ->
       {noreply,
        State#state{timer = erlang:send_after(FetchInterval, self(), fetch)}}
@@ -128,7 +139,8 @@ fetch(#state{topic = Topic,
              min_bytes = MinBytes,
              max_bytes = MaxBytes,
              max_wait_time = MaxWaitTime,
-             callback = Callback}) ->
+             callback = Callback,
+             errors_actions = ErrorsActions}) ->
   case kafe_consumer:can_fetch(GroupID) of
     true ->
       case kafe:fetch(-1, Topic, #{partition => Partition,
@@ -158,13 +170,35 @@ fetch(#state{topic = Topic,
                   [#{error_code := ErrorCode,
                      partition := Partition}]}]}} ->
           lager:error("Error fetching offset ~p of topic ~s, partition ~p: ~s", [Offset + 1, Topic, Partition, kafe_error:message(ErrorCode)]),
-          {error, ErrorCode};
+          get_error_action(ErrorCode, ErrorsActions, Offset);
         Error ->
           lager:error("Error fetching offset ~p of topic ~s, partition ~p: ~p", [Offset + 1, Topic, Partition, Error]),
           Error
       end;
     false ->
       {ok, Offset}
+  end.
+
+get_error_action(ErrorCode, ErrorsActions, Offset) ->
+  case maps:get(ErrorsActions, ErrorCode, maps:get(ErrorsActions, '*', undefined)) of
+    undefined ->
+      {error, ErrorCode};
+    error ->
+      {error, ErrorCode};
+    {call, {Module, Function, Args}} ->
+      erlang:apply(Module, Function, Args);
+    {wait, Time} ->
+      {wait, Time};
+    stop ->
+      stop;
+    exit ->
+      exit(ErrorCode);
+    continue ->
+      {ok, Offset};
+    next ->
+      {ok, Offset + 1};
+    _ ->
+      {error, ErrorCode}
   end.
 
 process_messages([], Topic, Partition, _, GroupID, _, LastOffset, Start) ->

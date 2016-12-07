@@ -7,7 +7,7 @@
 -export([
          start_link/0
          , stop_child/1
-         , start_child/10
+         , start_child/11
         ]).
 -export([init/1]).
 
@@ -32,11 +32,11 @@ stop_child(Pid) when is_pid(Pid) ->
 start_child(Topic, Partition, FetchInterval,
             GroupID, Commit, FromBeginning,
             MinBytes, MaxBytes, MaxWaitTime,
-            Callback) ->
+            ErrorsActions, Callback) ->
   case supervisor:start_child(?MODULE, [Topic, Partition, FetchInterval,
                                         GroupID, Commit, FromBeginning,
                                         MinBytes, MaxBytes, MaxWaitTime,
-                                        Callback]) of
+                                        ErrorsActions, Callback]) of
     {ok, Child, _} -> {ok, Child};
     Other -> Other
   end.
