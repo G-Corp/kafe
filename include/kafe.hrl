@@ -70,7 +70,8 @@
                                          ?DEFAULT_GROUP_USER_DATA)]).
 
 -define(DEFAULT_CONSUMER_FETCH_INTERVAL, 10).
--define(DEFAULT_CONSUMER_COMMIT, [after_processing, {interval, 1000}]).
+-define(DEFAULT_CONSUMER_COMMIT_INTERVAL, 1000).
+-define(DEFAULT_CONSUMER_COMMIT, [after_processing, {interval, ?DEFAULT_CONSUMER_COMMIT_INTERVAL}]).
 -define(DEFAULT_CONSUMER_ALLOW_UNORDERED_COMMIT, false).
 -define(DEFAULT_CONSUMER_COMMIT_RETRY, 0).
 -define(DEFAULT_CONSUMER_COMMIT_DELAY, 100).

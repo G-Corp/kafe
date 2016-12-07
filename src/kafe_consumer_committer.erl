@@ -83,12 +83,18 @@ handle_call({commit, Offset}, _From, #state{group_id = GroupID,
                                             topic = Topic,
                                             partition = Partition,
                                             last_offset = MaxOffset,
+                                            commit_messages = CommitMessages,
                                             commits = Commits} = State) ->
   case (not lists:member(Offset, Commits)) andalso (Offset >= MaxOffset) of
     true ->
       Commits0 = lists:sort([Offset|Commits]),
       kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(Commits0)),
-      {reply, ok, start_commit_timer(State#state{commits = Commits0}, 5)};
+      case length(Commits0) >= CommitMessages of
+        true ->
+          {reply, ok, start_commit_timer(State#state{commits = Commits0}, 5)};
+        false ->
+          {reply, ok, State#state{commits = Commits0}}
+      end;
     false ->
       {reply, ok, State}
   end;
@@ -101,38 +107,37 @@ handle_cast(_Msg, State) ->
   {noreply, State}.
 
 % @hidden
-handle_info(commit, #state{commits = []} = State) ->
-  {noreply, start_commit_timer(State#state{attempt = 0})};
 handle_info(commit, #state{last_offset = LastOffset, commits = Commits, group_id = GroupID, topic = Topic, partition = Partition, attempt = Attempt} = State) ->
   case kafe_consumer_store:lookup(GroupID, can_fetch) of
     {ok, true} ->
-      case lcs(LastOffset, Commits, Attempt) of
-        [] ->
-          {noreply, start_commit_timer(State#state{attempt = Attempt + 1})};
-        LIS ->
-          CommitOffset = lists:max(LIS) + 1,
-          GenerationID = kafe_consumer_store:value(GroupID, generation_id),
-          MemberID = kafe_consumer_store:value(GroupID, member_id),
-          case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
-                                  [{Topic, [{Partition, CommitOffset, <<>>}]}]) of
-            {ok, [#{name := Topic,
-                    partitions := [#{error_code := none,
-                                     partition := Partition}]}]} ->
-              lager:debug("Committed offset ~p for topic ~s, partition ~p", [CommitOffset, Topic, Partition]),
-              RemainingCommits = Commits -- LIS,
-              kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(RemainingCommits)),
-              {noreply, start_commit_timer(State#state{last_offset = CommitOffset,
-                                                       commits = RemainingCommits,
-                                                       attempt = 0})};
-            {ok, [#{name := Topic,
-                    partitions := [#{error_code := Error,
-                                     partition := Partition}]}]} ->
-              lager:error("Commit offset ~p for topic ~s, partition ~p error: ~s", [CommitOffset, Topic, Partition, kafe_error:message(Error)]),
-              {noreply, start_commit_timer(State)};
-            Error ->
-              lager:error("Commit offset ~p for topic ~s, partition ~p error: ~p", [CommitOffset, Topic, Partition, Error]),
-              {noreply, start_commit_timer(State)}
-          end
+      {Attempt0,
+       RemainingCommits,
+       CommitOffset} = case lcs(LastOffset, Commits, Attempt) of
+                         [] ->
+                           {Attempt + 1, [], LastOffset};
+                         LIS ->
+                           {0, Commits -- LIS, lists:max(LIS) + 1}
+                       end,
+      GenerationID = kafe_consumer_store:value(GroupID, generation_id),
+      MemberID = kafe_consumer_store:value(GroupID, member_id),
+      case kafe:offset_commit(GroupID, GenerationID, MemberID, -1,
+                              [{Topic, [{Partition, CommitOffset, <<>>}]}]) of
+        {ok, [#{name := Topic,
+                partitions := [#{error_code := none,
+                                 partition := Partition}]}]} ->
+          lager:debug("Committed offset ~p for topic ~s, partition ~p", [CommitOffset, Topic, Partition]),
+          kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(RemainingCommits)),
+          {noreply, start_commit_timer(State#state{last_offset = CommitOffset,
+                                                   commits = RemainingCommits,
+                                                   attempt = Attempt0})};
+        {ok, [#{name := Topic,
+                partitions := [#{error_code := Error,
+                                 partition := Partition}]}]} ->
+          lager:error("Commit offset ~p for topic ~s, partition ~p error: ~s", [CommitOffset, Topic, Partition, kafe_error:message(Error)]),
+          {noreply, start_commit_timer(State)};
+        Error ->
+          lager:error("Commit offset ~p for topic ~s, partition ~p error: ~p", [CommitOffset, Topic, Partition, Error]),
+          {noreply, start_commit_timer(State)}
       end;
     _ ->
       {noreply, start_commit_timer(State)}
@@ -165,6 +170,8 @@ start_commit_timer(#state{commit_interval = undefined} = State) ->
 start_commit_timer(#state{commit_interval = Interval, commit_timer = undefined} = State) ->
   State#state{commit_timer = erlang:send_after(Interval, self(), commit)}.
 
+lcs(_Last, [], _Attempt) ->
+  [];
 lcs(Last, [First|_] = List, _Attempt) when Last == First ->
   do_lcs(List, Last, []);
 lcs(_, _, Attempt) when Attempt < ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS ->
@@ -463,6 +470,8 @@ info_commit_cannot_fetch_test() ->
 lcs_test() ->
   ?assertMatch([2, 1, 0], lcs(0, [0, 1, 2], 0)),
   ?assertMatch([], lcs(0, [1, 2, 3], 0)),
+  ?assertMatch([], lcs(0, [], 0)),
+  ?assertMatch([], lcs(0, [], ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS)),
   ?assertMatch([3, 2, 1], lcs(0, [1, 2, 3], ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS)),
   ?assertMatch([], lcs(0, [1, 2, 3, 6, 7, 8], 0)),
   ?assertMatch([3, 2, 1], lcs(0, [1, 2, 3, 6, 7, 8], ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS)),
