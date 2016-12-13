@@ -170,7 +170,7 @@ fetch(#state{topic = Topic,
                   [#{error_code := ErrorCode,
                      partition := Partition}]}]}} ->
           lager:error("Error fetching offset ~p of topic ~s, partition ~p: ~s", [Offset + 1, Topic, Partition, kafe_error:message(ErrorCode)]),
-          get_error_action(ErrorCode, ErrorsActions, Topic, Partition, Offset);
+          get_error_action(ErrorCode, ErrorsActions, Topic, Partition, Offset, GroupID);
         Error ->
           lager:error("Error fetching offset ~p of topic ~s, partition ~p: ~p", [Offset + 1, Topic, Partition, Error]),
           Error
@@ -179,14 +179,21 @@ fetch(#state{topic = Topic,
       {ok, Offset}
   end.
 
-get_error_action(ErrorCode, ErrorsActions, Topic, Partition, Offset) ->
+get_error_action(ErrorCode, ErrorsActions, Topic, Partition, Offset, GroupID) ->
   case maps:get(ErrorCode, ErrorsActions, maps:get('*', ErrorsActions, undefined)) of
     undefined ->
       {error, ErrorCode};
     error ->
       {error, ErrorCode};
     {call, {Module, Function, Args}} ->
-      erlang:apply(Module, Function, Args);
+      try
+        erlang:apply(Module, Function, [Topic, Partition, Offset, GroupID|Args])
+      catch
+        Class:Error ->
+          lager:error("Error calling ~s:~s/~p, topic ~s, partition ~p, offset ~p, group ~s, args ~p",
+                      [Module, Function, Topic, Partition, Offset, GroupID, Args]),
+          stop
+      end;
     {retry, Time} ->
       {wait, Time};
     stop ->
@@ -196,10 +203,12 @@ get_error_action(ErrorCode, ErrorsActions, Topic, Partition, Offset) ->
     retry ->
       {ok, Offset};
     next ->
+      commit(Offset, Topic, Partition, GroupID),
       {ok, Offset + 1};
     {reset, earliest} ->
       case get_partition_offset(Topic, Partition, -2) of
         {ok, _} = Offset1 ->
+          commit(Offset1 - 1, Topic, Partition, GroupID),
           Offset1;
         _ ->
           {error, internal_error}
@@ -207,6 +216,7 @@ get_error_action(ErrorCode, ErrorsActions, Topic, Partition, Offset) ->
     {reset, latest} ->
       case get_partition_offset(Topic, Partition, -1) of
         {ok, _} = Offset1 ->
+          commit(Offset1 - 1, Topic, Partition, GroupID),
           Offset1;
         _ ->
           {error, internal_error}
