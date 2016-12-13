@@ -207,17 +207,17 @@ get_error_action(ErrorCode, ErrorsActions, Topic, Partition, Offset, GroupID) ->
       {ok, Offset + 1};
     {reset, earliest} ->
       case get_partition_offset(Topic, Partition, -2) of
-        {ok, _} = Offset1 ->
+        {ok, Offset1} ->
           commit(Offset1 - 1, Topic, Partition, GroupID),
-          Offset1;
+          {ok, Offset1};
         _ ->
           {error, internal_error}
       end;
     {reset, latest} ->
       case get_partition_offset(Topic, Partition, -1) of
-        {ok, _} = Offset1 ->
+        {ok, Offset1} ->
           commit(Offset1 - 1, Topic, Partition, GroupID),
-          Offset1;
+          {ok, Offset1};
         _ ->
           {error, internal_error}
       end;
