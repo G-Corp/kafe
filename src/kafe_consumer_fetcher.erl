@@ -190,8 +190,8 @@ get_error_action(ErrorCode, ErrorsActions, Topic, Partition, Offset, GroupID) ->
         erlang:apply(Module, Function, [Topic, Partition, Offset, GroupID|Args])
       catch
         Class:Error ->
-          lager:error("Error calling ~s:~s/~p, topic ~s, partition ~p, offset ~p, group ~s, args ~p",
-                      [Module, Function, Topic, Partition, Offset, GroupID, Args]),
+          lager:error("Error calling ~s:~s/~p, topic ~s, partition ~p, offset ~p, group ~s, args ~p: ~p : ~p",
+                      [Module, Function, Topic, Partition, Offset, GroupID, Args, Class, Error]),
           stop
       end;
     {retry, Time} ->
