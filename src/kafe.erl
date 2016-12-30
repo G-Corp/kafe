@@ -72,6 +72,7 @@
          max_offset/2,
          partition_for_offset/2,
          api_version/0,
+         update_brokers/0,
          state/0
         ]).
 
@@ -296,6 +297,10 @@ partition_for_offset(TopicName, Offset) ->
   end.
 
 % @hidden
+update_brokers() ->
+  gen_server:cast(?SERVER, update_brokers).
+
+% @hidden
 api_version() ->
   gen_server:call(?SERVER, api_version, ?TIMEOUT).
 
@@ -453,7 +458,15 @@ fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_
 % @end
 -spec fetch(integer(), binary(), fetch_options()) -> {ok, [message_set()]} | {ok, #{topics => [message_set()], throttle_time => integer()}} | {error, term()}.
 fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), (is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName)), is_map(Options) ->
-  kafe_protocol_fetch:run(ReplicatID, TopicName, Options).
+  case kafe_protocol_fetch:run(ReplicatID, TopicName, Options) of
+    {ok, #{topics :=
+           [#{partitions :=
+              [#{error_code := ErrorCode}]}]}} = Result when ErrorCode =:= not_leader_for_partition ->
+      update_brokers(),
+      Result;
+    Other ->
+      Other
+  end.
 
 % @doc
 % Find groups managed by all brokers.
@@ -817,8 +830,9 @@ init(_) ->
             pool_size => PoolSize,
             chunk_pool_size => ChunkPoolSize},
   State1 = update_state_with_metadata(init_connexions(State)),
-  _ = erlang:send_after(BrokersUpdateFreq, self(), update_brokers),
-  {ok, State1}.
+  {ok, State1#{
+         brokers_update_timer => erlang:send_after(BrokersUpdateFreq, self(), update_brokers)
+        }}.
 
 % @hidden
 handle_call(number_of_brokers, _From, #{brokers_list := Brokers} = State) ->
@@ -863,15 +877,20 @@ handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
 % @hidden
+handle_cast(update_brokers, State) ->
+  handle_info(update_brokers, State);
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
 % @hidden
-handle_info(update_brokers, #{brokers_update_frequency := Frequency} = State) ->
+handle_info(update_brokers, #{brokers_update_frequency := Frequency,
+                              brokers_update_timer := Timer} = State) ->
   lager:debug("Update brokers list..."),
+  erlang:cancel_timer(Timer),
   State1 = update_state_with_metadata(remove_dead_brokers(State)),
-  _ = erlang:send_after(Frequency, self(), update_brokers),
-  {noreply, State1};
+  {noreply, State1#{
+              brokers_update_timer => erlang:send_after(Frequency, self(), update_brokers)
+             }};
 % @hidden
 handle_info(_Info, State) ->
   {noreply, State}.

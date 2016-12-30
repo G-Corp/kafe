@@ -1,7 +1,7 @@
 [{<<"bristow">>,{pkg,<<"bristow">>,<<"0.2.1">>},0},
  {<<"bucs">>,{pkg,<<"bucs">>,<<"1.0.3">>},0},
  {<<"doteki">>,{pkg,<<"doteki">>,<<"1.0.3">>},0},
- {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.8">>},1},
- {<<"lager">>,{pkg,<<"lager">>,<<"3.2.1">>},0},
+ {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.9">>},1},
+ {<<"lager">>,{pkg,<<"lager">>,<<"3.2.4">>},0},
  {<<"metrics">>,{pkg,<<"metrics">>,<<"2.2.0">>},0},
  {<<"poolgirl">>,{pkg,<<"poolgirl">>,<<"1.1.1">>},0}].
