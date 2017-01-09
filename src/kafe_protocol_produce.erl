@@ -4,10 +4,65 @@
 -include("../include/kafe.hrl").
 
 -export([
+         run2/2,
+         request2/3,
          run/3,
          request/5,
          response/2
         ]).
+
+% [{broker_id, [{topic, [{partition, [message]}]}]}]
+run2(Messages, Options) ->
+  case dispatch(Messages,
+           maps:get(key_to_partition, Options, fun kafe:default_key_to_partition/2),
+           []) of
+    {ok, Dispatch} ->
+      consolidate(
+        [kafe_protocol:run(BrokerID,
+                           {call,
+                            fun ?MODULE:request2/3, [Messages0, Options],
+                            fun ?MODULE:response/2})
+         || {BrokerID, Messages0} <- Dispatch]);
+    {error, _} = Error ->
+      Error
+  end.
+
+request2(Messages, Options, #{api_version := ApiVersion} = State) ->
+  Timeout = maps:get(timeout, Options, ?DEFAULT_PRODUCE_SYNC_TIMEOUT),
+  RequiredAcks = maps:get(required_acks,
+                          Options,
+                          ?DEFAULT_PRODUCE_REQUIRED_ACKS),
+  Encoded = encode_messages_topics(Messages, Options, ApiVersion, []),
+  kafe_protocol:request(
+    ?PRODUCE_REQUEST,
+    <<RequiredAcks:16, Timeout:32, Encoded/binary>>,
+    State,
+    ApiVersion).
+
+encode_messages_topics([], _, _, Acc) ->
+  kafe_protocol:encode_array(lists:reverse(Acc));
+encode_messages_topics([{Topic, Messages}|Rest], Options, ApiVersion, Acc) ->
+  encode_messages_topics(
+    Rest,
+    Options,
+    ApiVersion,
+    [<<(kafe_protocol:encode_string(Topic))/binary,
+       (encode_messages_partitions(Messages, Options, ApiVersion, []))/binary>>
+     |Acc]).
+
+encode_messages_partitions([], _, _, Acc) ->
+  kafe_protocol:encode_array(lists:reverse(Acc));
+encode_messages_partitions([{Partition, Messages}|Rest], Options, ApiVersion, Acc) ->
+  MessageSet = message_set(Messages, Options, ApiVersion, <<>>),
+  encode_messages_partitions(
+    Rest,
+    Options,
+    ApiVersion,
+    [<<Partition:32/signed,
+       (kafe_protocol:encode_bytes(MessageSet))/binary>>
+     |Acc]).
+
+
 
 run(Topic, Message, Options) ->
   Partition = case Message of
@@ -232,4 +287,81 @@ partitions(
 get_timestamp() ->
   {Mega, Sec, Micro} = erlang:timestamp(),
   (Mega * 1000000 + Sec) * 1000000 + Micro.
+
+% Message dispatch per brocker
+dispatch([], _, Result) ->
+  {ok, Result};
+dispatch([{Topic, Messages}|Rest], KeyToPartition, Result) ->
+  case dispatch(Messages, Topic, KeyToPartition, Result) of
+    {error, _} = Error ->
+      Error;
+    Dispatch ->
+      dispatch(Rest, KeyToPartition, Dispatch)
+  end.
+
+dispatch([], _, _, Result) ->
+  Result;
+dispatch([{Key, Value, Partition}|Rest], Topic, KeyToPartition, Result) when is_binary(Value),
+                                                                             is_integer(Partition) ->
+  case kafe:broker_id_by_topic_and_partition(Topic, Partition) of
+    undefined ->
+      {error, {Topic, Partition}};
+    BrokerID ->
+      TopicsForBroker = buclists:keyfind(BrokerID, 1, Result, []),
+      PartitionsForTopic = buclists:keyfind(Topic, 1, TopicsForBroker, []),
+      MessagesForPartition = buclists:keyfind(Partition, 1, PartitionsForTopic, []),
+      dispatch(
+        Rest,
+        Topic,
+        KeyToPartition,
+      buclists:keyupdate(
+        BrokerID,
+        1,
+        Result,
+        {BrokerID,
+         buclists:keyupdate(
+           Topic,
+           1,
+           TopicsForBroker,
+           {Topic,
+            buclists:keyupdate(
+              Partition,
+              1,
+              PartitionsForTopic,
+              {Partition,
+               [{Key, Value}|MessagesForPartition]})})}))
+  end;
+dispatch([{Key, Value}|Rest], Topic, KeyToPartition, Result) when is_binary(Value) ->
+  dispatch([{Key, Value, erlang:apply(KeyToPartition, [Topic, Key])}|Rest], Topic, KeyToPartition, Result);
+dispatch([{Value, Partition}|Rest], Topic, KeyToPartition, Result) when is_binary(Value),
+                                                                        is_integer(Partition) ->
+  dispatch([{<<>>, Value, Partition}|Rest], Topic, KeyToPartition, Result);
+dispatch([Value|Rest], Topic, KeyToPartition, Result) when is_binary(Value) ->
+  dispatch([{<<>>, Value, kafe_rr:next(Topic)}|Rest], Topic, KeyToPartition, Result).
+
+consolidate([{ok, Base}|Rest]) ->
+  consolidate(Rest, Base).
+
+consolidate([], Acc) ->
+  {ok, Acc};
+consolidate([{ok, #{topics := Topics}}|Rest], #{topics := AccTopics} = Acc) ->
+  consolidate(
+    Rest,
+    Acc#{topics => consolidate_topics(Topics, AccTopics)}).
+
+consolidate_topics([], Topics) ->
+  Topics;
+consolidate_topics([#{name := Topic, partitions := Partitions}|Rest], Topics) ->
+  consolidate_topics(
+    Rest,
+    add_partition(Topics, Topic, Partitions, [])).
+
+add_partition([], _, [], Acc) ->
+  Acc;
+add_partition([], Topic, Partitions, Acc) ->
+  [#{name => Topic, partitions => Partitions}|Acc];
+add_partition([#{name := Topic, partitions := CurrentPartitions}|Rest], Topic, Partitions, Acc) ->
+  add_partition(Rest, Topic, [], [#{name => Topic, partitions => CurrentPartitions ++ Partitions}|Acc]);
+add_partition([Current|Rest], Topic, Partitions, Acc) ->
+  add_partition(Rest, Topic, Partitions, [Current|Acc]).
 

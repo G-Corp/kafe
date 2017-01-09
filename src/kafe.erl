@@ -28,6 +28,9 @@
          offset/2,
          produce/2,
          produce/3,
+
+produce2/2,
+
          default_key_to_partition/2,
          fetch/1,
          fetch/2,
@@ -63,6 +66,7 @@
          first_broker/0,
          release_broker/1,
          broker_id_by_topic_and_partition/2,
+         broker_id_by_topics_and_partitions/1,
          broker_by_name/1,
          broker_by_host_and_port/2,
          broker_by_id/1,
@@ -234,6 +238,10 @@ broker_id_by_topic_and_partition(Topic, Partition) ->
   gen_server:call(?SERVER, {broker_id_by_topic_and_partition, bucs:to_binary(Topic), Partition}, ?TIMEOUT).
 
 % @hidden
+broker_id_by_topics_and_partitions(TopicsAndPartitions) ->
+  gen_server:call(?SERVER, {broker_id_by_topics_and_partitions, TopicsAndPartitions}, ?TIMEOUT).
+
+% @hidden
 broker_by_name(BrokerName) ->
   gen_server:call(?SERVER, {broker_by_name, BrokerName}, ?TIMEOUT).
 
@@ -364,8 +372,21 @@ offset(Topics) when is_list(Topics) ->
 offset(ReplicatID, Topics) when is_integer(ReplicatID), is_list(Topics) ->
   kafe_protocol_offset:run(ReplicatID, Topics).
 
+
+-spec produce2([{Topic :: binary(),
+                 [{Key :: term(), Value :: binary(), Partition :: integer()}
+                  | {Value :: binary(), Partition :: integer()}
+                  | {Key :: term(), Value :: binary()}
+                  | binary()]}],
+               Options :: produce_options()) -> ok | {ok, [topic_partition_info()]} | {error,  term()}.
+produce2(Messages, Options) when is_list(Messages), is_map(Options) ->
+  kafe_protocol_produce:run2(Messages, Options).
+
 % @equiv produce(Topic, Message, #{})
-produce(Topic, Message) ->
+produce(Topic, Message) when is_binary(Message) ->
+  produce(Topic, Message, #{});
+produce(Topic, {Key, Value} = Message) when is_binary(Key),
+                                            is_binary(Value) ->
   produce(Topic, Message, #{}).
 
 % @doc
@@ -840,17 +861,20 @@ handle_call(number_of_brokers, _From, #{brokers_list := Brokers} = State) ->
 handle_call(first_broker, _From, State) ->
   {reply, get_first_broker(State), State};
 handle_call({broker_id_by_topic_and_partition, Topic, Partition}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
-  case maps:get(Topic, Topics, undefined) of
-    undefined ->
-      {reply, undefined, State};
-    Brokers ->
-      case maps:get(Partition, Brokers, undefined) of
-        undefined ->
-          {reply, undefined, State};
-        Broker ->
-          {reply, maps:get(Broker, BrokersAddr, undefined), State}
-      end
-  end;
+  {reply,
+   broker_id({Topic, Partition}, Topics, BrokersAddr),
+   State};
+handle_call({broker_id_by_topics_and_partitions, TopicsAndPartitions}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
+  {reply,
+   broker_id(
+     lists:flatten(
+       [[{Topic, Partition}
+         || Partition <- Partitions]
+        || {Topic, Partitions} <- TopicsAndPartitions]),
+     Topics,
+     BrokersAddr,
+     undefined),
+   State};
 handle_call({broker_by_name, BrokerName}, _From, #{brokers := BrokersAddr} = State) ->
   case maps:get(bucs:to_string(BrokerName), BrokersAddr, undefined) of
     undefined ->
@@ -1126,5 +1150,32 @@ get_first_broker([BrokerID|Rest]) ->
     {error, Reason} ->
       lager:error("Can't checkout broker from pool ~s: ~p", [BrokerID, Reason]),
       get_first_broker(Rest)
+  end.
+
+% @hidden
+broker_id({Topic, Partition}, Topics, BrokersAddr) ->
+  case maps:get(Topic, Topics, undefined) of
+    undefined ->
+      undefined;
+    Brokers ->
+      case maps:get(Partition, Brokers, undefined) of
+        undefined ->
+          undefined;
+        Broker ->
+          maps:get(Broker, BrokersAddr, undefined)
+      end
+  end.
+
+% @hidden
+broker_id([], _, _, BrokerID) ->
+  BrokerID;
+broker_id([TopicPartition|Rest], Topics, BrokersAddr, BrokerID) ->
+  case {broker_id(TopicPartition, Topics, BrokersAddr), BrokerID} of
+    {undefined, _} ->
+      undefined;
+    {BrokerID, BrokerID} ->
+      broker_id(Rest, Topics, BrokersAddr, BrokerID);
+    {NewBrokerID, undefined} ->
+      broker_id(Rest, Topics, BrokersAddr, NewBrokerID)
   end.
 
