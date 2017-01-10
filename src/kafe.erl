@@ -28,9 +28,6 @@
          offset/2,
          produce/2,
          produce/3,
-
-produce2/2,
-
          default_key_to_partition/2,
          fetch/1,
          fetch/2,
@@ -112,10 +109,13 @@ produce2/2,
                                                     isr => [integer()],
                                                     leader => integer(),
                                                     replicas => [integer()]}]}]}.
+-type topic() :: binary().
+-type key() :: term().
+-type value() :: binary().
+-type partition() :: integer().
 -type topics() :: [binary() | string() | atom()] | [{binary() | string() | atom(), [{integer(), integer(), integer()}]}].
 -type topic_partition_info() :: #{name => binary(),
                                   partitions => [#{error_code => error_code(), id => integer(), offsets => [integer()]}]}.
--type message() :: binary() | {binary(), binary()}.
 -type produce_options() :: #{timeout => integer(),
                              required_acks => integer(),
                              partition => integer(),
@@ -372,23 +372,6 @@ offset(Topics) when is_list(Topics) ->
 offset(ReplicatID, Topics) when is_integer(ReplicatID), is_list(Topics) ->
   kafe_protocol_offset:run(ReplicatID, Topics).
 
-
--spec produce2([{Topic :: binary(),
-                 [{Key :: term(), Value :: binary(), Partition :: integer()}
-                  | {Value :: binary(), Partition :: integer()}
-                  | {Key :: term(), Value :: binary()}
-                  | binary()]}],
-               Options :: produce_options()) -> ok | {ok, [topic_partition_info()]} | {error,  term()}.
-produce2(Messages, Options) when is_list(Messages), is_map(Options) ->
-  kafe_protocol_produce:run2(Messages, Options).
-
-% @equiv produce(Topic, Message, #{})
-produce(Topic, Message) when is_binary(Message) ->
-  produce(Topic, Message, #{});
-produce(Topic, {Key, Value} = Message) when is_binary(Key),
-                                            is_binary(Value) ->
-  produce(Topic, Message, #{}).
-
 % @doc
 % Send a message
 %
@@ -404,7 +387,8 @@ produce(Topic, {Key, Value} = Message) when is_binary(Key),
 % If it is 1, the server will wait the data is written to the local log before sending a response. If it is -1 the server will block until the message is committed
 % by all in sync replicas before sending a response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server
 % will never wait for more acknowledgements than there are in-sync replicas). (default: -1)</li>
-% <li><tt>partition :: integer()</tt> : The partition that data is being published to.</li>
+% <li><tt>partition :: integer()</tt> : The partition that data is being published to.
+% <i>This option exist for compatibility but it will be removed in the next major release.</i></li>
 % <li><tt>key_to_partition :: fun((binary(), term()) -&gt; integer())</tt> : Hash function to do partition assignment from the message key. (default:
 % kafe:default_key_to_partition/2)</li>
 % </ul>
@@ -422,9 +406,29 @@ produce(Topic, {Key, Value} = Message) when is_binary(Key),
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI">Kafka protocol documentation</a>.
 % @end
--spec produce(binary(), message(), produce_options()) -> ok | {ok, [topic_partition_info()]} | {error,  term()}.
-produce(Topic, Message, Options) ->
-  kafe_protocol_produce:run(Topic, Message, Options).
+-spec produce([{topic(), [{key(), value(), partition()}
+                          | {value(), partition()}
+                          | {key(), value()}
+                          | value()]}], produce_options()) ->
+  ok
+  | {ok, [topic_partition_info()]}
+  | {error,  term()}.
+produce(Messages, Options) when is_list(Messages), is_map(Options) ->
+  kafe_protocol_produce:run(Messages, Options);
+produce(Topic, Message) when is_binary(Topic),
+                             (is_binary(Message) orelse is_tuple(Message)) ->
+  produce([{Topic, [Message]}], #{}).
+
+% @equiv produce([{Topic, [Message]}], Options)
+produce(Topic, Message, #{partition := Partition} = Options) when is_binary(Topic),
+                                      is_binary(Message) ->
+  produce([{Topic, [{Message, Partition}]}], Options);
+produce(Topic, {Key, Value}, #{partition := Partition} = Options) when is_binary(Topic),
+                                                                       is_binary(Value) ->
+  produce([{Topic, [{Key, Value, Partition}]}], Options);
+produce(Topic, Message, Options) when is_binary(Topic),
+                                      is_map(Options) ->
+  produce([{Topic, [Message]}], Options).
 
 % @doc
 % Default fonction used to do partition assignment from the message key.

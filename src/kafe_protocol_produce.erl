@@ -4,15 +4,13 @@
 -include("../include/kafe.hrl").
 
 -export([
-         run2/2,
-         request2/3,
-         run/3,
-         request/5,
+         run/2,
+         request/3,
          response/2
         ]).
 
 % [{broker_id, [{topic, [{partition, [message]}]}]}]
-run2(Messages, Options) ->
+run(Messages, Options) ->
   case dispatch(Messages,
            maps:get(key_to_partition, Options, fun kafe:default_key_to_partition/2),
            []) of
@@ -20,69 +18,11 @@ run2(Messages, Options) ->
       consolidate(
         [kafe_protocol:run(BrokerID,
                            {call,
-                            fun ?MODULE:request2/3, [Messages0, Options],
+                            fun ?MODULE:request/3, [Messages0, Options],
                             fun ?MODULE:response/2})
          || {BrokerID, Messages0} <- Dispatch]);
     {error, _} = Error ->
       Error
-  end.
-
-request2(Messages, Options, #{api_version := ApiVersion} = State) ->
-  Timeout = maps:get(timeout, Options, ?DEFAULT_PRODUCE_SYNC_TIMEOUT),
-  RequiredAcks = maps:get(required_acks,
-                          Options,
-                          ?DEFAULT_PRODUCE_REQUIRED_ACKS),
-  Encoded = encode_messages_topics(Messages, Options, ApiVersion, []),
-  kafe_protocol:request(
-    ?PRODUCE_REQUEST,
-    <<RequiredAcks:16, Timeout:32, Encoded/binary>>,
-    State,
-    ApiVersion).
-
-encode_messages_topics([], _, _, Acc) ->
-  kafe_protocol:encode_array(lists:reverse(Acc));
-encode_messages_topics([{Topic, Messages}|Rest], Options, ApiVersion, Acc) ->
-  encode_messages_topics(
-    Rest,
-    Options,
-    ApiVersion,
-    [<<(kafe_protocol:encode_string(Topic))/binary,
-       (encode_messages_partitions(Messages, Options, ApiVersion, []))/binary>>
-     |Acc]).
-
-encode_messages_partitions([], _, _, Acc) ->
-  kafe_protocol:encode_array(lists:reverse(Acc));
-encode_messages_partitions([{Partition, Messages}|Rest], Options, ApiVersion, Acc) ->
-  MessageSet = message_set(Messages, Options, ApiVersion, <<>>),
-  encode_messages_partitions(
-    Rest,
-    Options,
-    ApiVersion,
-    [<<Partition:32/signed,
-       (kafe_protocol:encode_bytes(MessageSet))/binary>>
-     |Acc]).
-
-
-
-run(Topic, Message, Options) ->
-  Partition = case Message of
-                {Key, _} when erlang:size(Key) > 0 ->
-                  KeyToPartition = maps:get(key_to_partition, Options, fun kafe:default_key_to_partition/2),
-                  erlang:apply(KeyToPartition, [Topic, Key]);
-                _ ->
-                  maps:get(partition, Options, kafe_rr:next(Topic))
-              end,
-  case maps:get(required_acks, Options, ?DEFAULT_PRODUCE_REQUIRED_ACKS) of
-    0 ->
-      kafe_protocol:run({topic_and_partition, Topic, Partition},
-                        {call,
-                         fun ?MODULE:request/5, [bucs:to_binary(Topic), Partition, Message, Options],
-                         undefined});
-    _ ->
-      kafe_protocol:run({topic_and_partition, Topic, Partition},
-                        {call,
-                         fun ?MODULE:request/5, [bucs:to_binary(Topic), Partition, Message, Options],
-                         fun ?MODULE:response/2})
   end.
 
 %% Produce Request (Version: 0) => acks timeout [topic_data]
@@ -116,36 +56,40 @@ run(Topic, Message, Options) ->
 %%   Timestamp => int64
 %%   Key => bytes
 %%   Value => bytes
-request(Topic, Partition, Messages, Options, #{api_version := ApiVersion} = State) ->
+request(Messages, Options, #{api_version := ApiVersion} = State) ->
   Timeout = maps:get(timeout, Options, ?DEFAULT_PRODUCE_SYNC_TIMEOUT),
   RequiredAcks = maps:get(required_acks,
                           Options,
                           ?DEFAULT_PRODUCE_REQUIRED_ACKS),
-
-  Messages1 = [case Msg of
-                 {Key, Value} ->
-                   {Key, Value};
-                 _ ->
-                   {<<>>, Msg}
-               end || Msg <- case is_list(Messages) of
-                               true -> Messages;
-                               false -> [Messages]
-                             end],
-  % MessageSet = message_set(Key, Value, Options, ApiVersion, <<>>),
-  MessageSet = message_set(Messages1, Options, ApiVersion, <<>>),
-  Encoded = <<
-              1:32/signed, % Number of topics
-              (kafe_protocol:encode_string(Topic))/binary, % Topic
-              1:32/signed, % Number or partition
-              Partition:32/signed, % Partition
-              % N.B., MessageSets are not preceded by an int32 like other array elements in the protocol.
-              (kafe_protocol:encode_bytes(MessageSet))/binary % Message Set
-            >>,
+  Encoded = encode_messages_topics(Messages, Options, ApiVersion, []),
   kafe_protocol:request(
     ?PRODUCE_REQUEST,
     <<RequiredAcks:16, Timeout:32, Encoded/binary>>,
     State,
     ApiVersion).
+
+encode_messages_topics([], _, _, Acc) ->
+  kafe_protocol:encode_array(lists:reverse(Acc));
+encode_messages_topics([{Topic, Messages}|Rest], Options, ApiVersion, Acc) ->
+  encode_messages_topics(
+    Rest,
+    Options,
+    ApiVersion,
+    [<<(kafe_protocol:encode_string(Topic))/binary,
+       (encode_messages_partitions(Messages, Options, ApiVersion, []))/binary>>
+     |Acc]).
+
+encode_messages_partitions([], _, _, Acc) ->
+  kafe_protocol:encode_array(lists:reverse(Acc));
+encode_messages_partitions([{Partition, Messages}|Rest], Options, ApiVersion, Acc) ->
+  MessageSet = message_set(Messages, Options, ApiVersion, <<>>),
+  encode_messages_partitions(
+    Rest,
+    Options,
+    ApiVersion,
+    [<<Partition:32/signed,
+       (kafe_protocol:encode_bytes(MessageSet))/binary>>
+     |Acc]).
 
 message_set([], _, _, Result) ->
   Result;
