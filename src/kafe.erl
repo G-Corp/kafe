@@ -26,6 +26,7 @@
          offset/0,
          offset/1,
          offset/2,
+         produce/1,
          produce/2,
          produce/3,
          default_key_to_partition/2,
@@ -372,6 +373,10 @@ offset(Topics) when is_list(Topics) ->
 offset(ReplicatID, Topics) when is_integer(ReplicatID), is_list(Topics) ->
   kafe_protocol_offset:run(ReplicatID, Topics).
 
+% @equiv produce(Messages, #{})
+produce(Messages) ->
+  produce(Messages, #{}).
+
 % @doc
 % Send a message
 %
@@ -399,8 +404,9 @@ offset(ReplicatID, Topics) when is_integer(ReplicatID), is_list(Topics) ->
 %
 % Example:
 % <pre>
-% Response = kafe:product(&lt;&lt;"topic"&gt;&gt;, &lt;&lt;"a simple message"&gt;&gt;, #{timeout =&gt; 1000, partition =&gt; 0}).
-% Response1 = kafe:product(&lt;&lt;"topic"&gt;&gt;, {&lt;&lt;"key"&gt;&gt;, &lt;&lt;"Another simple message"&gt;&gt;}).
+% Response = kafe:product([{&lt;&lt;"topic"&gt;&gt;, [&lt;&lt;"a simple message"&gt;&gt;]}], #{timeout =&gt; 1000}).
+% Response1 = kafe:product([{&lt;&lt;"topic1"&gt;&gt;, [{&lt;&lt;"key1"&gt;&gt;, &lt;&lt;"A simple message"&gt;&gt;}]},
+%                           {&lt;&lt;"topic2"&gt;&gt;, [{&lt;&lt;"key2"&gt;&gt;, &lt;&lt;"Another simple message"&gt;&gt;}]}]).
 % </pre>
 %
 % For more informations, see the

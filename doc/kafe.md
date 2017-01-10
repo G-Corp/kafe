@@ -409,7 +409,7 @@ Offset commit v1.</td></tr><tr><td valign="top"><a href="#offset_commit-5">offse
 Offset commit v2.</td></tr><tr><td valign="top"><a href="#offset_fetch-1">offset_fetch/1</a></td><td>Equivalent to <a href="#offset_fetch-2"><tt>offset_fetch(ConsumerGroup, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#offset_fetch-2">offset_fetch/2</a></td><td> 
 Offset fetch.</td></tr><tr><td valign="top"><a href="#offsets-2">offsets/2</a></td><td>
 Return the list of all unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#offsets-3">offsets/3</a></td><td>
-Return the list of the next Nth unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td> 
+Return the list of the next Nth unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-1">produce/1</a></td><td>Equivalent to <a href="#produce-2"><tt>produce(Messages, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td> 
 Send a message.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td>Equivalent to <a href="#produce-2"><tt>produce([{Topic, [Message]}], Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#start-0">start/0</a></td><td>
 Start kafe application.</td></tr><tr><td valign="top"><a href="#start_consumer-3">start_consumer/3</a></td><td> 
 Start a new consumer.</td></tr><tr><td valign="top"><a href="#stop_consumer-1">stop_consumer/1</a></td><td>
@@ -803,6 +803,14 @@ offsets(TopicName::binary() | {binary(), [integer()]}, ConsumerGroup::binary(), 
 
 Return the list of the next Nth unread offsets for a given topic and consumer group
 
+<a name="produce-1"></a>
+
+### produce/1 ###
+
+`produce(Messages) -> any()`
+
+Equivalent to [`produce(Messages, #{})`](#produce-2).
+
 <a name="produce-2"></a>
 
 ### produce/2 ###
@@ -844,8 +852,9 @@ Example:
 
 ```
 
- Response = kafe:product(<<"topic">>, <<"a simple message">>, #{timeout => 1000, partition => 0}).
- Response1 = kafe:product(<<"topic">>, {<<"key">>, <<"Another simple message">>}).
+ Response = kafe:product([{<<"topic">>, [<<"a simple message">>]}], #{timeout => 1000}).
+ Response1 = kafe:product([{<<"topic1">>, [{<<"key1">>, <<"A simple message">>}]},
+                           {<<"topic2">>, [{<<"key2">>, <<"Another simple message">>}]}]).
 ```
 
 For more informations, see the
