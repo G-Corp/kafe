@@ -228,31 +228,31 @@ metadata() = #{brokers =&gt; [#{host =&gt; binary(), id =&gt; integer(), port =&
 
 
 
-### <a name="type-offset_commit_option">offset_commit_option()</a> ###
-
-
-<pre><code>
-offset_commit_option() = [{binary(), [{integer(), integer(), binary()}]}]
-</code></pre>
-
-
-
-
-### <a name="type-offset_commit_option_v1">offset_commit_option_v1()</a> ###
-
-
-<pre><code>
-offset_commit_option_v1() = [{binary(), [{integer(), integer(), integer(), binary()}]}]
-</code></pre>
-
-
-
-
 ### <a name="type-offset_commit_set">offset_commit_set()</a> ###
 
 
 <pre><code>
 offset_commit_set() = [#{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integer(), error_code =&gt; <a href="#type-error_code">error_code()</a>}]}]
+</code></pre>
+
+
+
+
+### <a name="type-offset_commit_topics">offset_commit_topics()</a> ###
+
+
+<pre><code>
+offset_commit_topics() = [{binary(), [{integer(), integer(), binary()}]}]
+</code></pre>
+
+
+
+
+### <a name="type-offset_commit_topics_v1">offset_commit_topics_v1()</a> ###
+
+
+<pre><code>
+offset_commit_topics_v1() = [{binary(), [{integer(), integer(), integer(), binary()}]}]
 </code></pre>
 
 
@@ -715,7 +715,7 @@ For more informations, see the
 ### offset_commit/2 ###
 
 <pre><code>
-offset_commit(ConsumerGroup::binary(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
+offset_commit(ConsumerGroup::binary(), Topics::<a href="#type-offset_commit_topics">offset_commit_topics()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -730,7 +730,7 @@ For more informations, see the
 ### offset_commit/4 ###
 
 <pre><code>
-offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationID::integer(), ConsumerID::binary(), Topics::<a href="#type-offset_commit_option_v1">offset_commit_option_v1()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
+offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationID::integer(), ConsumerID::binary(), Topics::<a href="#type-offset_commit_topics_v1">offset_commit_topics_v1()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -745,7 +745,7 @@ For more informations, see the
 ### offset_commit/5 ###
 
 <pre><code>
-offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationID::integer(), ConsumerID::binary(), RetentionTime::integer(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
+offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationID::integer(), ConsumerID::binary(), RetentionTime::integer(), Topics::<a href="#type-offset_commit_topics">offset_commit_topics()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
