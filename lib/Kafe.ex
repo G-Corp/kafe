@@ -105,4 +105,7 @@ defmodule Kafe do
   def unquote(:"stop_consumer")(arg1) do
     :erlang.apply(:"kafe", :"stop_consumer", [arg1])
   end
+  def unquote(:"split")(arg1, arg2, arg3) do
+    :erlang.apply(:"kafe", :"split", [arg1, arg2, arg3])
+  end
 end

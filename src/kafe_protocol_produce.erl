@@ -258,22 +258,22 @@ dispatch([{Key, Value, Partition}|Rest], Topic, KeyToPartition, Result) when is_
         Rest,
         Topic,
         KeyToPartition,
-      buclists:keyupdate(
-        BrokerID,
-        1,
-        Result,
-        {BrokerID,
-         buclists:keyupdate(
-           Topic,
-           1,
-           TopicsForBroker,
-           {Topic,
-            buclists:keyupdate(
-              Partition,
-              1,
-              PartitionsForTopic,
-              {Partition,
-               [{Key, Value}|MessagesForPartition]})})}))
+        buclists:keyupdate(
+          BrokerID,
+          1,
+          Result,
+          {BrokerID,
+           buclists:keyupdate(
+             Topic,
+             1,
+             TopicsForBroker,
+             {Topic,
+              buclists:keyupdate(
+                Partition,
+                1,
+                PartitionsForTopic,
+                {Partition,
+                 MessagesForPartition ++ [{Key, Value}]})})}))
   end;
 dispatch([{Key, Value}|Rest], Topic, KeyToPartition, Result) when is_binary(Value) ->
   dispatch([{Key, Value, erlang:apply(KeyToPartition, [Topic, Key])}|Rest], Topic, KeyToPartition, Result);

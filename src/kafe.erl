@@ -15,6 +15,9 @@
 
 -include("../include/kafe.hrl").
 -include_lib("kernel/include/inet.hrl").
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
 -define(SERVER, ?MODULE).
 
 % Public API
@@ -47,7 +50,8 @@
          offset_fetch/2,
          offset_commit/2,
          offset_commit/4,
-         offset_commit/5
+         offset_commit/5,
+         split/3
         ]).
 
 -export([
@@ -838,6 +842,13 @@ start_consumer(GroupID, Callback, Options) when is_function(Callback, 6);
 stop_consumer(GroupID) ->
   kafe_consumer_sup:stop_child(GroupID).
 
+% @doc
+% Take a list of tuples where the <tt>M</tt>th element is a <tt>Topic</tt> and the <tt>N</tt>th element is a <tt>Partition</tt> and return the given list splitted in
+% <tt>O</tt> lists, on per broker.
+% @end
+split(M, N, List) ->
+  gen_server:call(?SERVER, {split, M, N, List}, ?TIMEOUT).
+
 % Private
 
 % @hidden
@@ -906,6 +917,8 @@ handle_call(state, _From, State) ->
 % Public
 handle_call(brokers, _From, #{brokers := Brokers} = State) ->
   {reply, maps:values(Brokers), State};
+handle_call({split, M, N, List}, _From, #{topics := Topics, brokers := Brokers} = State) ->
+  {reply, split(M, N, List, Topics, Brokers), State};
 % RIP
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
@@ -1189,3 +1202,53 @@ broker_id([TopicPartition|Rest], Topics, BrokersAddr, BrokerID) ->
       broker_id(Rest, Topics, BrokersAddr, NewBrokerID)
   end.
 
+% @hidden
+split(M, N, List, Topics, Brokers) ->
+  split(M, N, List, Topics, Brokers, #{}).
+
+split(_, _, [], _, _, Acc) ->
+  maps:values(Acc);
+split(M, N, [Tuple|List], Topics, Brokers, Acc) ->
+  BrokerID = broker_id({erlang:element(M, Tuple),
+                        erlang:element(N, Tuple)}, Topics, Brokers),
+  Messages = maps:get(BrokerID, Acc, []),
+  split(M, N, List, Topics, Brokers,
+        maps:put(BrokerID, [Tuple|Messages], Acc)).
+
+-ifdef(TEST).
+kafe_test_() ->
+  {setup,
+   fun() ->
+       ok
+   end,
+   fun(_) ->
+       ok
+   end,
+   [
+    fun() ->
+       Topics = #{
+         <<"topic1">> => #{0 => "127.0.0.1:9093", 1 => "127.0.0.1:9094", 2 => "127.0.0.1:9092"},
+         <<"topic2">> => #{0 => "127.0.0.1:9093", 1 => "127.0.0.1:9094", 2 => "127.0.0.1:9092"}},
+       Brokers = #{"127.0.0.1:9092" => '127.0.0.1:9092',
+                   "127.0.0.1:9093" => '127.0.0.1:9093',
+                   "127.0.0.1:9094" => '127.0.0.1:9094'},
+       ?assertEqual(
+          [],
+          split(1, 2, [], Topics, Brokers)),
+       ?assertEqual(
+          [[{<<"topic1">>, 2, message12}],
+           [{<<"topic1">>, 0, message10}],
+           [{<<"topic1">>, 1, message11}]],
+          split(1, 2, [{<<"topic1">>, 0, message10},
+                       {<<"topic1">>, 1, message11},
+                       {<<"topic1">>, 2, message12}], Topics, Brokers)),
+       ?assertEqual(
+          [[{<<"topic2">>, 2, message22}, {<<"topic1">>, 2, message12}],
+           [{<<"topic2">>, 0, message20}, {<<"topic1">>, 0, message10}],
+           [{<<"topic2">>, 1, message21}, {<<"topic1">>, 1, message11}]],
+          split(1, 2, [{<<"topic1">>, 0, message10}, {<<"topic2">>, 0, message20},
+                       {<<"topic1">>, 1, message11}, {<<"topic2">>, 1, message21},
+                       {<<"topic1">>, 2, message12}, {<<"topic2">>, 2, message22}], Topics, Brokers))
+    end
+   ]}.
+-endif.

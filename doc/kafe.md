@@ -410,7 +410,9 @@ Offset commit v2.</td></tr><tr><td valign="top"><a href="#offset_fetch-1">offset
 Offset fetch.</td></tr><tr><td valign="top"><a href="#offsets-2">offsets/2</a></td><td>
 Return the list of all unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#offsets-3">offsets/3</a></td><td>
 Return the list of the next Nth unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-1">produce/1</a></td><td>Equivalent to <a href="#produce-2"><tt>produce(Messages, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td> 
-Send a message.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td>Equivalent to <a href="#produce-2"><tt>produce([{Topic, [Message]}], Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#start-0">start/0</a></td><td>
+Send a message.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td>Equivalent to <a href="#produce-2"><tt>produce([{Topic, [Message]}], Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#split-3">split/3</a></td><td>
+Take a list of tuples where the <tt>M</tt>th element is a <tt>Topic</tt> and the <tt>N</tt>th element is a <tt>Partition</tt> and return the given list splitted in
+<tt>O</tt> lists, on per broker.</td></tr><tr><td valign="top"><a href="#start-0">start/0</a></td><td>
 Start kafe application.</td></tr><tr><td valign="top"><a href="#start_consumer-3">start_consumer/3</a></td><td> 
 Start a new consumer.</td></tr><tr><td valign="top"><a href="#stop_consumer-1">stop_consumer/1</a></td><td>
 Stop the given consumer.</td></tr><tr><td valign="top"><a href="#sync_group-4">sync_group/4</a></td><td> 
@@ -867,6 +869,15 @@ For more informations, see the
 `produce(Topic, Message, Options) -> any()`
 
 Equivalent to [`produce([{Topic, [Message]}], Options)`](#produce-2).
+
+<a name="split-3"></a>
+
+### split/3 ###
+
+`split(M, N, List) -> any()`
+
+Take a list of tuples where the `M`th element is a `Topic` and the `N`th element is a `Partition` and return the given list splitted in
+`O` lists, on per broker.
 
 <a name="start-0"></a>
 
