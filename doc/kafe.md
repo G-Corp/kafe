@@ -362,7 +362,7 @@ topic() = binary()
 
 
 <pre><code>
-topic_partition_info() = #{name =&gt; binary(), partitions =&gt; [#{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), offsets =&gt; [integer()]}]}
+topic_partition_info() = #{name =&gt; binary(), partitions =&gt; [#{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), offsets =&gt; [integer()], timestamp =&gt; integer()} | #{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), offsets =&gt; [integer()]}]}
 </code></pre>
 
 
@@ -818,7 +818,7 @@ Equivalent to [`produce(Messages, #{})`](#produce-2).
 ### produce/2 ###
 
 <pre><code>
-produce(Messages::[{<a href="#type-topic">topic()</a>, [{<a href="#type-key">key()</a>, <a href="#type-value">value()</a>, <a href="#type-partition">partition()</a>} | {<a href="#type-value">value()</a>, <a href="#type-partition">partition()</a>} | {<a href="#type-key">key()</a>, <a href="#type-value">value()</a>} | <a href="#type-value">value()</a>]}], Options::<a href="#type-produce_options">produce_options()</a>) -&gt; ok | {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()}
+produce(Messages::[{<a href="#type-topic">topic()</a>, [{<a href="#type-key">key()</a>, <a href="#type-value">value()</a>, <a href="#type-partition">partition()</a>} | {<a href="#type-value">value()</a>, <a href="#type-partition">partition()</a>} | {<a href="#type-key">key()</a>, <a href="#type-value">value()</a>} | <a href="#type-value">value()</a>]}], Options::<a href="#type-produce_options">produce_options()</a>) -&gt; {ok, #{throttle_time =&gt; integer(), topics =&gt; [<a href="#type-topic_partition_info">topic_partition_info()</a>]}} | {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()}
 </code></pre>
 <br />
 

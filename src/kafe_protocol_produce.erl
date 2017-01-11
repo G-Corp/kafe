@@ -291,7 +291,9 @@ consolidate([], Acc) ->
 consolidate([{ok, #{topics := Topics}}|Rest], #{topics := AccTopics} = Acc) ->
   consolidate(
     Rest,
-    Acc#{topics => consolidate_topics(Topics, AccTopics)}).
+    Acc#{topics => consolidate_topics(Topics, AccTopics)});
+consolidate([{error, _} = Error|_], _) ->
+  Error.
 
 consolidate_topics([], Topics) ->
   Topics;

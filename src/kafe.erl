@@ -120,7 +120,13 @@
 -type partition() :: integer().
 -type topics() :: [binary() | string() | atom()] | [{binary() | string() | atom(), [{integer(), integer(), integer()}]}].
 -type topic_partition_info() :: #{name => binary(),
-                                  partitions => [#{error_code => error_code(), id => integer(), offsets => [integer()]}]}.
+                                  partitions => [#{error_code => error_code(),
+                                                   id => integer(),
+                                                   offsets => [integer()],
+                                                   timestamp => integer()}
+                                                 | #{error_code => error_code(),
+                                                     id => integer(),
+                                                     offsets => [integer()]}]}.
 -type produce_options() :: #{timeout => integer(),
                              required_acks => integer(),
                              partition => integer(),
@@ -420,7 +426,8 @@ produce(Messages) ->
                           | {value(), partition()}
                           | {key(), value()}
                           | value()]}], produce_options()) ->
-  ok
+  {ok, #{throttle_time => integer(),
+         topics => [topic_partition_info()]}}
   | {ok, [topic_partition_info()]}
   | {error,  term()}.
 produce(Messages, Options) when is_list(Messages), is_map(Options) ->
