@@ -34,11 +34,17 @@ init([]) ->
         type => worker,
         shutdown => 5000,
         modules => [kafe_rr]},
-      #{id => kafe,
-        start => {kafe, start_link, []},
+      % #{id => kafe,
+      %   start => {kafe, start_link, []},
+      %   restart => permanent,
+      %   type => worker,
+      %   shutdown => 5000,
+      %   modules => [kafe]},
+      #{id => kafe_brokers,
+        start => {kafe_brokers, start_link, []},
         restart => permanent,
         type => worker,
         shutdown => 5000,
-        modules => [kafe]}
+        modules => [kafe_brokers]}
      ]}}.
 

@@ -11,7 +11,7 @@
 -module(kafe).
 -compile([{parse_transform, bristow_transform},
           {parse_transform, lager_transform}]).
--behaviour(gen_server).
+% -behaviour(gen_server).
 
 -include("../include/kafe.hrl").
 -include_lib("kernel/include/inet.hrl").
@@ -58,26 +58,25 @@
 
 % Internal API
 -export([
-         number_of_brokers/0,
-         start_link/0,
-         first_broker/0,
-         release_broker/1,
-         broker_id_by_topic_and_partition/2,
-         broker_by_name/1,
-         broker_by_host_and_port/2,
-         broker_by_id/1,
+         number_of_brokers/0, % UNUSED
+         % start_link/0,
+         % first_broker/0,
+         % release_broker/1,
+         % broker_id_by_topic_and_partition/2,
+         % broker_by_name/1,
+         % broker_by_host_and_port/2,
+         % broker_by_id/1,
          topics/0,
          partitions/1,
          max_offset/1,
          max_offset/2,
          partition_for_offset/2,
          api_version/0,
-         update_brokers/0,
-         state/0
+         update_brokers/0
         ]).
 
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+% -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+%          terminate/2, code_change/3]).
 
 -export_type([describe_group/0, group_commit_identifier/0]).
 
@@ -209,52 +208,52 @@
 -type group_commit_identifier() :: binary().
 
 % @hidden
-start_link() ->
-  gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+% start_link() ->
+%   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 % @hidden
-first_broker() ->
-  gen_server:call(?SERVER, first_broker, ?TIMEOUT).
+% first_broker() ->
+%   gen_server:call(?SERVER, first_broker, ?TIMEOUT).
 
 % @hidden
 number_of_brokers() ->
   gen_server:call(?SERVER, number_of_brokers, ?TIMEOUT).
 
-% @hidden
-release_broker(Broker) ->
-  case poolgirl:checkin(Broker) of
-    ok -> ok;
-    {error, Error} ->
-      lager:error("Checkin broker ~p failed: ~p", [Broker, Error]),
-      ok
-  end.
+% % @hidden
+% release_broker(Broker) ->
+%   case poolgirl:checkin(Broker) of
+%     ok -> ok;
+%     {error, Error} ->
+%       lager:error("Checkin broker ~p failed: ~p", [Broker, Error]),
+%       ok
+%   end.
 
 % @hidden
-broker_id_by_topic_and_partition(Topic, Partition) ->
-  gen_server:call(?SERVER, {broker_id_by_topic_and_partition, bucs:to_binary(Topic), Partition}, ?TIMEOUT).
+% broker_id_by_topic_and_partition(Topic, Partition) ->
+%   gen_server:call(?SERVER, {broker_id_by_topic_and_partition, bucs:to_binary(Topic), Partition}, ?TIMEOUT).
 
-% @hidden
-broker_by_name(BrokerName) ->
-  gen_server:call(?SERVER, {broker_by_name, BrokerName}, ?TIMEOUT).
-
-% @hidden
-broker_by_host_and_port(Host, Port) ->
-  broker_by_name(kafe_utils:broker_name(Host, Port)).
-
-% @hidden
-broker_by_id(BrokerID) ->
-  case poolgirl:checkout(BrokerID) of
-    {ok, BrokerPID} -> BrokerPID;
-    _ -> undefined
-  end.
+% % @hidden
+% broker_by_name(BrokerName) ->
+%   gen_server:call(?SERVER, {broker_by_name, BrokerName}, ?TIMEOUT).
+%
+% % @hidden
+% broker_by_host_and_port(Host, Port) ->
+%   broker_by_name(kafe_utils:broker_name(Host, Port)).
+%
+% % @hidden
+% broker_by_id(BrokerID) ->
+%   case poolgirl:checkout(BrokerID) of
+%     {ok, BrokerPID} -> BrokerPID;
+%     _ -> undefined
+%   end.
 
 % @hidden
 topics() ->
-  gen_server:call(?SERVER, topics, ?TIMEOUT).
+  kafe_brokers:topics().
 
 % @hidden
 partitions(Topic) ->
-  gen_server:call(?SERVER, {partitions, Topic}, ?TIMEOUT).
+  kafe_brokers:partitions(Topic).
 
 % @hidden
 max_offset(TopicName) ->
@@ -298,15 +297,13 @@ partition_for_offset(TopicName, Offset) ->
 
 % @hidden
 update_brokers() ->
-  gen_server:cast(?SERVER, update_brokers).
+  kafe_brokers:update().
 
 % @hidden
 api_version() ->
-  gen_server:call(?SERVER, api_version, ?TIMEOUT).
+  doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION).
 
-% @hidden
-state() ->
-  gen_server:call(?SERVER, state, ?TIMEOUT).
+% -- Public APIs --
 
 % @doc
 % Start kafe application
@@ -318,7 +315,7 @@ start() ->
 % Return the list of availables brokers
 % @end
 brokers() ->
-  gen_server:call(?SERVER, brokers, ?TIMEOUT).
+  kafe_brokers:list().
 
 % @equiv metadata([])
 metadata() ->
@@ -809,326 +806,326 @@ stop_consumer(GroupID) ->
 
 % Private
 
-% @hidden
-init(_) ->
-  process_flag(trap_exit, true),
-  ApiVersion = doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION),
-  CorrelationID = doteki:get_env([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
-  ClientID = doteki:get_env([kafe, client_id], ?DEFAULT_CLIENT_ID),
-  Offset = doteki:get_env([kafe, offset], ?DEFAULT_OFFSET),
-  BrokersUpdateFreq = doteki:get_env([kafe, brokers_update_frequency], ?DEFAULT_BROKER_UPDATE),
-  PoolSize = doteki:get_env([kafe, pool_size], ?DEFAULT_POOL_SIZE),
-  ChunkPoolSize = doteki:get_env([kafe, chunk_pool_size], ?DEFAULT_CHUNK_POOL_SIZE),
-  State = #{brokers => #{},
-            brokers_list => [],
-            topics => #{},
-            brokers_update_frequency => BrokersUpdateFreq,
-            api_version => ApiVersion,
-            correlation_id => CorrelationID,
-            client_id => ClientID,
-            offset => Offset,
-            pool_size => PoolSize,
-            chunk_pool_size => ChunkPoolSize},
-  State1 = update_state_with_metadata(init_connexions(State)),
-  {ok, State1#{
-         brokers_update_timer => erlang:send_after(BrokersUpdateFreq, self(), update_brokers)
-        }}.
-
-% @hidden
-handle_call(number_of_brokers, _From, #{brokers_list := Brokers} = State) ->
-  {reply, length(Brokers), State};
-handle_call(first_broker, _From, State) ->
-  {reply, get_first_broker(State), State};
-handle_call({broker_id_by_topic_and_partition, Topic, Partition}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
-  case maps:get(Topic, Topics, undefined) of
-    undefined ->
-      {reply, undefined, State};
-    Brokers ->
-      case maps:get(Partition, Brokers, undefined) of
-        undefined ->
-          {reply, undefined, State};
-        Broker ->
-          {reply, maps:get(Broker, BrokersAddr, undefined), State}
-      end
-  end;
-handle_call({broker_by_name, BrokerName}, _From, #{brokers := BrokersAddr} = State) ->
-  case maps:get(bucs:to_string(BrokerName), BrokersAddr, undefined) of
-    undefined ->
-      {reply, undefined, State};
-    BrokerID ->
-      case poolgirl:checkout(BrokerID) of
-        {ok, BrokerPID} -> {reply, BrokerPID, State};
-        _ -> {reply, undefined, State}
-      end
-  end;
-handle_call(topics, _From, #{topics := Topics} = State) ->
-  {reply, Topics, State};
-handle_call({partitions, Topic}, _From, #{topics := Topics} = State) ->
-  {reply, maps:keys(maps:get(Topic, Topics, #{})), State};
-handle_call(api_version, _From, #{api_version := Version} = State) ->
-  {reply, Version, State};
-handle_call(state, _From, State) ->
-  {reply, State, State};
-% Public
-handle_call(brokers, _From, #{brokers := Brokers} = State) ->
-  {reply, maps:values(Brokers), State};
-% RIP
-handle_call(_Request, _From, State) ->
-  {reply, ok, State}.
-
-% @hidden
-handle_cast(update_brokers, State) ->
-  handle_info(update_brokers, State);
-handle_cast(_Msg, State) ->
-  {noreply, State}.
-
-% @hidden
-handle_info(update_brokers, #{brokers_update_frequency := Frequency,
-                              brokers_update_timer := Timer} = State) ->
-  lager:debug("Update brokers list..."),
-  erlang:cancel_timer(Timer),
-  State1 = update_state_with_metadata(remove_dead_brokers(State)),
-  {noreply, State1#{
-              brokers_update_timer => erlang:send_after(Frequency, self(), update_brokers)
-             }};
-% @hidden
-handle_info(_Info, State) ->
-  {noreply, State}.
-
-% @hidden
-terminate(_Reason, #{brokers := Brokers} ) ->
-  _ = poolgirl:remove_pools(maps:values(Brokers)),
-  ok.
-
-% @hidden
-code_change(_OldVsn, State, _Extra) ->
-  {ok, State}.
-
-% @hidden
-init_connexions(State) ->
-  KafkaBrokers = doteki:get_env(
-                   [kafe, brokers],
-                   [{doteki:get_env([kafe, host], ?DEFAULT_IP),
-                     doteki:get_env([kafe, port], ?DEFAULT_PORT)}]),
-  get_connection(KafkaBrokers, State).
-
-% @hidden
-get_connection([], State) ->
-  lager:debug("No more brockers..."),
-  State;
-get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
-                                      brokers := Brokers,
-                                      pool_size := PoolSize,
-                                      chunk_pool_size := ChunkPoolSize} = State) ->
-  lager:debug("Get connection for ~s:~p", [Host, Port]),
-  try
-    case inet:gethostbyname(bucs:to_string(Host)) of
-      {ok, #hostent{h_name = Hostname,
-                    h_addrtype = AddrType,
-                    h_addr_list = AddrsList}} ->
-        case get_host(AddrsList, Hostname, AddrType) of
-          undefined ->
-            lager:error("Can't retrieve host for ~s:~p", [Host, Port]),
-            get_connection(Rest, State);
-          {BrokerAddr, BrokerHostList} ->
-            case lists:foldl(fun(E, Acc) ->
-                                 BrokerFullName = kafe_utils:broker_name(E, Port),
-                                 case lists:member(BrokerFullName, BrokersList) of
-                                   true -> Acc;
-                                   _ -> [BrokerFullName|Acc]
-                                 end
-                             end, [], BrokerHostList) of
-              [] ->
-                lager:debug("All hosts already registered for ~s:~p", [bucinet:ip_to_string(BrokerAddr), Port]),
-                get_connection(Rest, State);
-              BrokerHostList1 ->
-                IP = bucinet:ip_to_string(BrokerAddr),
-                BrokerID = kafe_utils:broker_id(IP, Port),
-                case poolgirl:size(BrokerID) of
-                  {ok, N, A} when N > 0 ->
-                    lager:debug("Pool ~s size ~p/~p", [BrokerID, N, A]),
-                    get_connection(Rest, State);
-                  _ ->
-                    case poolgirl:add_pool(BrokerID,
-                                           {kafe_conn, start_link, [BrokerAddr, Port]},
-                                           #{size => PoolSize,
-                                             chunk_size => ChunkPoolSize,
-                                             allow_empty_pool => false}) of
-                      {ok, PoolSize1} ->
-                        lager:info("Broker pool ~s (size ~p) reference ~p", [BrokerID, PoolSize1, BrokerHostList1]),
-                        Brokers1 = lists:foldl(fun(BrokerHost, Acc) ->
-                                                   maps:put(BrokerHost, BrokerID, Acc)
-                                               end, Brokers, BrokerHostList1),
-                        get_connection(Rest, State#{brokers => Brokers1,
-                                                    brokers_list => BrokerHostList1 ++ BrokersList});
-                      {error, Reason} ->
-                        lager:error("Connection failed to ~p:~p : ~p", [bucinet:ip_to_string(BrokerAddr), Port, Reason]),
-                        get_connection(Rest, State)
-                    end
-                end
-            end
-        end;
-      {error, Reason} ->
-        lager:error("Can't retrieve host by name for ~s:~p : ~p", [Host, Port, Reason]),
-        get_connection(Rest, State)
-    end
-  catch
-    Type:Reason1 ->
-      lager:error("Error while getting connection for ~s:~p : ~p:~p", [Host, Port, Type, Reason1]),
-      get_connection(Rest, State)
-  end.
-
-% @hidden
-update_state_with_metadata(State) ->
-  {State2, FirstBroker} = case get_first_broker(State) of
-                            undefined ->
-                              State1 = init_connexions(State),
-                              {State1, get_first_broker(State1)};
-                            Broker -> {State, Broker}
-                          end,
-  case FirstBroker of
-    undefined ->
-      State2;
-    _ ->
-      case kafe_protocol:run(FirstBroker,
-                             {call,
-                              fun kafe_protocol_metadata:request/2, [[]],
-                              fun kafe_protocol_metadata:response/2}) of
-        {ok, #{brokers := Brokers,
-               topics := Topics}} ->
-          {Brokers1, State3} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, StateAcc}) ->
-                                               {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
-                                                get_connection([{bucs:to_string(Host), Port}], StateAcc)}
-                                           end, {#{}, State2}, Brokers),
-          State4 = remove_unlisted_brokers(maps:values(Brokers1), State3),
-          case update_topics(Topics, Brokers1) of
-            leader_election ->
-              timer:sleep(1000),
-              update_state_with_metadata(State3);
-            Topics1 ->
-              maps:put(topics, Topics1, State4)
-          end;
-        _ ->
-          State2
-      end
-  end.
-
-update_topics(Topics, Brokers1) ->
-  update_topics(Topics, Brokers1, #{}).
-update_topics([], _, Acc) ->
-  Acc;
-update_topics([#{name := Topic, partitions := Partitions}|Rest], Brokers1, Acc) ->
-  case brokers_for_partitions(Partitions, Brokers1, Topic, #{}) of
-    leader_election ->
-      leader_election;
-    BrokersForPartitions ->
-      AccUpdate = maps:put(Topic, BrokersForPartitions, Acc),
-      update_topics(Rest, Brokers1, AccUpdate)
-  end.
-
-brokers_for_partitions([], _, _, Acc) ->
-  Acc;
-brokers_for_partitions([#{id := ID, leader := -1}|_], _, Topic, _) ->
-  lager:info("Leader election in progress for topic ~s, partition ~p", [Topic, ID]),
-  leader_election;
-brokers_for_partitions([#{id := ID, leader := Leader}|Rest], Brokers1, Topic, Acc) ->
-  brokers_for_partitions(Rest, Brokers1, Topic,
-                         maps:put(ID, maps:get(Leader, Brokers1), Acc)).
-
-% @hidden
-remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->
-  UnkillID = lists:foldl(fun(Broker, Acc) ->
-                             case maps:get(Broker, Brokers, undefined) of
-                               undefined -> Acc;
-                               ID -> [ID|Acc]
-                             end
-                         end, [], BrokersList),
-  Brokers1 = maps:fold(fun(BrokerName, BrokerID, Acc) ->
-                           case lists:member(BrokerName, BrokersList) of
-                             true ->
-                               maps:put(BrokerName, BrokerID, Acc);
-                             false ->
-                               case lists:member(BrokerID, UnkillID) of
-                                 true ->
-                                   ok;
-                                 false ->
-                                   _ = poolgirl:remove_pool(BrokerID)
-                               end,
-                               Acc
-                           end
-                       end, #{}, Brokers),
-  State#{brokers => Brokers1, brokers_list => BrokersList}.
-
-
-% @hidden
-remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
-  lists:foldl(fun(Broker, #{brokers := Brokers1, brokers_list := BrokersList1} = State1) ->
-                  case maps:get(Broker, Brokers1, undefined) of
-                    undefined ->
-                      maps:put(brokers_list,
-                               lists:delete(Broker, BrokersList1),
-                               State1);
-                    BrokerID ->
-                      case poolgirl:checkout(BrokerID) of
-                        {ok, BrokerPID} ->
-                          case check_if_broker_is_alive(BrokerPID) of
-                            ok ->
-                              _ = poolgirl:checkin(BrokerPID),
-                              State1;
-                            {error, Reason} ->
-                              _ = poolgirl:checkin(BrokerPID),
-                              _ = poolgirl:remove_pool(BrokerID),
-                              lager:warning("Broker ~s (from ~s) not alive : ~p", [Broker, BrokerID, Reason]),
-                              maps:put(brokers_list,
-                                       lists:delete(Broker, BrokersList1),
-                                       maps:put(brokers, maps:remove(Broker, Brokers1), State1))
-                          end;
-                        _ ->
-                          maps:put(brokers_list,
-                                   lists:delete(Broker, BrokersList1),
-                                   State1)
-                      end
-                  end
-              end, State, BrokersList).
-
-% @hidden
-get_host([], _, _) -> undefined;
-get_host([Addr|Rest], Hostname, AddrType) ->
-  case inet:getaddr(Hostname, AddrType) of
-    {ok, Addr} ->
-      case inet:gethostbyaddr(Addr) of
-        {ok, #hostent{h_name = Hostname1, h_aliases = HostAlias}} ->
-          {Addr, lists:usort([Hostname|[Hostname1|HostAlias]])};
-        _ ->
-          {Addr, [Hostname]}
-      end;
-    _ -> get_host(Rest, Hostname, AddrType)
-  end.
-
-% @hidden
-get_first_broker(#{brokers := Brokers}) ->
-  get_first_broker(maps:values(Brokers));
-get_first_broker([]) -> undefined;
-get_first_broker([BrokerID|Rest]) ->
-  case poolgirl:checkout(BrokerID) of
-    {ok, Broker} ->
-      case check_if_broker_is_alive(Broker) of
-        ok ->
-          Broker;
-        {error, Reason} ->
-          _ = poolgirl:checkin(Broker),
-          lager:warning("Broker ~s is not alive: ~p", [Broker, Reason]),
-          get_first_broker(Rest)
-      end;
-    {error, Reason} ->
-      lager:error("Can't checkout broker from pool ~s: ~p", [BrokerID, Reason]),
-      get_first_broker(Rest)
-  end.
-
-check_if_broker_is_alive(BrokerPid) ->
-  try
-    gen_server:call(BrokerPid, alive, ?TIMEOUT)
-  catch
-    Type:Error ->
-      {error, {Type, Error}}
-  end.
+% - REMOVE - % % @hidden
+% - REMOVE - % init(_) ->
+% - REMOVE - %   process_flag(trap_exit, true),
+% - REMOVE - %   ApiVersion = doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION),
+% - REMOVE - %   CorrelationID = doteki:get_env([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
+% - REMOVE - %   ClientID = doteki:get_env([kafe, client_id], ?DEFAULT_CLIENT_ID),
+% - REMOVE - %   Offset = doteki:get_env([kafe, offset], ?DEFAULT_OFFSET),
+% - REMOVE - %   BrokersUpdateFreq = doteki:get_env([kafe, brokers_update_frequency], ?DEFAULT_BROKER_UPDATE),
+% - REMOVE - %   PoolSize = doteki:get_env([kafe, pool_size], ?DEFAULT_POOL_SIZE),
+% - REMOVE - %   ChunkPoolSize = doteki:get_env([kafe, chunk_pool_size], ?DEFAULT_CHUNK_POOL_SIZE),
+% - REMOVE - %   State = #{brokers => #{},
+% - REMOVE - %             brokers_list => [],
+% - REMOVE - %             topics => #{},
+% - REMOVE - %             brokers_update_frequency => BrokersUpdateFreq,
+% - REMOVE - %             api_version => ApiVersion,
+% - REMOVE - %             correlation_id => CorrelationID,
+% - REMOVE - %             client_id => ClientID,
+% - REMOVE - %             offset => Offset,
+% - REMOVE - %             pool_size => PoolSize,
+% - REMOVE - %             chunk_pool_size => ChunkPoolSize},
+% - REMOVE - %   State1 = update_state_with_metadata(init_connexions(State)),
+% - REMOVE - %   {ok, State1#{
+% - REMOVE - %          brokers_update_timer => erlang:send_after(BrokersUpdateFreq, self(), update_brokers)
+% - REMOVE - %         }}.
+% - REMOVE - %
+% - REMOVE - % % @hidden
+% - REMOVE - % handle_call(number_of_brokers, _From, #{brokers_list := Brokers} = State) ->
+% - REMOVE - %   {reply, length(Brokers), State};
+% - REMOVE - % handle_call(first_broker, _From, State) ->
+% - REMOVE - %   {reply, get_first_broker(State), State};
+% - REMOVE - % handle_call({broker_id_by_topic_and_partition, Topic, Partition}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
+% - REMOVE - %   case maps:get(Topic, Topics, undefined) of
+% - REMOVE - %     undefined ->
+% - REMOVE - %       {reply, undefined, State};
+% - REMOVE - %     Brokers ->
+% - REMOVE - %       case maps:get(Partition, Brokers, undefined) of
+% - REMOVE - %         undefined ->
+% - REMOVE - %           {reply, undefined, State};
+% - REMOVE - %         Broker ->
+% - REMOVE - %           {reply, maps:get(Broker, BrokersAddr, undefined), State}
+% - REMOVE - %       end
+% - REMOVE - %   end;
+% - REMOVE - % handle_call({broker_by_name, BrokerName}, _From, #{brokers := BrokersAddr} = State) ->
+% - REMOVE - %   case maps:get(bucs:to_string(BrokerName), BrokersAddr, undefined) of
+% - REMOVE - %     undefined ->
+% - REMOVE - %       {reply, undefined, State};
+% - REMOVE - %     BrokerID ->
+% - REMOVE - %       case poolgirl:checkout(BrokerID) of
+% - REMOVE - %         {ok, BrokerPID} -> {reply, BrokerPID, State};
+% - REMOVE - %         _ -> {reply, undefined, State}
+% - REMOVE - %       end
+% - REMOVE - %   end;
+% - REMOVE - % handle_call(topics, _From, #{topics := Topics} = State) ->
+% - REMOVE - %   {reply, Topics, State};
+% - REMOVE - % handle_call({partitions, Topic}, _From, #{topics := Topics} = State) ->
+% - REMOVE - %   {reply, maps:keys(maps:get(Topic, Topics, #{})), State};
+% - REMOVE - % handle_call(api_version, _From, #{api_version := Version} = State) ->
+% - REMOVE - %   {reply, Version, State};
+% - REMOVE - % handle_call(state, _From, State) ->
+% - REMOVE - %   {reply, State, State};
+% - REMOVE - % % Public
+% - REMOVE - % handle_call(brokers, _From, #{brokers := Brokers} = State) ->
+% - REMOVE - %   {reply, maps:values(Brokers), State};
+% - REMOVE - % % RIP
+% - REMOVE - % handle_call(_Request, _From, State) ->
+% - REMOVE - %   {reply, ok, State}.
+% - REMOVE - %
+% - REMOVE - % % @hidden
+% - REMOVE - % handle_cast(update_brokers, State) ->
+% - REMOVE - %   handle_info(update_brokers, State);
+% - REMOVE - % handle_cast(_Msg, State) ->
+% - REMOVE - %   {noreply, State}.
+% - REMOVE - %
+% - REMOVE - % % @hidden
+% - REMOVE - % handle_info(update_brokers, #{brokers_update_frequency := Frequency,
+% - REMOVE - %                               brokers_update_timer := Timer} = State) ->
+% - REMOVE - %   lager:debug("Update brokers list..."),
+% - REMOVE - %   erlang:cancel_timer(Timer),
+% - REMOVE - %   State1 = update_state_with_metadata(remove_dead_brokers(State)),
+% - REMOVE - %   {noreply, State1#{
+% - REMOVE - %               brokers_update_timer => erlang:send_after(Frequency, self(), update_brokers)
+% - REMOVE - %              }};
+% - REMOVE - % % @hidden
+% - REMOVE - % handle_info(_Info, State) ->
+% - REMOVE - %   {noreply, State}.
+% - REMOVE - %
+% - REMOVE - % % @hidden
+% - REMOVE - % terminate(_Reason, #{brokers := Brokers} ) ->
+% - REMOVE - %   _ = poolgirl:remove_pools(maps:values(Brokers)),
+% - REMOVE - %   ok.
+% - REMOVE - %
+% - REMOVE - % % @hidden
+% - REMOVE - % code_change(_OldVsn, State, _Extra) ->
+% - REMOVE - %   {ok, State}.
+% - REMOVE - %
+% - REMOVE - % % @hidden
+% - REMOVE - % init_connexions(State) ->
+% - REMOVE - %   KafkaBrokers = doteki:get_env(
+% - REMOVE - %                    [kafe, brokers],
+% - REMOVE - %                    [{doteki:get_env([kafe, host], ?DEFAULT_IP),
+% - REMOVE - %                      doteki:get_env([kafe, port], ?DEFAULT_PORT)}]),
+% - REMOVE - %   get_connection(KafkaBrokers, State).
+% - REMOVE - %
+% - REMOVE - % % @hidden
+% - REMOVE - % get_connection([], State) ->
+% - REMOVE - %   lager:debug("No more brockers..."),
+% - REMOVE - %   State;
+% - REMOVE - % get_connection([{Host, Port}|Rest], #{brokers_list := BrokersList,
+% - REMOVE - %                                       brokers := Brokers,
+% - REMOVE - %                                       pool_size := PoolSize,
+% - REMOVE - %                                       chunk_pool_size := ChunkPoolSize} = State) ->
+% - REMOVE - %   lager:debug("Get connection for ~s:~p", [Host, Port]),
+% - REMOVE - %   try
+% - REMOVE - %     case inet:gethostbyname(bucs:to_string(Host)) of
+% - REMOVE - %       {ok, #hostent{h_name = Hostname,
+% - REMOVE - %                     h_addrtype = AddrType,
+% - REMOVE - %                     h_addr_list = AddrsList}} ->
+% - REMOVE - %         case get_host(AddrsList, Hostname, AddrType) of
+% - REMOVE - %           undefined ->
+% - REMOVE - %             lager:error("Can't retrieve host for ~s:~p", [Host, Port]),
+% - REMOVE - %             get_connection(Rest, State);
+% - REMOVE - %           {BrokerAddr, BrokerHostList} ->
+% - REMOVE - %             case lists:foldl(fun(E, Acc) ->
+% - REMOVE - %                                  BrokerFullName = kafe_utils:broker_name(E, Port),
+% - REMOVE - %                                  case lists:member(BrokerFullName, BrokersList) of
+% - REMOVE - %                                    true -> Acc;
+% - REMOVE - %                                    _ -> [BrokerFullName|Acc]
+% - REMOVE - %                                  end
+% - REMOVE - %                              end, [], BrokerHostList) of
+% - REMOVE - %               [] ->
+% - REMOVE - %                 lager:debug("All hosts already registered for ~s:~p", [bucinet:ip_to_string(BrokerAddr), Port]),
+% - REMOVE - %                 get_connection(Rest, State);
+% - REMOVE - %               BrokerHostList1 ->
+% - REMOVE - %                 IP = bucinet:ip_to_string(BrokerAddr),
+% - REMOVE - %                 BrokerID = kafe_utils:broker_id(IP, Port),
+% - REMOVE - %                 case poolgirl:size(BrokerID) of
+% - REMOVE - %                   {ok, N, A} when N > 0 ->
+% - REMOVE - %                     lager:debug("Pool ~s size ~p/~p", [BrokerID, N, A]),
+% - REMOVE - %                     get_connection(Rest, State);
+% - REMOVE - %                   _ ->
+% - REMOVE - %                     case poolgirl:add_pool(BrokerID,
+% - REMOVE - %                                            {kafe_conn, start_link, [BrokerAddr, Port]},
+% - REMOVE - %                                            #{size => PoolSize,
+% - REMOVE - %                                              chunk_size => ChunkPoolSize,
+% - REMOVE - %                                              allow_empty_pool => false}) of
+% - REMOVE - %                       {ok, PoolSize1} ->
+% - REMOVE - %                         lager:info("Broker pool ~s (size ~p) reference ~p", [BrokerID, PoolSize1, BrokerHostList1]),
+% - REMOVE - %                         Brokers1 = lists:foldl(fun(BrokerHost, Acc) ->
+% - REMOVE - %                                                    maps:put(BrokerHost, BrokerID, Acc)
+% - REMOVE - %                                                end, Brokers, BrokerHostList1),
+% - REMOVE - %                         get_connection(Rest, State#{brokers => Brokers1,
+% - REMOVE - %                                                     brokers_list => BrokerHostList1 ++ BrokersList});
+% - REMOVE - %                       {error, Reason} ->
+% - REMOVE - %                         lager:error("Connection failed to ~p:~p : ~p", [bucinet:ip_to_string(BrokerAddr), Port, Reason]),
+% - REMOVE - %                         get_connection(Rest, State)
+% - REMOVE - %                     end
+% - REMOVE - %                 end
+% - REMOVE - %             end
+% - REMOVE - %         end;
+% - REMOVE - %       {error, Reason} ->
+% - REMOVE - %         lager:error("Can't retrieve host by name for ~s:~p : ~p", [Host, Port, Reason]),
+% - REMOVE - %         get_connection(Rest, State)
+% - REMOVE - %     end
+% - REMOVE - %   catch
+% - REMOVE - %     Type:Reason1 ->
+% - REMOVE - %       lager:error("Error while getting connection for ~s:~p : ~p:~p", [Host, Port, Type, Reason1]),
+% - REMOVE - %       get_connection(Rest, State)
+% - REMOVE - %   end.
+% - REMOVE - %
+% - REMOVE - % % @hidden
+% - REMOVE - % update_state_with_metadata(State) ->
+% - REMOVE - %   {State2, FirstBroker} = case get_first_broker(State) of
+% - REMOVE - %                             undefined ->
+% - REMOVE - %                               State1 = init_connexions(State),
+% - REMOVE - %                               {State1, get_first_broker(State1)};
+% - REMOVE - %                             Broker -> {State, Broker}
+% - REMOVE - %                           end,
+% - REMOVE - %   case FirstBroker of
+% - REMOVE - %     undefined ->
+% - REMOVE - %       State2;
+% - REMOVE - %     _ ->
+% - REMOVE - %       case kafe_protocol:run(FirstBroker,
+% - REMOVE - %                              {call,
+% - REMOVE - %                               fun kafe_protocol_metadata:request/2, [[]],
+% - REMOVE - %                               fun kafe_protocol_metadata:response/2}) of
+% - REMOVE - %         {ok, #{brokers := Brokers,
+% - REMOVE - %                topics := Topics}} ->
+% - REMOVE - %           {Brokers1, State3} = lists:foldl(fun(#{host := Host, id := ID, port := Port}, {Acc, StateAcc}) ->
+% - REMOVE - %                                                {maps:put(ID, kafe_utils:broker_name(Host, Port), Acc),
+% - REMOVE - %                                                 get_connection([{bucs:to_string(Host), Port}], StateAcc)}
+% - REMOVE - %                                            end, {#{}, State2}, Brokers),
+% - REMOVE - %           State4 = remove_unlisted_brokers(maps:values(Brokers1), State3),
+% - REMOVE - %           case update_topics(Topics, Brokers1) of
+% - REMOVE - %             leader_election ->
+% - REMOVE - %               timer:sleep(1000),
+% - REMOVE - %               update_state_with_metadata(State3);
+% - REMOVE - %             Topics1 ->
+% - REMOVE - %               maps:put(topics, Topics1, State4)
+% - REMOVE - %           end;
+% - REMOVE - %         _ ->
+% - REMOVE - %           State2
+% - REMOVE - %       end
+% - REMOVE - %   end.
+% - REMOVE - %
+% - REMOVE - % update_topics(Topics, Brokers1) ->
+% - REMOVE - %   update_topics(Topics, Brokers1, #{}).
+% - REMOVE - % update_topics([], _, Acc) ->
+% - REMOVE - %   Acc;
+% - REMOVE - % update_topics([#{name := Topic, partitions := Partitions}|Rest], Brokers1, Acc) ->
+% - REMOVE - %   case brokers_for_partitions(Partitions, Brokers1, Topic, #{}) of
+% - REMOVE - %     leader_election ->
+% - REMOVE - %       leader_election;
+% - REMOVE - %     BrokersForPartitions ->
+% - REMOVE - %       AccUpdate = maps:put(Topic, BrokersForPartitions, Acc),
+% - REMOVE - %       update_topics(Rest, Brokers1, AccUpdate)
+% - REMOVE - %   end.
+% - REMOVE - %
+% - REMOVE - % brokers_for_partitions([], _, _, Acc) ->
+% - REMOVE - %   Acc;
+% - REMOVE - % brokers_for_partitions([#{id := ID, leader := -1}|_], _, Topic, _) ->
+% - REMOVE - %   lager:info("Leader election in progress for topic ~s, partition ~p", [Topic, ID]),
+% - REMOVE - %   leader_election;
+% - REMOVE - % brokers_for_partitions([#{id := ID, leader := Leader}|Rest], Brokers1, Topic, Acc) ->
+% - REMOVE - %   brokers_for_partitions(Rest, Brokers1, Topic,
+% - REMOVE - %                          maps:put(ID, maps:get(Leader, Brokers1), Acc)).
+% - REMOVE - %
+% - REMOVE - % % @hidden
+% - REMOVE - % remove_unlisted_brokers(BrokersList, #{brokers := Brokers} = State) ->
+% - REMOVE - %   UnkillID = lists:foldl(fun(Broker, Acc) ->
+% - REMOVE - %                              case maps:get(Broker, Brokers, undefined) of
+% - REMOVE - %                                undefined -> Acc;
+% - REMOVE - %                                ID -> [ID|Acc]
+% - REMOVE - %                              end
+% - REMOVE - %                          end, [], BrokersList),
+% - REMOVE - %   Brokers1 = maps:fold(fun(BrokerName, BrokerID, Acc) ->
+% - REMOVE - %                            case lists:member(BrokerName, BrokersList) of
+% - REMOVE - %                              true ->
+% - REMOVE - %                                maps:put(BrokerName, BrokerID, Acc);
+% - REMOVE - %                              false ->
+% - REMOVE - %                                case lists:member(BrokerID, UnkillID) of
+% - REMOVE - %                                  true ->
+% - REMOVE - %                                    ok;
+% - REMOVE - %                                  false ->
+% - REMOVE - %                                    _ = poolgirl:remove_pool(BrokerID)
+% - REMOVE - %                                end,
+% - REMOVE - %                                Acc
+% - REMOVE - %                            end
+% - REMOVE - %                        end, #{}, Brokers),
+% - REMOVE - %   State#{brokers => Brokers1, brokers_list => BrokersList}.
+% - REMOVE - %
+% - REMOVE - %
+% - REMOVE - % % @hidden
+% - REMOVE - % remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
+% - REMOVE - %   lists:foldl(fun(Broker, #{brokers := Brokers1, brokers_list := BrokersList1} = State1) ->
+% - REMOVE - %                   case maps:get(Broker, Brokers1, undefined) of
+% - REMOVE - %                     undefined ->
+% - REMOVE - %                       maps:put(brokers_list,
+% - REMOVE - %                                lists:delete(Broker, BrokersList1),
+% - REMOVE - %                                State1);
+% - REMOVE - %                     BrokerID ->
+% - REMOVE - %                       case poolgirl:checkout(BrokerID) of
+% - REMOVE - %                         {ok, BrokerPID} ->
+% - REMOVE - %                           case check_if_broker_is_alive(BrokerPID) of
+% - REMOVE - %                             ok ->
+% - REMOVE - %                               _ = poolgirl:checkin(BrokerPID),
+% - REMOVE - %                               State1;
+% - REMOVE - %                             {error, Reason} ->
+% - REMOVE - %                               _ = poolgirl:checkin(BrokerPID),
+% - REMOVE - %                               _ = poolgirl:remove_pool(BrokerID),
+% - REMOVE - %                               lager:warning("Broker ~s (from ~s) not alive : ~p", [Broker, BrokerID, Reason]),
+% - REMOVE - %                               maps:put(brokers_list,
+% - REMOVE - %                                        lists:delete(Broker, BrokersList1),
+% - REMOVE - %                                        maps:put(brokers, maps:remove(Broker, Brokers1), State1))
+% - REMOVE - %                           end;
+% - REMOVE - %                         _ ->
+% - REMOVE - %                           maps:put(brokers_list,
+% - REMOVE - %                                    lists:delete(Broker, BrokersList1),
+% - REMOVE - %                                    State1)
+% - REMOVE - %                       end
+% - REMOVE - %                   end
+% - REMOVE - %               end, State, BrokersList).
+% - REMOVE - %
+% - REMOVE - % % @hidden
+% - REMOVE - % get_host([], _, _) -> undefined;
+% - REMOVE - % get_host([Addr|Rest], Hostname, AddrType) ->
+% - REMOVE - %   case inet:getaddr(Hostname, AddrType) of
+% - REMOVE - %     {ok, Addr} ->
+% - REMOVE - %       case inet:gethostbyaddr(Addr) of
+% - REMOVE - %         {ok, #hostent{h_name = Hostname1, h_aliases = HostAlias}} ->
+% - REMOVE - %           {Addr, lists:usort([Hostname|[Hostname1|HostAlias]])};
+% - REMOVE - %         _ ->
+% - REMOVE - %           {Addr, [Hostname]}
+% - REMOVE - %       end;
+% - REMOVE - %     _ -> get_host(Rest, Hostname, AddrType)
+% - REMOVE - %   end.
+% - REMOVE - %
+% - REMOVE - % % @hidden
+% - REMOVE - % get_first_broker(#{brokers := Brokers}) ->
+% - REMOVE - %   get_first_broker(maps:values(Brokers));
+% - REMOVE - % get_first_broker([]) -> undefined;
+% - REMOVE - % get_first_broker([BrokerID|Rest]) ->
+% - REMOVE - %   case poolgirl:checkout(BrokerID) of
+% - REMOVE - %     {ok, Broker} ->
+% - REMOVE - %       case check_if_broker_is_alive(Broker) of
+% - REMOVE - %         ok ->
+% - REMOVE - %           Broker;
+% - REMOVE - %         {error, Reason} ->
+% - REMOVE - %           _ = poolgirl:checkin(Broker),
+% - REMOVE - %           lager:warning("Broker ~s is not alive: ~p", [Broker, Reason]),
+% - REMOVE - %           get_first_broker(Rest)
+% - REMOVE - %       end;
+% - REMOVE - %     {error, Reason} ->
+% - REMOVE - %       lager:error("Can't checkout broker from pool ~s: ~p", [BrokerID, Reason]),
+% - REMOVE - %       get_first_broker(Rest)
+% - REMOVE - %   end.
+% - REMOVE - %
+% - REMOVE - % check_if_broker_is_alive(BrokerPid) ->
+% - REMOVE - %   try
+% - REMOVE - %     gen_server:call(BrokerPid, alive, ?TIMEOUT)
+% - REMOVE - %   catch
+% - REMOVE - %     Type:Error ->
+% - REMOVE - %       {error, {Type, Error}}
+% - REMOVE - %   end.
