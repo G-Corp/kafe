@@ -110,7 +110,7 @@ broker_id_by_topic_and_partition(Topic, Partition) ->
 % @end
 -spec broker_by_name(BrokerName :: string()) -> pid() | undefined.
 broker_by_name(BrokerName) ->
-  case ets_get(?ETS_TABLE, topics, undefined) of
+  case ets_get(?ETS_TABLE, brokers, undefined) of
     undefined ->
       undefined;
     Brokers ->
@@ -151,9 +151,9 @@ release_broker(BrokerPID) ->
 % @doc
 % Return the list of availables topics
 % @end
--spec topics() -> [binary()].
+-spec topics() -> map().
 topics() ->
-  maps:keys(ets_get(?ETS_TABLE, topics, #{})).
+  ets_get(?ETS_TABLE, topics, #{}).
 
 % @doc
 % Return the list of availables partitions for the given <tt>Topic</tt>.
@@ -186,19 +186,24 @@ size() ->
 % @hidden
 init(_) ->
   ets:new(?ETS_TABLE, [public, named_table]),
-  BrokersUpdateFreq = doteki:get_env([kafe, brokers_update_frequency], ?DEFAULT_BROKER_UPDATE),
-  DefaultBrokers = doteki:get_env(
-                     [kafe, brokers],
-                     [{doteki:get_env([kafe, host], ?DEFAULT_IP),
-                       doteki:get_env([kafe, port], ?DEFAULT_PORT)}]),
-  PoolSize = doteki:get_env([kafe, pool_size], ?DEFAULT_POOL_SIZE),
-  ChunkPoolSize = doteki:get_env([kafe, chunk_pool_size], ?DEFAULT_CHUNK_POOL_SIZE),
-  {ok, retrieve, #state{
-                    default_brokers = DefaultBrokers,
-                    brokers_update_frequency = BrokersUpdateFreq,
-                    pool_size = PoolSize,
-                    chunk_pool_size = ChunkPoolSize
-                   }, 10}.
+  Timeout = doteki:get_env(
+              [kafe, brokers_update_frequency],
+              ?DEFAULT_BROKER_UPDATE),
+  State = #state{
+             default_brokers = doteki:get_env(
+                                 [kafe, brokers],
+                                 [{doteki:get_env([kafe, host], ?DEFAULT_IP),
+                                   doteki:get_env([kafe, port], ?DEFAULT_PORT)}]),
+             brokers_update_frequency = Timeout,
+             pool_size = doteki:get_env(
+                           [kafe, pool_size],
+                           ?DEFAULT_POOL_SIZE),
+             chunk_pool_size = doteki:get_env(
+                                 [kafe, chunk_pool_size],
+                                 ?DEFAULT_CHUNK_POOL_SIZE)
+            },
+  retrieve_brokers(State),
+  {ok, retrieve, State, Timeout}.
 
 % @hidden
 retrieve(timeout, #state{brokers_update_frequency = Timeout} = State) ->
