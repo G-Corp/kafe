@@ -11,11 +11,9 @@
 -module(kafe).
 -compile([{parse_transform, bristow_transform},
           {parse_transform, lager_transform}]).
-% -behaviour(gen_server).
 
 -include("../include/kafe.hrl").
 -include_lib("kernel/include/inet.hrl").
--define(SERVER, ?MODULE).
 
 % Public API
 -export([
@@ -26,6 +24,7 @@
          offset/0,
          offset/1,
          offset/2,
+         produce/1,
          produce/2,
          produce/3,
          default_key_to_partition/2,
@@ -58,7 +57,7 @@
 
 % Internal API
 -export([
-         number_of_brokers/0, % UNUSED
+         number_of_brokers/0,
          topics/0,
          partitions/1,
          max_offset/1,
@@ -97,10 +96,19 @@
                                                     isr => [integer()],
                                                     leader => integer(),
                                                     replicas => [integer()]}]}]}.
+-type topic() :: binary().
+-type key() :: term().
+-type value() :: binary().
+-type partition() :: integer().
 -type topics() :: [binary() | string() | atom()] | [{binary() | string() | atom(), [{integer(), integer(), integer()}]}].
 -type topic_partition_info() :: #{name => binary(),
-                                  partitions => [#{error_code => error_code(), id => integer(), offsets => [integer()]}]}.
--type message() :: binary() | {binary(), binary()}.
+                                  partitions => [#{error_code => error_code(),
+                                                   id => integer(),
+                                                   offsets => [integer()],
+                                                   timestamp => integer()}
+                                                 | #{error_code => error_code(),
+                                                     id => integer(),
+                                                     offsets => [integer()]}]}.
 -type produce_options() :: #{timeout => integer(),
                              required_acks => integer(),
                              partition => integer(),
@@ -135,8 +143,8 @@
 -type offset_commit_set() :: [#{name => binary(),
                                 partitions => [#{partition => integer(),
                                                  error_code => error_code()}]}].
--type offset_commit_option() :: [{binary(), [{integer(), integer(), binary()}]}].
--type offset_commit_option_v1() :: [{binary(), [{integer(), integer(), integer(), binary()}]}].
+-type offset_commit_topics() :: [{binary(), [{integer(), integer(), binary()}]}].
+-type offset_commit_topics_v1() :: [{binary(), [{integer(), integer(), integer(), binary()}]}].
 -type broker_id() :: atom().
 -type group() :: #{group_id => binary(), protocol_type => binary()}.
 -type groups() :: #{error_code => error_code(),
@@ -315,9 +323,9 @@ offset(Topics) when is_list(Topics) ->
 offset(ReplicatID, Topics) when is_integer(ReplicatID), is_list(Topics) ->
   kafe_protocol_offset:run(ReplicatID, Topics).
 
-% @equiv produce(Topic, Message, #{})
-produce(Topic, Message) ->
-  produce(Topic, Message, #{}).
+% @equiv produce(Messages, #{})
+produce(Messages) ->
+  produce(Messages, #{}).
 
 % @doc
 % Send a message
@@ -334,7 +342,8 @@ produce(Topic, Message) ->
 % If it is 1, the server will wait the data is written to the local log before sending a response. If it is -1 the server will block until the message is committed
 % by all in sync replicas before sending a response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server
 % will never wait for more acknowledgements than there are in-sync replicas). (default: -1)</li>
-% <li><tt>partition :: integer()</tt> : The partition that data is being published to.</li>
+% <li><tt>partition :: integer()</tt> : The partition that data is being published to.
+% <i>This option exist for compatibility but it will be removed in the next major release.</i></li>
 % <li><tt>key_to_partition :: fun((binary(), term()) -&gt; integer())</tt> : Hash function to do partition assignment from the message key. (default:
 % kafe:default_key_to_partition/2)</li>
 % </ul>
@@ -345,16 +354,38 @@ produce(Topic, Message) ->
 %
 % Example:
 % <pre>
-% Response = kafe:product(&lt;&lt;"topic"&gt;&gt;, &lt;&lt;"a simple message"&gt;&gt;, #{timeout =&gt; 1000, partition =&gt; 0}).
-% Response1 = kafe:product(&lt;&lt;"topic"&gt;&gt;, {&lt;&lt;"key"&gt;&gt;, &lt;&lt;"Another simple message"&gt;&gt;}).
+% Response = kafe:product([{&lt;&lt;"topic"&gt;&gt;, [&lt;&lt;"a simple message"&gt;&gt;]}], #{timeout =&gt; 1000}).
+% Response1 = kafe:product([{&lt;&lt;"topic1"&gt;&gt;, [{&lt;&lt;"key1"&gt;&gt;, &lt;&lt;"A simple message"&gt;&gt;}]},
+%                           {&lt;&lt;"topic2"&gt;&gt;, [{&lt;&lt;"key2"&gt;&gt;, &lt;&lt;"Another simple message"&gt;&gt;}]}]).
 % </pre>
 %
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI">Kafka protocol documentation</a>.
 % @end
--spec produce(binary(), message(), produce_options()) -> ok | {ok, [topic_partition_info()]} | {error,  term()}.
-produce(Topic, Message, Options) ->
-  kafe_protocol_produce:run(Topic, Message, Options).
+-spec produce([{topic(), [{key(), value(), partition()}
+                          | {value(), partition()}
+                          | {key(), value()}
+                          | value()]}], produce_options()) ->
+  {ok, #{throttle_time => integer(),
+         topics => [topic_partition_info()]}}
+  | {ok, [topic_partition_info()]}
+  | {error,  term()}.
+produce(Messages, Options) when is_list(Messages), is_map(Options) ->
+  kafe_protocol_produce:run(Messages, Options);
+produce(Topic, Message) when is_binary(Topic),
+                             (is_binary(Message) orelse is_tuple(Message)) ->
+  produce([{Topic, [Message]}], #{}).
+
+% @equiv produce([{Topic, [Message]}], Options)
+produce(Topic, Message, #{partition := Partition} = Options) when is_binary(Topic),
+                                      is_binary(Message) ->
+  produce([{Topic, [{Message, Partition}]}], Options);
+produce(Topic, {Key, Value}, #{partition := Partition} = Options) when is_binary(Topic),
+                                                                       is_binary(Value) ->
+  produce([{Topic, [{Key, Value, Partition}]}], Options);
+produce(Topic, Message, Options) when is_binary(Topic),
+                                      is_map(Options) ->
+  produce([{Topic, [Message]}], Options).
 
 % @doc
 % Default fonction used to do partition assignment from the message key.
@@ -569,7 +600,7 @@ describe_group(GroupID) when is_binary(GroupID) ->
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(binary(), offset_commit_option()) -> {ok, [offset_commit_set()]} | {error, term()}.
+-spec offset_commit(binary(), offset_commit_topics()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v0(ConsumerGroup, Topics).
 
@@ -579,7 +610,7 @@ offset_commit(ConsumerGroup, Topics) ->
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(binary(), integer(), binary(), offset_commit_option_v1()) -> {ok, [offset_commit_set()]} | {error, term()}.
+-spec offset_commit(binary(), integer(), binary(), offset_commit_topics_v1()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationID, ConsumerID, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v1(ConsumerGroup,
                                               ConsumerGroupGenerationID,
@@ -592,7 +623,7 @@ offset_commit(ConsumerGroup, ConsumerGroupGenerationID, ConsumerID, Topics) ->
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(binary(), integer(), binary(), integer(), offset_commit_option()) -> {ok, [offset_commit_set()]} | {error, term()}.
+-spec offset_commit(binary(), integer(), binary(), integer(), offset_commit_topics()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationID, ConsumerID, RetentionTime, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v2(ConsumerGroup,
                                               ConsumerGroupGenerationID,

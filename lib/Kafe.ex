@@ -24,6 +24,9 @@ defmodule Kafe do
   def unquote(:"offset")(arg1, arg2) do
     :erlang.apply(:"kafe", :"offset", [arg1, arg2])
   end
+  def unquote(:"produce")(arg1) do
+    :erlang.apply(:"kafe", :"produce", [arg1])
+  end
   def unquote(:"produce")(arg1, arg2) do
     :erlang.apply(:"kafe", :"produce", [arg1, arg2])
   end

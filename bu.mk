@@ -159,6 +159,15 @@ lint:
 LINT=lint
 endif
 
+ifdef NO_XREF
+XREF=
+else
+xref:
+	$(verbose) $(REBAR) xref
+
+XREF=xref
+endif
+
 compile-erl:
 	$(verbose) $(REBAR) as $(REBAR_ENV) update
 	$(verbose) $(REBAR) as $(REBAR_ENV) compile
@@ -184,7 +193,7 @@ else
 	$(verbose) erl -pa _build/$(REBAR_ENV)/lib/*/ebin _build/$(REBAR_ENV)/lib/*/include -name ${NODE_NAME}@${NODE_HOST} -setcookie ${current_dir}
 endif
 
-dist-erl: clean compile-erl tests $(LINT) doc
+dist-erl: clean compile-erl tests $(LINT) $(XREF) doc
 
 clean-erl:
 	$(verbose) $(RM_RF) _build test/eunit
