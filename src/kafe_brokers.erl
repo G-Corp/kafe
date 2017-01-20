@@ -17,7 +17,8 @@
          topics/0,
          partitions/1,
          update/0,
-         list/0
+         list/0,
+         size/0
         ]).
 
 -export([
@@ -168,6 +169,13 @@ update() ->
 -spec list() -> [string()].
 list() ->
   ets_get(?ETS_TABLE, brokers_list, []).
+
+% @doc
+% Return the number of availables brokers
+% @end
+-spec size() -> integer().
+size() ->
+  length(list()).
 
 % @hidden
 init(_) ->
