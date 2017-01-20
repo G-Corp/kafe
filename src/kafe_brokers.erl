@@ -10,6 +10,7 @@
          first_broker/0,
          first_broker/1,
          broker_by_topic_and_partition/2,
+         broker_id_by_topic_and_partition/2,
          broker_by_name/1,
          broker_by_host_and_port/2,
          broker_by_id/1,
@@ -76,6 +77,16 @@ first_broker(Retrieve) when is_boolean(Retrieve) ->
 % @end
 -spec broker_by_topic_and_partition(Topic :: binary(), Partition :: integer()) -> pid() | undefined.
 broker_by_topic_and_partition(Topic, Partition) ->
+  case broker_id_by_topic_and_partition(Topic, Partition) of
+    undefined -> undefined;
+    BrokerID -> checkout_broker(BrokerID)
+  end.
+
+% @doc
+% Return a broker ID for the given <tt>Topic</tt> and <tt>Partition</tt>.
+% @end
+-spec broker_id_by_topic_and_partition(Topic :: binary(), Partition :: integer()) -> atom() | undefined.
+broker_id_by_topic_and_partition(Topic, Partition) ->
   case {ets_get(?ETS_TABLE, topics, undefined),
         ets_get(?ETS_TABLE, brokers, undefined)} of
     {#{}, #{}} = {Topics, Brokers} ->
@@ -87,12 +98,7 @@ broker_by_topic_and_partition(Topic, Partition) ->
             undefined ->
               undefined;
             BrokerName ->
-              case maps:get(BrokerName, Brokers, undefined) of
-                undefined ->
-                  undefined;
-                BrokerID ->
-                  checkout_broker(BrokerID)
-              end
+              maps:get(BrokerName, Brokers, undefined)
           end
       end;
     _ ->
