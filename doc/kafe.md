@@ -188,21 +188,21 @@ join_group_options() = #{session_timeout =&gt; integer(), member_id =&gt; binary
 
 
 
-### <a name="type-member_assignment">member_assignment()</a> ###
+### <a name="type-key">key()</a> ###
 
 
 <pre><code>
-member_assignment() = #{version =&gt; integer(), partition_assignment =&gt; [<a href="#type-partition_assignment">partition_assignment()</a>], user_data =&gt; binary()}
+key() = term()
 </code></pre>
 
 
 
 
-### <a name="type-message">message()</a> ###
+### <a name="type-member_assignment">member_assignment()</a> ###
 
 
 <pre><code>
-message() = binary() | {binary(), binary()}
+member_assignment() = #{version =&gt; integer(), partition_assignment =&gt; [<a href="#type-partition_assignment">partition_assignment()</a>], user_data =&gt; binary()}
 </code></pre>
 
 
@@ -228,31 +228,31 @@ metadata() = #{brokers =&gt; [#{host =&gt; binary(), id =&gt; integer(), port =&
 
 
 
-### <a name="type-offset_commit_option">offset_commit_option()</a> ###
-
-
-<pre><code>
-offset_commit_option() = [{binary(), [{integer(), integer(), binary()}]}]
-</code></pre>
-
-
-
-
-### <a name="type-offset_commit_option_v1">offset_commit_option_v1()</a> ###
-
-
-<pre><code>
-offset_commit_option_v1() = [{binary(), [{integer(), integer(), integer(), binary()}]}]
-</code></pre>
-
-
-
-
 ### <a name="type-offset_commit_set">offset_commit_set()</a> ###
 
 
 <pre><code>
 offset_commit_set() = [#{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integer(), error_code =&gt; <a href="#type-error_code">error_code()</a>}]}]
+</code></pre>
+
+
+
+
+### <a name="type-offset_commit_topics">offset_commit_topics()</a> ###
+
+
+<pre><code>
+offset_commit_topics() = [{binary(), [{integer(), integer(), binary()}]}]
+</code></pre>
+
+
+
+
+### <a name="type-offset_commit_topics_v1">offset_commit_topics_v1()</a> ###
+
+
+<pre><code>
+offset_commit_topics_v1() = [{binary(), [{integer(), integer(), integer(), binary()}]}]
 </code></pre>
 
 
@@ -273,6 +273,16 @@ offset_fetch_options() = [binary()] | [{binary(), [integer()]}]
 
 <pre><code>
 offset_fetch_set() = #{name =&gt; binary(), partitions_offset =&gt; [#{partition =&gt; integer(), offset =&gt; integer(), metadata_info =&gt; binary(), error_code =&gt; <a href="#type-error_code">error_code()</a>}]}
+</code></pre>
+
+
+
+
+### <a name="type-partition">partition()</a> ###
+
+
+<pre><code>
+partition() = integer()
 </code></pre>
 
 
@@ -338,11 +348,21 @@ sync_group() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, v
 
 
 
+### <a name="type-topic">topic()</a> ###
+
+
+<pre><code>
+topic() = binary()
+</code></pre>
+
+
+
+
 ### <a name="type-topic_partition_info">topic_partition_info()</a> ###
 
 
 <pre><code>
-topic_partition_info() = #{name =&gt; binary(), partitions =&gt; [#{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), offsets =&gt; [integer()]}]}
+topic_partition_info() = #{name =&gt; binary(), partitions =&gt; [#{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), offsets =&gt; [integer()], timestamp =&gt; integer()} | #{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), offsets =&gt; [integer()]}]}
 </code></pre>
 
 
@@ -353,6 +373,16 @@ topic_partition_info() = #{name =&gt; binary(), partitions =&gt; [#{error_code =
 
 <pre><code>
 topics() = [binary() | string() | atom()] | [{binary() | string() | atom(), [{integer(), integer(), integer()}]}]
+</code></pre>
+
+
+
+
+### <a name="type-value">value()</a> ###
+
+
+<pre><code>
+value() = binary()
 </code></pre>
 
 <a name="index"></a>
@@ -379,8 +409,10 @@ Offset commit v1.</td></tr><tr><td valign="top"><a href="#offset_commit-5">offse
 Offset commit v2.</td></tr><tr><td valign="top"><a href="#offset_fetch-1">offset_fetch/1</a></td><td>Equivalent to <a href="#offset_fetch-2"><tt>offset_fetch(ConsumerGroup, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#offset_fetch-2">offset_fetch/2</a></td><td> 
 Offset fetch.</td></tr><tr><td valign="top"><a href="#offsets-2">offsets/2</a></td><td>
 Return the list of all unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#offsets-3">offsets/3</a></td><td>
-Return the list of the next Nth unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td>Equivalent to <a href="#produce-3"><tt>produce(Topic, Message, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td> 
-Send a message.</td></tr><tr><td valign="top"><a href="#start-0">start/0</a></td><td>
+Return the list of the next Nth unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-1">produce/1</a></td><td>Equivalent to <a href="#produce-2"><tt>produce(Messages, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td> 
+Send a message.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td>Equivalent to <a href="#produce-2"><tt>produce([{Topic, [Message]}], Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#split-3">split/3</a></td><td>
+Take a list of tuples where the <tt>M</tt>th element is a <tt>Topic</tt> and the <tt>N</tt>th element is a <tt>Partition</tt> and return the given list splitted in
+<tt>O</tt> lists, on per broker.</td></tr><tr><td valign="top"><a href="#start-0">start/0</a></td><td>
 Start kafe application.</td></tr><tr><td valign="top"><a href="#start_consumer-3">start_consumer/3</a></td><td> 
 Start a new consumer.</td></tr><tr><td valign="top"><a href="#stop_consumer-1">stop_consumer/1</a></td><td>
 Stop the given consumer.</td></tr><tr><td valign="top"><a href="#sync_group-4">sync_group/4</a></td><td> 
@@ -685,7 +717,7 @@ For more informations, see the
 ### offset_commit/2 ###
 
 <pre><code>
-offset_commit(ConsumerGroup::binary(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
+offset_commit(ConsumerGroup::binary(), Topics::<a href="#type-offset_commit_topics">offset_commit_topics()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -700,7 +732,7 @@ For more informations, see the
 ### offset_commit/4 ###
 
 <pre><code>
-offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationID::integer(), ConsumerID::binary(), Topics::<a href="#type-offset_commit_option_v1">offset_commit_option_v1()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
+offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationID::integer(), ConsumerID::binary(), Topics::<a href="#type-offset_commit_topics_v1">offset_commit_topics_v1()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -715,7 +747,7 @@ For more informations, see the
 ### offset_commit/5 ###
 
 <pre><code>
-offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationID::integer(), ConsumerID::binary(), RetentionTime::integer(), Topics::<a href="#type-offset_commit_option">offset_commit_option()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
+offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationID::integer(), ConsumerID::binary(), RetentionTime::integer(), Topics::<a href="#type-offset_commit_topics">offset_commit_topics()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -773,20 +805,20 @@ offsets(TopicName::binary() | {binary(), [integer()]}, ConsumerGroup::binary(), 
 
 Return the list of the next Nth unread offsets for a given topic and consumer group
 
+<a name="produce-1"></a>
+
+### produce/1 ###
+
+`produce(Messages) -> any()`
+
+Equivalent to [`produce(Messages, #{})`](#produce-2).
+
 <a name="produce-2"></a>
 
 ### produce/2 ###
 
-`produce(Topic, Message) -> any()`
-
-Equivalent to [`produce(Topic, Message, #{})`](#produce-3).
-
-<a name="produce-3"></a>
-
-### produce/3 ###
-
 <pre><code>
-produce(Topic::binary(), Message::<a href="#type-message">message()</a>, Options::<a href="#type-produce_options">produce_options()</a>) -&gt; ok | {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()}
+produce(Messages::[{<a href="#type-topic">topic()</a>, [{<a href="#type-key">key()</a>, <a href="#type-value">value()</a>, <a href="#type-partition">partition()</a>} | {<a href="#type-value">value()</a>, <a href="#type-partition">partition()</a>} | {<a href="#type-key">key()</a>, <a href="#type-value">value()</a>} | <a href="#type-value">value()</a>]}], Options::<a href="#type-produce_options">produce_options()</a>) -&gt; {ok, #{throttle_time =&gt; integer(), topics =&gt; [<a href="#type-topic_partition_info">topic_partition_info()</a>]}} | {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()}
 </code></pre>
 <br />
 
@@ -808,6 +840,7 @@ by all in sync replicas before sending a response. For any number > 1 the server
 will never wait for more acknowledgements than there are in-sync replicas). (default: -1)
 
 * `partition :: integer()` : The partition that data is being published to.
+_This option exist for compatibility but it will be removed in the next major release._
 
 * `key_to_partition :: fun((binary(), term()) -> integer())` : Hash function to do partition assignment from the message key. (default:
 kafe:default_key_to_partition/2)
@@ -821,12 +854,30 @@ Example:
 
 ```
 
- Response = kafe:product(<<"topic">>, <<"a simple message">>, #{timeout => 1000, partition => 0}).
- Response1 = kafe:product(<<"topic">>, {<<"key">>, <<"Another simple message">>}).
+ Response = kafe:product([{<<"topic">>, [<<"a simple message">>]}], #{timeout => 1000}).
+ Response1 = kafe:product([{<<"topic1">>, [{<<"key1">>, <<"A simple message">>}]},
+                           {<<"topic2">>, [{<<"key2">>, <<"Another simple message">>}]}]).
 ```
 
 For more informations, see the
 [Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI).
+
+<a name="produce-3"></a>
+
+### produce/3 ###
+
+`produce(Topic, Message, Options) -> any()`
+
+Equivalent to [`produce([{Topic, [Message]}], Options)`](#produce-2).
+
+<a name="split-3"></a>
+
+### split/3 ###
+
+`split(M, N, List) -> any()`
+
+Take a list of tuples where the `M`th element is a `Topic` and the `N`th element is a `Partition` and return the given list splitted in
+`O` lists, on per broker.
 
 <a name="start-0"></a>
 

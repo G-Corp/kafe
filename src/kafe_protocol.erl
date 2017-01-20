@@ -32,10 +32,12 @@ run(BrokerPID, Request) when is_pid(BrokerPID) ->
         Response
       catch
         Type:Error ->
+          _ = kafe:release_broker(BrokerPID),
           lager:error("Request error: ~p:~p", [Type, Error]),
           {error, Error}
       end;
     false ->
+      _ = kafe:release_broker(BrokerPID),
       {error, broker_not_available}
   end;
 run(BrokerName, Request) when is_list(BrokerName) ->

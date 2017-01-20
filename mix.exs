@@ -4,7 +4,7 @@ defmodule Kafe.Mixfile do
   def project do
     [
       app: :kafe,
-      version: "2.1.8",
+      version: "2.2.0",
       elixir: "~> 1.2",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
@@ -24,7 +24,7 @@ defmodule Kafe.Mixfile do
   defp deps do
     [
       {:lager, "~> 3.2.0"},
-      {:bucs, "~> 1.0.3"},
+      {:bucs, "~> 1.0.4"},
       {:doteki, "~> 1.0.3"},
       {:poolgirl, "~> 1.1.1"},
       {:bristow, "~> 0.2.1"},

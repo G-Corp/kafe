@@ -15,6 +15,9 @@
 
 -include("../include/kafe.hrl").
 -include_lib("kernel/include/inet.hrl").
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
 -define(SERVER, ?MODULE).
 
 % Public API
@@ -26,6 +29,7 @@
          offset/0,
          offset/1,
          offset/2,
+         produce/1,
          produce/2,
          produce/3,
          default_key_to_partition/2,
@@ -46,7 +50,8 @@
          offset_fetch/2,
          offset_commit/2,
          offset_commit/4,
-         offset_commit/5
+         offset_commit/5,
+         split/3
         ]).
 
 -export([
@@ -63,6 +68,7 @@
          first_broker/0,
          release_broker/1,
          broker_id_by_topic_and_partition/2,
+         broker_id_by_topics_and_partitions/1,
          broker_by_name/1,
          broker_by_host_and_port/2,
          broker_by_id/1,
@@ -108,10 +114,19 @@
                                                     isr => [integer()],
                                                     leader => integer(),
                                                     replicas => [integer()]}]}]}.
+-type topic() :: binary().
+-type key() :: term().
+-type value() :: binary().
+-type partition() :: integer().
 -type topics() :: [binary() | string() | atom()] | [{binary() | string() | atom(), [{integer(), integer(), integer()}]}].
 -type topic_partition_info() :: #{name => binary(),
-                                  partitions => [#{error_code => error_code(), id => integer(), offsets => [integer()]}]}.
--type message() :: binary() | {binary(), binary()}.
+                                  partitions => [#{error_code => error_code(),
+                                                   id => integer(),
+                                                   offsets => [integer()],
+                                                   timestamp => integer()}
+                                                 | #{error_code => error_code(),
+                                                     id => integer(),
+                                                     offsets => [integer()]}]}.
 -type produce_options() :: #{timeout => integer(),
                              required_acks => integer(),
                              partition => integer(),
@@ -146,8 +161,8 @@
 -type offset_commit_set() :: [#{name => binary(),
                                 partitions => [#{partition => integer(),
                                                  error_code => error_code()}]}].
--type offset_commit_option() :: [{binary(), [{integer(), integer(), binary()}]}].
--type offset_commit_option_v1() :: [{binary(), [{integer(), integer(), integer(), binary()}]}].
+-type offset_commit_topics() :: [{binary(), [{integer(), integer(), binary()}]}].
+-type offset_commit_topics_v1() :: [{binary(), [{integer(), integer(), integer(), binary()}]}].
 -type broker_id() :: atom().
 -type group() :: #{group_id => binary(), protocol_type => binary()}.
 -type groups() :: #{error_code => error_code(),
@@ -232,6 +247,10 @@ release_broker(Broker) ->
 % @hidden
 broker_id_by_topic_and_partition(Topic, Partition) ->
   gen_server:call(?SERVER, {broker_id_by_topic_and_partition, bucs:to_binary(Topic), Partition}, ?TIMEOUT).
+
+% @hidden
+broker_id_by_topics_and_partitions(TopicsAndPartitions) ->
+  gen_server:call(?SERVER, {broker_id_by_topics_and_partitions, TopicsAndPartitions}, ?TIMEOUT).
 
 % @hidden
 broker_by_name(BrokerName) ->
@@ -364,9 +383,9 @@ offset(Topics) when is_list(Topics) ->
 offset(ReplicatID, Topics) when is_integer(ReplicatID), is_list(Topics) ->
   kafe_protocol_offset:run(ReplicatID, Topics).
 
-% @equiv produce(Topic, Message, #{})
-produce(Topic, Message) ->
-  produce(Topic, Message, #{}).
+% @equiv produce(Messages, #{})
+produce(Messages) ->
+  produce(Messages, #{}).
 
 % @doc
 % Send a message
@@ -383,7 +402,8 @@ produce(Topic, Message) ->
 % If it is 1, the server will wait the data is written to the local log before sending a response. If it is -1 the server will block until the message is committed
 % by all in sync replicas before sending a response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server
 % will never wait for more acknowledgements than there are in-sync replicas). (default: -1)</li>
-% <li><tt>partition :: integer()</tt> : The partition that data is being published to.</li>
+% <li><tt>partition :: integer()</tt> : The partition that data is being published to.
+% <i>This option exist for compatibility but it will be removed in the next major release.</i></li>
 % <li><tt>key_to_partition :: fun((binary(), term()) -&gt; integer())</tt> : Hash function to do partition assignment from the message key. (default:
 % kafe:default_key_to_partition/2)</li>
 % </ul>
@@ -394,16 +414,38 @@ produce(Topic, Message) ->
 %
 % Example:
 % <pre>
-% Response = kafe:product(&lt;&lt;"topic"&gt;&gt;, &lt;&lt;"a simple message"&gt;&gt;, #{timeout =&gt; 1000, partition =&gt; 0}).
-% Response1 = kafe:product(&lt;&lt;"topic"&gt;&gt;, {&lt;&lt;"key"&gt;&gt;, &lt;&lt;"Another simple message"&gt;&gt;}).
+% Response = kafe:product([{&lt;&lt;"topic"&gt;&gt;, [&lt;&lt;"a simple message"&gt;&gt;]}], #{timeout =&gt; 1000}).
+% Response1 = kafe:product([{&lt;&lt;"topic1"&gt;&gt;, [{&lt;&lt;"key1"&gt;&gt;, &lt;&lt;"A simple message"&gt;&gt;}]},
+%                           {&lt;&lt;"topic2"&gt;&gt;, [{&lt;&lt;"key2"&gt;&gt;, &lt;&lt;"Another simple message"&gt;&gt;}]}]).
 % </pre>
 %
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ProduceAPI">Kafka protocol documentation</a>.
 % @end
--spec produce(binary(), message(), produce_options()) -> ok | {ok, [topic_partition_info()]} | {error,  term()}.
-produce(Topic, Message, Options) ->
-  kafe_protocol_produce:run(Topic, Message, Options).
+-spec produce([{topic(), [{key(), value(), partition()}
+                          | {value(), partition()}
+                          | {key(), value()}
+                          | value()]}], produce_options()) ->
+  {ok, #{throttle_time => integer(),
+         topics => [topic_partition_info()]}}
+  | {ok, [topic_partition_info()]}
+  | {error,  term()}.
+produce(Messages, Options) when is_list(Messages), is_map(Options) ->
+  kafe_protocol_produce:run(Messages, Options);
+produce(Topic, Message) when is_binary(Topic),
+                             (is_binary(Message) orelse is_tuple(Message)) ->
+  produce([{Topic, [Message]}], #{}).
+
+% @equiv produce([{Topic, [Message]}], Options)
+produce(Topic, Message, #{partition := Partition} = Options) when is_binary(Topic),
+                                      is_binary(Message) ->
+  produce([{Topic, [{Message, Partition}]}], Options);
+produce(Topic, {Key, Value}, #{partition := Partition} = Options) when is_binary(Topic),
+                                                                       is_binary(Value) ->
+  produce([{Topic, [{Key, Value, Partition}]}], Options);
+produce(Topic, Message, Options) when is_binary(Topic),
+                                      is_map(Options) ->
+  produce([{Topic, [Message]}], Options).
 
 % @doc
 % Default fonction used to do partition assignment from the message key.
@@ -618,7 +660,7 @@ describe_group(GroupID) when is_binary(GroupID) ->
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(binary(), offset_commit_option()) -> {ok, [offset_commit_set()]} | {error, term()}.
+-spec offset_commit(binary(), offset_commit_topics()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v0(ConsumerGroup, Topics).
 
@@ -628,7 +670,7 @@ offset_commit(ConsumerGroup, Topics) ->
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(binary(), integer(), binary(), offset_commit_option_v1()) -> {ok, [offset_commit_set()]} | {error, term()}.
+-spec offset_commit(binary(), integer(), binary(), offset_commit_topics_v1()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationID, ConsumerID, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v1(ConsumerGroup,
                                               ConsumerGroupGenerationID,
@@ -641,7 +683,7 @@ offset_commit(ConsumerGroup, ConsumerGroupGenerationID, ConsumerID, Topics) ->
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(binary(), integer(), binary(), integer(), offset_commit_option()) -> {ok, [offset_commit_set()]} | {error, term()}.
+-spec offset_commit(binary(), integer(), binary(), integer(), offset_commit_topics()) -> {ok, [offset_commit_set()]} | {error, term()}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationID, ConsumerID, RetentionTime, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v2(ConsumerGroup,
                                               ConsumerGroupGenerationID,
@@ -807,6 +849,13 @@ start_consumer(GroupID, Callback, Options) when is_function(Callback, 6);
 stop_consumer(GroupID) ->
   kafe_consumer_sup:stop_child(GroupID).
 
+% @doc
+% Take a list of tuples where the <tt>M</tt>th element is a <tt>Topic</tt> and the <tt>N</tt>th element is a <tt>Partition</tt> and return the given list splitted in
+% <tt>O</tt> lists, on per broker.
+% @end
+split(M, N, List) ->
+  gen_server:call(?SERVER, {split, M, N, List}, ?TIMEOUT).
+
 % Private
 
 % @hidden
@@ -840,17 +889,20 @@ handle_call(number_of_brokers, _From, #{brokers_list := Brokers} = State) ->
 handle_call(first_broker, _From, State) ->
   {reply, get_first_broker(State), State};
 handle_call({broker_id_by_topic_and_partition, Topic, Partition}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
-  case maps:get(Topic, Topics, undefined) of
-    undefined ->
-      {reply, undefined, State};
-    Brokers ->
-      case maps:get(Partition, Brokers, undefined) of
-        undefined ->
-          {reply, undefined, State};
-        Broker ->
-          {reply, maps:get(Broker, BrokersAddr, undefined), State}
-      end
-  end;
+  {reply,
+   broker_id({Topic, Partition}, Topics, BrokersAddr),
+   State};
+handle_call({broker_id_by_topics_and_partitions, TopicsAndPartitions}, _From, #{topics := Topics, brokers := BrokersAddr} = State) ->
+  {reply,
+   broker_id(
+     lists:flatten(
+       [[{Topic, Partition}
+         || Partition <- Partitions]
+        || {Topic, Partitions} <- TopicsAndPartitions]),
+     Topics,
+     BrokersAddr,
+     undefined),
+   State};
 handle_call({broker_by_name, BrokerName}, _From, #{brokers := BrokersAddr} = State) ->
   case maps:get(bucs:to_string(BrokerName), BrokersAddr, undefined) of
     undefined ->
@@ -872,6 +924,8 @@ handle_call(state, _From, State) ->
 % Public
 handle_call(brokers, _From, #{brokers := Brokers} = State) ->
   {reply, maps:values(Brokers), State};
+handle_call({split, M, N, List}, _From, #{topics := Topics, brokers := Brokers} = State) ->
+  {reply, split(M, N, List, Topics, Brokers), State};
 % RIP
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
@@ -1128,3 +1182,80 @@ get_first_broker([BrokerID|Rest]) ->
       get_first_broker(Rest)
   end.
 
+% @hidden
+broker_id({Topic, Partition}, Topics, BrokersAddr) ->
+  case maps:get(Topic, Topics, undefined) of
+    undefined ->
+      undefined;
+    Brokers ->
+      case maps:get(Partition, Brokers, undefined) of
+        undefined ->
+          undefined;
+        Broker ->
+          maps:get(Broker, BrokersAddr, undefined)
+      end
+  end.
+
+% @hidden
+broker_id([], _, _, BrokerID) ->
+  BrokerID;
+broker_id([TopicPartition|Rest], Topics, BrokersAddr, BrokerID) ->
+  case {broker_id(TopicPartition, Topics, BrokersAddr), BrokerID} of
+    {undefined, _} ->
+      undefined;
+    {BrokerID, BrokerID} ->
+      broker_id(Rest, Topics, BrokersAddr, BrokerID);
+    {NewBrokerID, undefined} ->
+      broker_id(Rest, Topics, BrokersAddr, NewBrokerID)
+  end.
+
+% @hidden
+split(M, N, List, Topics, Brokers) ->
+  split(M, N, List, Topics, Brokers, #{}).
+
+split(_, _, [], _, _, Acc) ->
+  maps:values(Acc);
+split(M, N, [Tuple|List], Topics, Brokers, Acc) ->
+  BrokerID = broker_id({erlang:element(M, Tuple),
+                        erlang:element(N, Tuple)}, Topics, Brokers),
+  Messages = maps:get(BrokerID, Acc, []),
+  split(M, N, List, Topics, Brokers,
+        maps:put(BrokerID, [Tuple|Messages], Acc)).
+
+-ifdef(TEST).
+kafe_test_() ->
+  {setup,
+   fun() ->
+       ok
+   end,
+   fun(_) ->
+       ok
+   end,
+   [
+    fun() ->
+       Topics = #{
+         <<"topic1">> => #{0 => "127.0.0.1:9093", 1 => "127.0.0.1:9094", 2 => "127.0.0.1:9092"},
+         <<"topic2">> => #{0 => "127.0.0.1:9093", 1 => "127.0.0.1:9094", 2 => "127.0.0.1:9092"}},
+       Brokers = #{"127.0.0.1:9092" => '127.0.0.1:9092',
+                   "127.0.0.1:9093" => '127.0.0.1:9093',
+                   "127.0.0.1:9094" => '127.0.0.1:9094'},
+       ?assertEqual(
+          [],
+          split(1, 2, [], Topics, Brokers)),
+       ?assertEqual(
+          [[{<<"topic1">>, 2, message12}],
+           [{<<"topic1">>, 0, message10}],
+           [{<<"topic1">>, 1, message11}]],
+          split(1, 2, [{<<"topic1">>, 0, message10},
+                       {<<"topic1">>, 1, message11},
+                       {<<"topic1">>, 2, message12}], Topics, Brokers)),
+       ?assertEqual(
+          [[{<<"topic2">>, 2, message22}, {<<"topic1">>, 2, message12}],
+           [{<<"topic2">>, 0, message20}, {<<"topic1">>, 0, message10}],
+           [{<<"topic2">>, 1, message21}, {<<"topic1">>, 1, message11}]],
+          split(1, 2, [{<<"topic1">>, 0, message10}, {<<"topic2">>, 0, message20},
+                       {<<"topic1">>, 1, message11}, {<<"topic2">>, 1, message21},
+                       {<<"topic1">>, 2, message12}, {<<"topic2">>, 2, message22}], Topics, Brokers))
+    end
+   ]}.
+-endif.
