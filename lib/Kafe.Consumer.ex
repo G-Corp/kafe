@@ -9,6 +9,9 @@ defmodule Kafe.Consumer do
   def unquote(:"stop")(arg1) do
     :erlang.apply(:"kafe_consumer", :"stop", [arg1])
   end
+  def unquote(:"list")() do
+    :erlang.apply(:"kafe_consumer", :"list", [])
+  end
   def unquote(:"describe")(arg1) do
     :erlang.apply(:"kafe_consumer", :"describe", [arg1])
   end
@@ -20,6 +23,9 @@ defmodule Kafe.Consumer do
   end
   def unquote(:"member_id")(arg1) do
     :erlang.apply(:"kafe_consumer", :"member_id", [arg1])
+  end
+  def unquote(:"coordinator")(arg1) do
+    :erlang.apply(:"kafe_consumer", :"coordinator", [arg1])
   end
   def unquote(:"commit")(arg1, arg2, arg3, arg4) do
     :erlang.apply(:"kafe_consumer", :"commit", [arg1, arg2, arg3, arg4])

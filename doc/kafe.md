@@ -13,8 +13,6 @@ Copyright (c) 2014-2015 Finexkap, 2015 G-Corp, 2015-2016 BotsUnit
 
 __Introduced in:__ 2014
 
-__Behaviours:__ [`gen_server`](gen_server.md).
-
 __Authors:__ Grégoire Lejeune ([`gl@finexkap.com`](mailto:gl@finexkap.com)), Grégoire Lejeune ([`greg@g-corp.io`](mailto:greg@g-corp.io)), Grégoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire.lejeune@botsunit.com)).
 
 <a name="description"></a>
@@ -391,7 +389,8 @@ value() = binary()
 
 
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#brokers-0">brokers/0</a></td><td>
-Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#default_key_to_partition-2">default_key_to_partition/2</a></td><td>
+Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#consumer_groups-0">consumer_groups/0</a></td><td>
+Return the list of availables consumers.</td></tr><tr><td valign="top"><a href="#default_key_to_partition-2">default_key_to_partition/2</a></td><td>
 Default fonction used to do partition assignment from the message key.</td></tr><tr><td valign="top"><a href="#default_protocol-4">default_protocol/4</a></td><td>
 Create a default protocol as defined in the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest">Kafka Protocol Guide</a>.</td></tr><tr><td valign="top"><a href="#describe_group-1">describe_group/1</a></td><td> 
 Return the description of the given consumer group.</td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
@@ -410,9 +409,7 @@ Offset commit v2.</td></tr><tr><td valign="top"><a href="#offset_fetch-1">offset
 Offset fetch.</td></tr><tr><td valign="top"><a href="#offsets-2">offsets/2</a></td><td>
 Return the list of all unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#offsets-3">offsets/3</a></td><td>
 Return the list of the next Nth unread offsets for a given topic and consumer group.</td></tr><tr><td valign="top"><a href="#produce-1">produce/1</a></td><td>Equivalent to <a href="#produce-2"><tt>produce(Messages, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#produce-2">produce/2</a></td><td> 
-Send a message.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td>Equivalent to <a href="#produce-2"><tt>produce([{Topic, [Message]}], Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#split-3">split/3</a></td><td>
-Take a list of tuples where the <tt>M</tt>th element is a <tt>Topic</tt> and the <tt>N</tt>th element is a <tt>Partition</tt> and return the given list splitted in
-<tt>O</tt> lists, on per broker.</td></tr><tr><td valign="top"><a href="#start-0">start/0</a></td><td>
+Send a message.</td></tr><tr><td valign="top"><a href="#produce-3">produce/3</a></td><td>Equivalent to <a href="#produce-2"><tt>produce([{Topic, [Message]}], Options)</tt></a>.</td></tr><tr><td valign="top"><a href="#start-0">start/0</a></td><td>
 Start kafe application.</td></tr><tr><td valign="top"><a href="#start_consumer-3">start_consumer/3</a></td><td> 
 Start a new consumer.</td></tr><tr><td valign="top"><a href="#stop_consumer-1">stop_consumer/1</a></td><td>
 Stop the given consumer.</td></tr><tr><td valign="top"><a href="#sync_group-4">sync_group/4</a></td><td> 
@@ -430,6 +427,17 @@ The sync group request is used by the group leader to assign state (e.g.</td></t
 `brokers() -> any()`
 
 Return the list of availables brokers
+
+<a name="consumer_groups-0"></a>
+
+### consumer_groups/0 ###
+
+<pre><code>
+consumer_groups() -&gt; [binary()]
+</code></pre>
+<br />
+
+Return the list of availables consumers
 
 <a name="default_key_to_partition-2"></a>
 
@@ -869,15 +877,6 @@ For more informations, see the
 `produce(Topic, Message, Options) -> any()`
 
 Equivalent to [`produce([{Topic, [Message]}], Options)`](#produce-2).
-
-<a name="split-3"></a>
-
-### split/3 ###
-
-`split(M, N, List) -> any()`
-
-Take a list of tuples where the `M`th element is a `Topic` and the `N`th element is a `Partition` and return the given list splitted in
-`O` lists, on per broker.
 
 <a name="start-0"></a>
 

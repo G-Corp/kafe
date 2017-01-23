@@ -247,7 +247,7 @@ dispatch([], _, _, Result) ->
   Result;
 dispatch([{Key, Value, Partition}|Rest], Topic, KeyToPartition, Result) when is_binary(Value),
                                                                              is_integer(Partition) ->
-  case kafe:broker_id_by_topic_and_partition(Topic, Partition) of
+  case kafe_brokers:broker_id_by_topic_and_partition(Topic, Partition) of
     undefined ->
       {error, {Topic, Partition}};
     BrokerID ->

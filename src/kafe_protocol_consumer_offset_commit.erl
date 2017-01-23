@@ -14,44 +14,29 @@
         ]).
 
 run_v0(ConsumerGroup, Topics) ->
-  case kafe:group_coordinator(ConsumerGroup) of
-    {ok, #{coordinator_host := Host,
-           coordinator_port := Port}} ->
-      kafe_protocol:run({host_and_port, Host, Port},
-                        {call,
-                         fun ?MODULE:request_v0/3, [ConsumerGroup, Topics],
-                         fun ?MODULE:response/2});
-    E -> E
-  end.
+  kafe_protocol:run({coordinator, ConsumerGroup},
+                    {call,
+                     fun ?MODULE:request_v0/3, [ConsumerGroup, Topics],
+                     fun ?MODULE:response/2}).
 
 run_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
-  case kafe:group_coordinator(ConsumerGroup) of
-    {ok, #{coordinator_host := Host,
-           coordinator_port := Port}} ->
-      kafe_protocol:run({host_and_port, Host, Port},
-                        {call,
-                         fun ?MODULE:request_v1/5, [ConsumerGroup,
-                                                    ConsumerGroupGenerationId,
-                                                    ConsumerId,
-                                                    Topics],
-                         fun ?MODULE:response/2});
-    E -> E
-  end.
+  kafe_protocol:run({coordinator, ConsumerGroup},
+                    {call,
+                     fun ?MODULE:request_v1/5, [ConsumerGroup,
+                                                ConsumerGroupGenerationId,
+                                                ConsumerId,
+                                                Topics],
+                     fun ?MODULE:response/2}).
 
 run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics) ->
-  case kafe:group_coordinator(ConsumerGroup) of
-    {ok, #{coordinator_host := Host,
-           coordinator_port := Port}} ->
-      kafe_protocol:run({host_and_port, Host, Port},
-                        {call,
-                         fun ?MODULE:request_v2/6, [ConsumerGroup,
-                                                    ConsumerGroupGenerationId,
-                                                    ConsumerId,
-                                                    RetentionTime,
-                                                    Topics],
-                         fun ?MODULE:response/2});
-    E -> E
-  end.
+  kafe_protocol:run({coordinator, ConsumerGroup},
+                    {call,
+                     fun ?MODULE:request_v2/6, [ConsumerGroup,
+                                                ConsumerGroupGenerationId,
+                                                ConsumerId,
+                                                RetentionTime,
+                                                Topics],
+                     fun ?MODULE:response/2}).
 
 request_v0(ConsumerGroup, Topics, State) ->
   kafe_protocol:request(

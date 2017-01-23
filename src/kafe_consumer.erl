@@ -118,6 +118,7 @@
 -export([
          start/3
          , stop/1
+         , list/0
          , commit/4
          , commit/1
          , remove_commits/3
@@ -128,6 +129,7 @@
          , topics/1
          , member_id/1
          , generation_id/1
+         , coordinator/1
         ]).
 
 % Private
@@ -144,6 +146,10 @@ start(GroupID, Callback, Options) ->
 % @equiv kafe:stop_consumer(GroupID)
 stop(GroupID) ->
   kafe:stop_consumer(GroupID).
+
+% @equiv kafe:consumer_groups()
+list() ->
+  kafe:consumer_groups().
 
 % @doc
 % Return consumer group descrition
@@ -181,6 +187,13 @@ generation_id(GroupID) ->
 -spec member_id(GroupID :: binary()) -> binary().
 member_id(GroupID) ->
   kafe_consumer_store:value(GroupID, member_id).
+
+% @doc
+% Return the consumer group coordinator
+% @end
+-spec coordinator(GroupID :: binary()) -> atom() | undefined.
+coordinator(GroupID) ->
+  kafe_consumer_store:value(GroupID, coordinator).
 
 % @doc
 % Commit the <tt>Offset</tt> for the given <tt>GroupID</tt>, <tt>Topic</tt> and <tt>Partition</tt>.

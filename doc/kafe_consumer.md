@@ -136,9 +136,10 @@ __Internal :__
 
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#commit-1">commit/1</a></td><td>
 Commit the offset for the given message.</td></tr><tr><td valign="top"><a href="#commit-4">commit/4</a></td><td>
-Commit the <tt>Offset</tt> for the given <tt>GroupID</tt>, <tt>Topic</tt> and <tt>Partition</tt>.</td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
+Commit the <tt>Offset</tt> for the given <tt>GroupID</tt>, <tt>Topic</tt> and <tt>Partition</tt>.</td></tr><tr><td valign="top"><a href="#coordinator-1">coordinator/1</a></td><td>
+Return the consumer group coordinator.</td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
 Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#generation_id-1">generation_id/1</a></td><td>
-Return the consumer group generation ID.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
+Return the consumer group generation ID.</td></tr><tr><td valign="top"><a href="#list-0">list/0</a></td><td>Equivalent to <a href="kafe.md#consumer_groups-0"><tt>kafe:consumer_groups()</tt></a>.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
 Return the consumer group member ID.</td></tr><tr><td valign="top"><a href="#pending_commits-1">pending_commits/1</a></td><td>
 Return the number of pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#pending_commits-3">pending_commits/3</a></td><td>
 Return the number or pending commits for the given consumer group, topic and partition.</td></tr><tr><td valign="top"><a href="#remove_commits-1">remove_commits/1</a></td><td>
@@ -173,6 +174,17 @@ commit(GroupID::binary(), Topic::binary(), Partition::integer(), Offset::integer
 
 Commit the `Offset` for the given `GroupID`, `Topic` and `Partition`.
 
+<a name="coordinator-1"></a>
+
+### coordinator/1 ###
+
+<pre><code>
+coordinator(GroupID::binary()) -&gt; atom() | undefined
+</code></pre>
+<br />
+
+Return the consumer group coordinator
+
 <a name="describe-1"></a>
 
 ### describe/1 ###
@@ -194,6 +206,14 @@ generation_id(GroupID::binary()) -&gt; integer()
 <br />
 
 Return the consumer group generation ID
+
+<a name="list-0"></a>
+
+### list/0 ###
+
+`list() -> any()`
+
+Equivalent to [`kafe:consumer_groups()`](kafe.md#consumer_groups-0).
 
 <a name="member_id-1"></a>
 

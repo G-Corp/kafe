@@ -4,15 +4,31 @@
 -include("../include/kafe.hrl").
 
 -export([
+         run/2,
          run/1,
          request/2,
          response/2
         ]).
 
+run(ConsumerGroup, force) ->
+  case kafe_protocol:run({call,
+                          fun ?MODULE:request/2, [ConsumerGroup],
+                          fun ?MODULE:response/2}) of
+    {ok, #{error_code := none} = Coordinator} = Result ->
+      kafe_consumer_store:insert(ConsumerGroup, coordinator, Coordinator),
+      Result;
+    Other ->
+      kafe_consumer_store:delete(ConsumerGroup, coordinator),
+      Other
+  end.
+
 run(ConsumerGroup) ->
-  kafe_protocol:run({call,
-                     fun ?MODULE:request/2, [ConsumerGroup],
-                     fun ?MODULE:response/2}).
+  case kafe_consumer:coordinator(ConsumerGroup) of
+    undefined ->
+      run(ConsumerGroup, force);
+    Data ->
+      {ok, Data}
+  end.
 
 request(ConsumerGroup, State) ->
   kafe_protocol:request(

@@ -10,17 +10,10 @@
         ]).
 
 run(GroupId, GenerationId, MemberId) ->
-  case kafe:group_coordinator(bucs:to_binary(GroupId)) of
-    {ok, #{coordinator_host := Host,
-           coordinator_port := Port,
-           error_code := none}} ->
-      kafe_protocol:run({host_and_port, Host, Port},
-                        {call,
-                         fun ?MODULE:request/4, [GroupId, GenerationId, MemberId],
-                         fun ?MODULE:response/2});
-    _ ->
-      {error, no_broker_found}
-  end.
+  kafe_protocol:run({coordinator, GroupId},
+                    {call,
+                     fun ?MODULE:request/4, [GroupId, GenerationId, MemberId],
+                     fun ?MODULE:response/2}).
 
 % Heartbeat Request (Version: 0) => group_id group_generation_id member_id
 %   group_id => STRING
