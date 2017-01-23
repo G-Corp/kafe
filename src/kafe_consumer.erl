@@ -147,9 +147,9 @@ start(GroupID, Callback, Options) ->
 stop(GroupID) ->
   kafe:stop_consumer(GroupID).
 
-% @equiv kafe:consumers_list()
+% @equiv kafe:consumer_groups()
 list() ->
-  kafe:consumers_list().
+  kafe:consumer_groups().
 
 % @doc
 % Return consumer group descrition

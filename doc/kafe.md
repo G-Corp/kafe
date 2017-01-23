@@ -389,7 +389,7 @@ value() = binary()
 
 
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#brokers-0">brokers/0</a></td><td>
-Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#consumers_list-0">consumers_list/0</a></td><td>
+Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#consumer_groups-0">consumer_groups/0</a></td><td>
 Return the list of availables consumers.</td></tr><tr><td valign="top"><a href="#default_key_to_partition-2">default_key_to_partition/2</a></td><td>
 Default fonction used to do partition assignment from the message key.</td></tr><tr><td valign="top"><a href="#default_protocol-4">default_protocol/4</a></td><td>
 Create a default protocol as defined in the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest">Kafka Protocol Guide</a>.</td></tr><tr><td valign="top"><a href="#describe_group-1">describe_group/1</a></td><td> 
@@ -428,12 +428,12 @@ The sync group request is used by the group leader to assign state (e.g.</td></t
 
 Return the list of availables brokers
 
-<a name="consumers_list-0"></a>
+<a name="consumer_groups-0"></a>
 
-### consumers_list/0 ###
+### consumer_groups/0 ###
 
 <pre><code>
-consumers_list() -&gt; [binary()]
+consumer_groups() -&gt; [binary()]
 </code></pre>
 <br />
 

@@ -139,7 +139,7 @@ Commit the offset for the given message.</td></tr><tr><td valign="top"><a href="
 Commit the <tt>Offset</tt> for the given <tt>GroupID</tt>, <tt>Topic</tt> and <tt>Partition</tt>.</td></tr><tr><td valign="top"><a href="#coordinator-1">coordinator/1</a></td><td>
 Return the consumer group coordinator.</td></tr><tr><td valign="top"><a href="#describe-1">describe/1</a></td><td>
 Return consumer group descrition.</td></tr><tr><td valign="top"><a href="#generation_id-1">generation_id/1</a></td><td>
-Return the consumer group generation ID.</td></tr><tr><td valign="top"><a href="#list-0">list/0</a></td><td>Equivalent to <a href="kafe.md#consumers_list-0"><tt>kafe:consumers_list()</tt></a>.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
+Return the consumer group generation ID.</td></tr><tr><td valign="top"><a href="#list-0">list/0</a></td><td>Equivalent to <a href="kafe.md#consumer_groups-0"><tt>kafe:consumer_groups()</tt></a>.</td></tr><tr><td valign="top"><a href="#member_id-1">member_id/1</a></td><td>
 Return the consumer group member ID.</td></tr><tr><td valign="top"><a href="#pending_commits-1">pending_commits/1</a></td><td>
 Return the number of pending commits for the given consumer group.</td></tr><tr><td valign="top"><a href="#pending_commits-3">pending_commits/3</a></td><td>
 Return the number or pending commits for the given consumer group, topic and partition.</td></tr><tr><td valign="top"><a href="#remove_commits-1">remove_commits/1</a></td><td>
@@ -213,7 +213,7 @@ Return the consumer group generation ID
 
 `list() -> any()`
 
-Equivalent to [`kafe:consumers_list()`](kafe.md#consumers_list-0).
+Equivalent to [`kafe:consumer_groups()`](kafe.md#consumer_groups-0).
 
 <a name="member_id-1"></a>
 

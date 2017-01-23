@@ -51,7 +51,7 @@
 -export([
          start_consumer/3,
          stop_consumer/1,
-         consumers_list/0,
+         consumer_groups/0,
          offsets/2,
          offsets/3
         ]).
@@ -793,7 +793,7 @@ stop_consumer(GroupID) ->
 % @doc
 % Return the list of availables consumers
 % @end
--spec consumers_list() -> [binary()].
-consumers_list() ->
-  kafe_consumer_sup:consumers_list().
+-spec consumer_groups() -> [binary()].
+consumer_groups() ->
+  kafe_consumer_sup:consumer_groups().
 

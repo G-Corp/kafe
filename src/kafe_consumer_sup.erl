@@ -8,7 +8,7 @@
          start_link/0
          , start_child/2
          , stop_child/1
-         , consumers_list/0
+         , consumer_groups/0
         ]).
 -export([init/1]).
 
@@ -23,10 +23,10 @@ start_child(GroupID, Options) ->
     _ ->
       case supervisor:start_child(?MODULE, [GroupID, Options]) of
         {ok, Child, _} ->
-          ets:insert(kafe_consumers_list, {Child, GroupID, Options}),
+          ets:insert(kafe_consumer_groups, {Child, GroupID, Options}),
           {ok, Child};
         {ok, Child} ->
-          ets:insert(kafe_consumers_list, {Child, GroupID, Options}),
+          ets:insert(kafe_consumer_groups, {Child, GroupID, Options}),
           {ok, Child};
         Other ->
           Other
@@ -34,7 +34,7 @@ start_child(GroupID, Options) ->
   end.
 
 stop_child(GroupPID) when is_pid(GroupPID) ->
-  ets:delete(kafe_consumers_list, GroupPID),
+  ets:delete(kafe_consumer_groups, GroupPID),
   supervisor:terminate_child(?MODULE, GroupPID);
 stop_child(GroupID) ->
   kafe_metrics:delete_consumer(GroupID),
@@ -46,7 +46,7 @@ stop_child(GroupID) ->
   end.
 
 init([]) ->
-  ets:new(kafe_consumers_list, [public, named_table]),
+  ets:new(kafe_consumer_groups, [public, named_table]),
   {ok, {
      #{strategy => simple_one_for_one,
        intensity => 0,
@@ -57,8 +57,8 @@ init([]) ->
         shutdown => 5000}]
     }}.
 
-consumers_list() ->
+consumer_groups() ->
   ets:foldl(fun({_, GroupID, _}, Acc) ->
                 [GroupID|Acc]
-            end, [], kafe_consumers_list).
+            end, [], kafe_consumer_groups).
 
