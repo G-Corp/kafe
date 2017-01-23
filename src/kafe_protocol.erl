@@ -67,6 +67,30 @@ run({topic_and_partition, Topic, Partition}, Request) ->
       {error, no_broker_found};
     BrokerPID ->
       run(BrokerPID, Request)
+  end;
+run({coordinator, GroupId}, Request) ->
+  case kafe:group_coordinator(bucs:to_binary(GroupId)) of
+    {ok, #{coordinator_host := Host,
+           coordinator_port := Port,
+           error_code := none}} ->
+      case run({host_and_port, Host, Port}, Request) of
+        {ok, #{error_code := not_coordinator_for_group}} ->
+          retry_with_coordinator(GroupId, Request);
+        {ok, [#{error_code := not_coordinator_for_group}]} ->
+          retry_with_coordinator(GroupId, Request);
+        Other ->
+          Other
+      end;
+    _ ->
+      {error, no_broker_found}
+  end.
+
+retry_with_coordinator(GroupId, Request) ->
+  case kafe_protocol_group_coordinator:run(GroupId, force) of
+    {ok, #{error_code := none}} ->
+      run({coordinator, GroupId}, Request);
+    _ ->
+      {error, no_broker_found}
   end.
 
 request(ApiKey, RequestMessage,

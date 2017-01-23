@@ -10,19 +10,14 @@
         ]).
 
 run(ConsumerGroup, Options) ->
-  case kafe:group_coordinator(ConsumerGroup) of
-    {ok, #{coordinator_host := Host,
-           coordinator_port := Port}} ->
-      Options1 = if
-                   Options =:= [] -> maps:keys(kafe:topics());
-                   true -> Options
-                 end,
-      kafe_protocol:run({host_and_port, Host, Port},
-                        {call,
-                         fun ?MODULE:request/3, [ConsumerGroup, Options1],
-                         fun ?MODULE:response/2});
-    E -> E
-  end.
+  Options1 = if
+               Options =:= [] -> maps:keys(kafe:topics());
+               true -> Options
+             end,
+  kafe_protocol:run({coordinator, ConsumerGroup},
+                    {call,
+                     fun ?MODULE:request/3, [ConsumerGroup, Options1],
+                     fun ?MODULE:response/2}).
 
 request(ConsumerGroup, Options, #{api_version := ApiVersion} = State) ->
   kafe_protocol:request(

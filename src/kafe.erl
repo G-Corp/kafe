@@ -51,6 +51,7 @@
 -export([
          start_consumer/3,
          stop_consumer/1,
+         consumers_list/0,
          offsets/2,
          offsets/3
         ]).
@@ -788,4 +789,11 @@ start_consumer(GroupID, Callback, Options) when is_function(Callback, 6);
 -spec stop_consumer(GroupID :: binary()) -> ok | {error, not_found | simple_one_for_one | detached}.
 stop_consumer(GroupID) ->
   kafe_consumer_sup:stop_child(GroupID).
+
+% @doc
+% Return the list of availables consumers
+% @end
+-spec consumers_list() -> [binary()].
+consumers_list() ->
+  kafe_consumer_sup:consumers_list().
 

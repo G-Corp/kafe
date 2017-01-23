@@ -389,7 +389,8 @@ value() = binary()
 
 
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#brokers-0">brokers/0</a></td><td>
-Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#default_key_to_partition-2">default_key_to_partition/2</a></td><td>
+Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#consumers_list-0">consumers_list/0</a></td><td>
+Return the list of availables consumers.</td></tr><tr><td valign="top"><a href="#default_key_to_partition-2">default_key_to_partition/2</a></td><td>
 Default fonction used to do partition assignment from the message key.</td></tr><tr><td valign="top"><a href="#default_protocol-4">default_protocol/4</a></td><td>
 Create a default protocol as defined in the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest">Kafka Protocol Guide</a>.</td></tr><tr><td valign="top"><a href="#describe_group-1">describe_group/1</a></td><td> 
 Return the description of the given consumer group.</td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
@@ -426,6 +427,17 @@ The sync group request is used by the group leader to assign state (e.g.</td></t
 `brokers() -> any()`
 
 Return the list of availables brokers
+
+<a name="consumers_list-0"></a>
+
+### consumers_list/0 ###
+
+<pre><code>
+consumers_list() -&gt; [binary()]
+</code></pre>
+<br />
+
+Return the list of availables consumers
 
 <a name="default_key_to_partition-2"></a>
 

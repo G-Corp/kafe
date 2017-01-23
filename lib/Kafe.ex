@@ -105,4 +105,7 @@ defmodule Kafe do
   def unquote(:"stop_consumer")(arg1) do
     :erlang.apply(:"kafe", :"stop_consumer", [arg1])
   end
+  def unquote(:"consumers_list")() do
+    :erlang.apply(:"kafe", :"consumers_list", [])
+  end
 end

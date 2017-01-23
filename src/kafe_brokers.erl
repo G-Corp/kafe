@@ -287,6 +287,11 @@ get_connections([{Host, Port}|Rest], PoolSize, ChunkPoolSize) ->
                 case poolgirl:size(BrokerID) of
                   {ok, N, A} when N > 0 ->
                     lager:debug("Pool ~s size ~p/~p", [BrokerID, N, A]),
+                    Brokers1 = lists:foldl(fun(BrokerHost, Acc) ->
+                                               maps:put(BrokerHost, BrokerID, Acc)
+                                           end, Brokers, BrokerHostList1),
+                    ets:insert(?ETS_TABLE, [{brokers, Brokers1},
+                                            {brokers_list, lists:usort(BrokerHostList1 ++ BrokersList)}]),
                     get_connections(Rest, PoolSize, ChunkPoolSize);
                   _ ->
                     case poolgirl:add_pool(BrokerID,
@@ -300,7 +305,7 @@ get_connections([{Host, Port}|Rest], PoolSize, ChunkPoolSize) ->
                                                    maps:put(BrokerHost, BrokerID, Acc)
                                                end, Brokers, BrokerHostList1),
                         ets:insert(?ETS_TABLE, [{brokers, Brokers1},
-                                                {brokers_list, BrokerHostList1 ++ BrokersList}]),
+                                                {brokers_list, lists:usort(BrokerHostList1 ++ BrokersList)}]),
                         get_connections(Rest, PoolSize, ChunkPoolSize);
                       {error, Reason} ->
                         lager:warning("Connection failed to ~p:~p : ~p", [bucinet:ip_to_string(BrokerAddr), Port, Reason]),
