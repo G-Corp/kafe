@@ -1,8 +1,8 @@
 @author Gregoire Lejeune <gregoire.lejeune@finexkap.com>
 @author Gregoire Lejeune <greg@g-corp.io>
 @author Gregoire Lejeune <gregoire.lejeune@botsunit.com>
-@copyright 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 BotsUnit
-@version 2.0.0
+@copyright 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016, 2017 BotsUnit
+@version 2.2.0
 @title A Kafka client for Erlang and Elixir
 @doc
 
@@ -274,7 +274,9 @@ Copyright (c) 2015, 2016 BotsUnit<br />
 
 <p>
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+</p>
 
+<p>
 <ul>
   <li>Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.</li>
   <li>Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.</li>

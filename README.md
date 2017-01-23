@@ -2,9 +2,9 @@
 
 # A Kafka client for Erlang and Elixir #
 
-Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016 BotsUnit
+Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016, 2017 BotsUnit
 
-__Version:__ 2.0.0
+__Version:__ 2.2.0
 
 __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire.lejeune@finexkap.com)), Gregoire Lejeune ([`greg@g-corp.io`](mailto:greg@g-corp.io)), Gregoire Lejeune ([`gregoire.lejeune@botsunit.com`](mailto:gregoire.lejeune@botsunit.com)).
 
@@ -15,14 +15,14 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 
 __Version 2.0.0 cause changes in the following APIs :__
 
-* [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/all_in_one/doc/kafe.md#start_consumer-3)
+* [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/master/doc/kafe.md#start_consumer-3)
 
-* [`kafe:fetch/3`](https://github.com/botsunit/kafe/blob/all_in_one/doc/kafe.md#fetch-3)
+* [`kafe:fetch/3`](https://github.com/botsunit/kafe/blob/master/doc/kafe.md#fetch-3)
 
 
 __Kafe__ has been tested with Kafka 0.9 and 0.10
 
-You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/botsunit/kafe/blob/all_in_one/doc/kafe_consumer.md) is not compatible with this version.
+You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer.md) is not compatible with this version.
 
 
 ### Links ###
@@ -112,10 +112,10 @@ kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
 
 ```
 
-See [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/all_in_one/doc/kafe.md#start_consumer-3) for the available `Options`.
+See [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/master/doc/kafe.md#start_consumer-3) for the available `Options`.
 
 In the `consume` function, if you didn't start the consumer in autocommit mode (using `before_processing | after_processing` in the `commit` options),
-you need to commit manually when you have finished to treat the message. To do so, use [`kafe_consumer:commit/4`](https://github.com/botsunit/kafe/blob/all_in_one/doc/kafe_consumer.md#commit-4).
+you need to commit manually when you have finished to treat the message. To do so, use [`kafe_consumer:commit/4`](https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer.md#commit-4).
 
 When you are done with your consumer, stop it :
 
@@ -166,7 +166,7 @@ kafe:start_consumer(my_group, my_consumer, Options).
 
 ```
 
-To commit a message (if you need to), use [`kafe_consumer:commit/4`](https://github.com/botsunit/kafe/blob/all_in_one/doc/kafe_consumer.md#commit-4).
+To commit a message (if you need to), use [`kafe_consumer:commit/4`](https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer.md#commit-4).
 
 
 ### Using with Elixir ###
@@ -287,7 +287,7 @@ __Kafe__ use [rebar3](http://www.rebar3.org). So, you can use :
 
 ### API Documentation ###
 
-See [documentation](https://github.com/botsunit/kafe/blob/all_in_one/doc/.)
+See [documentation](https://github.com/botsunit/kafe/blob/master/doc/.)
 
 
 ### Contributing ###
@@ -307,7 +307,9 @@ Copyright (c) 2014, 2015 Finexkap<br />
 Copyright (c) 2015, G-Corp<br />
 Copyright (c) 2015, 2016 BotsUnit<br />
 
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:* Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 * The name of the author may not be used to endorse or promote products derived from this software without specific prior written permission.
 
@@ -320,7 +322,7 @@ THIS SOFTWARE IS PROVIDED BY THE AUTHOR `AS IS` AND ANY EXPRESS OR IMPLIED WARRA
 
 
 <table width="100%" border="0" summary="list of modules">
-<tr><td><a href="https://github.com/botsunit/kafe/blob/all_in_one/doc/kafe.md" class="module">kafe</a></td></tr>
-<tr><td><a href="https://github.com/botsunit/kafe/blob/all_in_one/doc/kafe_consumer.md" class="module">kafe_consumer</a></td></tr>
-<tr><td><a href="https://github.com/botsunit/kafe/blob/all_in_one/doc/kafe_consumer_subscriber.md" class="module">kafe_consumer_subscriber</a></td></tr></table>
+<tr><td><a href="https://github.com/botsunit/kafe/blob/master/doc/kafe.md" class="module">kafe</a></td></tr>
+<tr><td><a href="https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer.md" class="module">kafe_consumer</a></td></tr>
+<tr><td><a href="https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer_subscriber.md" class="module">kafe_consumer_subscriber</a></td></tr></table>
 
