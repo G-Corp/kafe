@@ -34,4 +34,3 @@ script:
   - make dist
   - sudo make docker-start
   - make integ
-  - sudo make docker-stop

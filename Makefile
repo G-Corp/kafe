@@ -81,7 +81,7 @@ endef
 docker-compose.yml: ## Create docker-compose.yml
 	$(call render_template,docker_compose_yml_v1,docker-compose.yml)
 
-docker-start: docker-stop ## Start docker
+docker-start: ## Start docker
 	$(verbose) docker-compose up -d
 	$(verbose) sleep 1
 	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 1 --partitions 1 --topic testone
