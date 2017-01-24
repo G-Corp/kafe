@@ -2,8 +2,6 @@ HAS_ELIXIR=1
 
 include bu.mk
 
-.PHONY: docker-compose.yml
-
 release: dist lint tag ## Tag and release to hex.pm
 	$(verbose) $(REBAR) hex publish
 
@@ -81,14 +79,14 @@ endef
 docker-compose.yml: ## Create docker-compose.yml
 	$(call render_template,docker_compose_yml_v1,docker-compose.yml)
 
-docker-start: docker-compose.yml ## Start docker
+docker-start: ## Start docker
 	$(verbose) docker-compose up -d
 	$(verbose) sleep 1
 	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 1 --partitions 1 --topic testone
 	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 2 --partitions 2 --topic testtwo
 	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 3 --partitions 3 --topic testthree
 
-docker-stop: docker-compose.yml ## Stop docker
+docker-stop: ## Stop docker
 	$(verbose) docker-compose kill
 	$(verbose) docker-compose rm --all -vf
 
