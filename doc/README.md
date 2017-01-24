@@ -269,13 +269,15 @@ You can add a prefix to all metrics by adding a `metrics_prefix` in the `metrics
 ```
 
 
-### Build ###
+### Build and tests ###
 
-__Kafe__ use [rebar3](http://www.rebar3.org). So, you can use :
+__Kafe__ use [rebar3](http://www.rebar3.org) and [bu.mk](https://github.com/botsunit/bu.mk). So, you can use :
 
 * `./rebar3 compile` to compile Kafe.
 
 * `./rebar3 eunit` to run tests.
+
+* `./rebar3 ct` to run (integration) tests.
 
 * `./rebar3 edoc` to build documentation.
 
@@ -283,6 +285,54 @@ __Kafe__ use [rebar3](http://www.rebar3.org). So, you can use :
 
 * `./rebar3 elixir generate_lib` to generate Elixir bindings.
 
+
+Or
+
+* `make release` Tag and release to hex.pm
+
+* `make integ` Run integration tests
+
+* `make docker-compose.yml` Create docker-compose.yml
+
+* `make docker-start` Start docker
+
+* `make docker-stop` Stop docker
+
+* `make elixir` Generate Elixir bindings (mix.exs and libs)
+
+* `make tests` Run tests
+
+* `make doc` Generate doc
+
+* `make dist` Create a distribution
+
+* `make clean` Clean
+
+* `make distclean` Clean the distribution
+
+* `make info` Display application informations
+
+* `make tag` Create a git tag
+
+* `make local.hex` Install hexfor Mix
+
+* `make local.rebar` Install rebar for Mix
+
+* `make bu-mk` Update bu.mk
+
+* `make help` Show this help.
+
+
+To run the integration tests, you must start zookeeper and a kafka cluster (3 brokers) and have the following three topics :
+
+* `testone` : replication factor: 1, partitions: 1
+
+* `testtwo` : replication factor: 2, partitions: 2
+
+* `testthree` : replication factor: 3, partitions: 3
+
+
+You can use the makefile rules `docker-compose.yml` and `docker-start` to help you to create this environment using docker (tested on Linux only).
 
 
 ### API Documentation ###

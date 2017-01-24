@@ -5,7 +5,7 @@ include bu.mk
 release: dist lint tag ## Tag and release to hex.pm
 	$(verbose) $(REBAR) hex publish
 
-integ:
+integ: ## Run integration tests
 	$(verbose) $(REBAR) ct
 
 KAFKA_ADVERTISED_HOST_NAME = $(shell ip addr list docker0 |grep "inet " |cut -d' ' -f6|cut -d/ -f1)

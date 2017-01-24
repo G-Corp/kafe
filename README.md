@@ -15,14 +15,14 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 
 __Version 2.0.0 cause changes in the following APIs :__
 
-* [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/master/doc/kafe.md#start_consumer-3)
+* [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe.md#start_consumer-3)
 
-* [`kafe:fetch/3`](https://github.com/botsunit/kafe/blob/master/doc/kafe.md#fetch-3)
+* [`kafe:fetch/3`](https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe.md#fetch-3)
 
 
 __Kafe__ has been tested with Kafka 0.9 and 0.10
 
-You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer.md) is not compatible with this version.
+You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe_consumer.md) is not compatible with this version.
 
 
 ### Links ###
@@ -112,10 +112,10 @@ kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
 
 ```
 
-See [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/master/doc/kafe.md#start_consumer-3) for the available `Options`.
+See [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe.md#start_consumer-3) for the available `Options`.
 
 In the `consume` function, if you didn't start the consumer in autocommit mode (using `before_processing | after_processing` in the `commit` options),
-you need to commit manually when you have finished to treat the message. To do so, use [`kafe_consumer:commit/4`](https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer.md#commit-4).
+you need to commit manually when you have finished to treat the message. To do so, use [`kafe_consumer:commit/4`](https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe_consumer.md#commit-4).
 
 When you are done with your consumer, stop it :
 
@@ -166,7 +166,7 @@ kafe:start_consumer(my_group, my_consumer, Options).
 
 ```
 
-To commit a message (if you need to), use [`kafe_consumer:commit/4`](https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer.md#commit-4).
+To commit a message (if you need to), use [`kafe_consumer:commit/4`](https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe_consumer.md#commit-4).
 
 
 ### Using with Elixir ###
@@ -269,13 +269,15 @@ You can add a prefix to all metrics by adding a `metrics_prefix` in the `metrics
 ```
 
 
-### Build ###
+### Build and tests ###
 
-__Kafe__ use [rebar3](http://www.rebar3.org). So, you can use :
+__Kafe__ use [rebar3](http://www.rebar3.org) and [bu.mk](https://github.com/botsunit/bu.mk). So, you can use :
 
 * `./rebar3 compile` to compile Kafe.
 
 * `./rebar3 eunit` to run tests.
+
+* `./rebar3 ct` to run (integration) tests.
 
 * `./rebar3 edoc` to build documentation.
 
@@ -284,10 +286,58 @@ __Kafe__ use [rebar3](http://www.rebar3.org). So, you can use :
 * `./rebar3 elixir generate_lib` to generate Elixir bindings.
 
 
+Or
+
+* `make release` Tag and release to hex.pm
+
+* `make integ` Run integration tests
+
+* `make docker-compose.yml` Create docker-compose.yml
+
+* `make docker-start` Start docker
+
+* `make docker-stop` Stop docker
+
+* `make elixir` Generate Elixir bindings (mix.exs and libs)
+
+* `make tests` Run tests
+
+* `make doc` Generate doc
+
+* `make dist` Create a distribution
+
+* `make clean` Clean
+
+* `make distclean` Clean the distribution
+
+* `make info` Display application informations
+
+* `make tag` Create a git tag
+
+* `make local.hex` Install hexfor Mix
+
+* `make local.rebar` Install rebar for Mix
+
+* `make bu-mk` Update bu.mk
+
+* `make help` Show this help.
+
+
+To run the integration tests, you must start zookeeper and a kafka cluster (3 brokers) and have the following three topics :
+
+* `testone` : replication factor: 1, partitions: 1
+
+* `testtwo` : replication factor: 2, partitions: 2
+
+* `testthree` : replication factor: 3, partitions: 3
+
+
+You can use the makefile rules `docker-compose.yml` and `docker-start` to help you to create this environment using docker (tested on Linux only).
+
 
 ### API Documentation ###
 
-See [documentation](https://github.com/botsunit/kafe/blob/master/doc/.)
+See [documentation](https://github.com/botsunit/kafe/blob/integration_tests/doc/.)
 
 
 ### Contributing ###
@@ -322,7 +372,7 @@ THIS SOFTWARE IS PROVIDED BY THE AUTHOR `AS IS` AND ANY EXPRESS OR IMPLIED WARRA
 
 
 <table width="100%" border="0" summary="list of modules">
-<tr><td><a href="https://github.com/botsunit/kafe/blob/master/doc/kafe.md" class="module">kafe</a></td></tr>
-<tr><td><a href="https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer.md" class="module">kafe_consumer</a></td></tr>
-<tr><td><a href="https://github.com/botsunit/kafe/blob/master/doc/kafe_consumer_subscriber.md" class="module">kafe_consumer_subscriber</a></td></tr></table>
+<tr><td><a href="https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe.md" class="module">kafe</a></td></tr>
+<tr><td><a href="https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe_consumer.md" class="module">kafe_consumer</a></td></tr>
+<tr><td><a href="https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe_consumer_subscriber.md" class="module">kafe_consumer_subscriber</a></td></tr></table>
 
