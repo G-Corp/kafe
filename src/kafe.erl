@@ -370,7 +370,8 @@ produce(Messages) ->
   {ok, #{throttle_time => integer(),
          topics => [topic_partition_info()]}}
   | {ok, [topic_partition_info()]}
-  | {error,  term()}.
+  | {error,  term()}
+  | ok.
 produce(Messages, Options) when is_list(Messages), is_map(Options) ->
   kafe_protocol_produce:run(Messages, Options);
 produce(Topic, Message) when is_binary(Topic),

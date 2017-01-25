@@ -15,12 +15,22 @@ run(Messages, Options) ->
            maps:get(key_to_partition, Options, fun kafe:default_key_to_partition/2),
            []) of
     {ok, Dispatch} ->
-      consolidate(
-        [kafe_protocol:run(BrokerID,
-                           {call,
-                            fun ?MODULE:request/3, [Messages0, Options],
-                            fun ?MODULE:response/2})
-         || {BrokerID, Messages0} <- Dispatch]);
+      case maps:get(required_acks, Options, ?DEFAULT_PRODUCE_REQUIRED_ACKS) of
+        0 ->
+          [kafe_protocol:run(BrokerID,
+                             {call,
+                              fun ?MODULE:request/3, [Messages0, Options],
+                              undefined})
+           || {BrokerID, Messages0} <- Dispatch],
+          ok;
+        _ ->
+          consolidate(
+            [kafe_protocol:run(BrokerID,
+                               {call,
+                                fun ?MODULE:request/3, [Messages0, Options],
+                                fun ?MODULE:response/2})
+             || {BrokerID, Messages0} <- Dispatch])
+      end;
     {error, _} = Error ->
       Error
   end.
