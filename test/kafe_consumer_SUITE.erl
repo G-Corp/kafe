@@ -41,13 +41,15 @@ all() ->
       end].
 
 t_consumer(_Config) ->
+  get_coordinator(),
+
   {ok, #{error_code := none,
          generation_id := GenerationId,
          leader_id := _LeaderId,
          member_id := MemberId,
          members := _,
          protocol_group := <<"default_protocol">>}} =
-  kafe:join_group(<<"kafe_test_consumer_group">>),
+  kafe:join_group(<<"kafe_test_consumer_group">>, #{session_timeout => 6000}),
 
   {ok, [#{error_code := none,
          group_id := <<"kafe_test_consumer_group">>,
@@ -95,7 +97,7 @@ heartbeat(N, GenerationId, MemberId, ClientHost) ->
   kafe:describe_group(<<"kafe_test_consumer_group">>),
   check_partition_assignment(PartitionAssignment),
 
-  timer:sleep(9000),
+  timer:sleep(2900),
 
   {ok, #{error_code := none}} = kafe:heartbeat(<<"kafe_test_consumer_group">>, GenerationId, MemberId),
 
@@ -108,4 +110,13 @@ check_partition_assignment(PartitionAssignment) ->
                         topic => <<"testthree">>}, PartitionAssignment),
   true = lists:member(#{partitions => [1, 0],
                         topic => <<"testtwo">>}, PartitionAssignment).
+
+get_coordinator() ->
+  case kafe:group_coordinator(<<"kafe_test_consumer_group">>) of
+    {ok, #{error_code := group_coordinator_not_available}} ->
+      timer:sleep(100),
+      get_coordinator();
+    _ ->
+      ok
+  end.
 

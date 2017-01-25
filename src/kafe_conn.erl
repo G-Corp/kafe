@@ -57,9 +57,9 @@ handle_call({call, Request, RequestParams, Response, ResponseParams}, From, Stat
                  {Response, ResponseParams},
                  State)
   catch
-    Type:Error ->
-      lager:error("Request error: ~p:~p", [Type, Error]),
-      {reply, {error, Error}, State}
+    Class:Reason ->
+      lager:error("Request error: ~p:~p~nStacktrace:~s", [Class, Reason, lager:pr_stacktrace(erlang:get_stacktrace(), {Class, Reason})]),
+      {reply, {error, Reason}, State}
   end;
 handle_call(alive, _From, #{socket := Socket} = State) ->
   case inet:setopts(Socket, []) of
