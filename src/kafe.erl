@@ -19,6 +19,7 @@
 -export([
          start/0,
          brokers/0,
+         api_versions/0,
          metadata/0,
          metadata/1,
          offset/0,
@@ -65,6 +66,7 @@
          max_offset/2,
          partition_for_offset/2,
          api_version/0,
+         api_version/1,
          update_brokers/0
         ]).
 
@@ -264,7 +266,11 @@ update_brokers() ->
 
 % @hidden
 api_version() ->
-  doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION).
+  kafe_brokers:api_version().
+
+% @hidden
+api_version(ApiKey) ->
+  kafe_brokers:api_version(ApiKey).
 
 % -- Public APIs --
 
@@ -279,6 +285,12 @@ start() ->
 % @end
 brokers() ->
   kafe_brokers:list().
+
+% @doc
+% Return the list of API versions for each api key
+% @end
+api_versions() ->
+  kafe_protocol_api_versions:run().
 
 % @equiv metadata([])
 metadata() ->
