@@ -6,7 +6,7 @@
 -export([
          run/2,
          request/3,
-         response/2
+         response/3 % TODO /2
         ]).
 
 run(ReplicaID, []) ->
@@ -23,16 +23,17 @@ run(ReplicaID, Topics) ->
              (undefined, _, Acc) ->
                Acc;
              (BrokerID, TopicsForBroker, Acc) ->
-               case kafe_protocol:run(BrokerID,
-                                      {call,
-                                       fun ?MODULE:request/3, [ReplicaID, TopicsForBroker],
-                                       fun ?MODULE:response/2}) of
+               case kafe_protocol:run(
+                      ?OFFSET_REQUEST,
+                      {fun ?MODULE:request/3, [ReplicaID, TopicsForBroker]},
+                      fun ?MODULE:response/3,
+                      #{broker => BrokerID}) of
                  {ok, Result} ->
                    [Result|Acc];
                  _ ->
                    Acc
                end
-           end, [], dispatch(Topics, kafe:topics()))) of
+           end, [], dispatch(Topics))) of
     [] ->
       {error, no_broker_found};
     OffsetsData ->
@@ -60,12 +61,18 @@ run(ReplicaID, Topics) ->
 %       partition => INT32
 %       timestamp => INT64
 %       max_num_offsets => INT32
-request(ReplicaId, Topics, State) ->
+%
+% Offsets Request (Version: 1) => replica_id [topics]
+%   replica_id => INT32
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition timestamp
+%       partition => INT32
+%       timestamp => INT64
+request(ReplicaId, Topics, #{api_version := ApiVersion} = State) ->
   kafe_protocol:request(
-    ?OFFSET_REQUEST,
-    <<ReplicaId:32/signed, (topics(Topics))/binary>>,
-    State,
-    ?V0).
+    <<ReplicaId:32/signed, (topics(Topics, ApiVersion))/binary>>,
+    State).
 
 % Offsets Response (Version: 0) => [responses]
 %   responses => topic [partition_responses]
@@ -73,53 +80,19 @@ request(ReplicaId, Topics, State) ->
 %     partition_responses => partition error_code [offsets]
 %       partition => INT32
 %       error_code => INT16
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) ->
-  {ok, response(NumberOfTopics, Remainder, ApiVersion)}.
-
-% Private
-
-dispatch(Topics, TopicsInfos) ->
-  dispatch(Topics, TopicsInfos, #{}).
-
-dispatch([], _, Result) ->
-  Result;
-dispatch([{Topic, Partitions}|Rest], TopicsInfos, Result) ->
-  dispatch(Rest,
-           TopicsInfos,
-           lists:foldl(fun({ID, _, _} = Partition, Acc) ->
-                           Broker = kafe_brokers:broker_id_by_topic_and_partition(Topic, ID),
-                           Topics = maps:get(Broker, Acc, []),
-                           maps:put(Broker, [{Topic, [Partition]}|Topics], Acc)
-                       end, Result, Partitions));
-dispatch([Topic|Rest], TopicsInfos, Result) when is_list(Topic);
-                                                 is_atom(Topic) ->
-  dispatch([bucs:to_binary(Topic)|Rest], TopicsInfos, Result);
-dispatch([Topic|Rest], TopicsInfos, Result) when is_binary(Topic) ->
-  Partitions = lists:foldl(fun(Partition, Acc) ->
-                               [{Partition, ?DEFAULT_OFFSET_TIMESTAMP, ?DEFAULT_OFFSET_MAX_NUM_OFFSETS}|Acc]
-                           end, [], maps:keys(maps:get(Topic, TopicsInfos, #{}))),
-  dispatch([{Topic, Partitions}|Rest], TopicsInfos, Result).
-
-topics(Topics) ->
-  topics(Topics, <<(length(Topics)):32/signed>>).
-
-topics([], Acc) -> Acc;
-topics([{TopicName, Partitions} | T], Acc) ->
-  topics(T,
-         <<
-           Acc/binary,
-           (kafe_protocol:encode_string(bucs:to_binary(TopicName)))/binary,
-           (kafe_protocol:encode_array(
-              [<<Partition:32/signed, Timestamp:64/signed, MaxNumOffsets:32/signed>> ||
-               {Partition, Timestamp, MaxNumOffsets} <- Partitions]))/binary
-         >>);
-topics([TopicName | T], Acc) ->
-  topics([{TopicName, [{?DEFAULT_OFFSET_PARTITION,
-                        ?DEFAULT_OFFSET_TIMESTAMP,
-                        ?DEFAULT_OFFSET_MAX_NUM_OFFSETS}]} | T], Acc).
-
+%
+% Offsets Response (Version: 1) => [responses]
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code timestamp offset
+%       partition => INT32
+%       error_code => INT16
+%       timestamp => INT64
+%       offset => INT64
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, _ApiVersion, #{api_version := ApiVersion}) ->
+  {ok, response(NumberOfTopics, Remainder, ApiVersion)};
 response(0, <<>>, _ApiVersion) ->
-    [];
+  [];
 response(
   N,
   <<
@@ -129,11 +102,86 @@ response(
     PartitionsRemainder/binary
   >>,
   ApiVersion) ->
-  {Partitions, Remainder} = partitions(NumberOfPartitions, PartitionsRemainder, []),
+  {Partitions, Remainder} = partitions(NumberOfPartitions, PartitionsRemainder, [], ApiVersion),
   [#{name => TopicName, partitions => Partitions} | response(N - 1, Remainder, ApiVersion)].
 
-partitions(0, Remainder, Acc) ->
-    {Acc, Remainder};
+% Private
+
+dispatch(Topics) ->
+  dispatch(Topics, #{}).
+
+dispatch([], Result) ->
+  Result;
+dispatch([{Topic, Partitions}|Rest], Result) ->
+  dispatch(Rest,
+           lists:foldl(fun
+                         ({ID, _, _} = Partition, Acc) ->
+                           Broker = kafe_brokers:broker_id_by_topic_and_partition(Topic, ID),
+                           Topics = maps:get(Broker, Acc, []),
+                           maps:put(Broker, [{Topic, [Partition]}|Topics], Acc);
+                         ({ID, _} = Partition, Acc) ->
+                           Broker = kafe_brokers:broker_id_by_topic_and_partition(Topic, ID),
+                           Topics = maps:get(Broker, Acc, []),
+                           maps:put(Broker, [{Topic, [Partition]}|Topics], Acc);
+                         (Partition, Acc) ->
+                           Broker = kafe_brokers:broker_id_by_topic_and_partition(Topic, Partition),
+                           Topics = maps:get(Broker, Acc, []),
+                           maps:put(Broker, [{Topic, [Partition]}|Topics], Acc)
+                       end, Result, Partitions));
+dispatch([Topic|Rest], Result) when is_binary(Topic) ->
+  dispatch([{Topic, kafe:partitions(Topic)} | Rest], Result).
+
+topics(Topics, ApiVersion) ->
+  topics(Topics, <<(length(Topics)):32/signed>>, ApiVersion).
+
+topics([], Acc, _) -> Acc;
+topics([{TopicName, Partitions} | T], Acc, ApiVersion) when ApiVersion == ?V0 ->
+  topics(T,
+         <<
+           Acc/binary,
+           (kafe_protocol:encode_string(bucs:to_binary(TopicName)))/binary,
+           (kafe_protocol:encode_array(
+              [case P of
+                 {Partition, Timestamp, MaxNumOffsets} ->
+                   <<Partition:32/signed,
+                     Timestamp:64/signed,
+                     MaxNumOffsets:32/signed>>;
+                 {Partition, Timestamp} ->
+                   <<Partition:32/signed,
+                     Timestamp:64/signed,
+                     ?DEFAULT_OFFSET_MAX_NUM_OFFSETS:32/signed>>;
+                 Partition ->
+                   <<Partition:32/signed,
+                     ?DEFAULT_OFFSET_TIMESTAMP:64/signed,
+                     ?DEFAULT_OFFSET_MAX_NUM_OFFSETS:32/signed>>
+               end || P <- Partitions]))/binary
+         >>,
+         ApiVersion);
+topics([{TopicName, Partitions} | T], Acc, ApiVersion) when ApiVersion == ?V1 ->
+  topics(T,
+         <<
+           Acc/binary,
+           (kafe_protocol:encode_string(bucs:to_binary(TopicName)))/binary,
+           (kafe_protocol:encode_array(
+              [case P of
+                 {Partition, Timestamp, _} ->
+                   <<Partition:32/signed, Timestamp:64/signed>>;
+                 {Partition, Timestamp} ->
+                   <<Partition:32/signed, Timestamp:64/signed>>;
+                 Partition ->
+                   <<Partition:32/signed,
+                     ?DEFAULT_OFFSET_TIMESTAMP:64/signed>>
+               end || P <- Partitions]))/binary
+         >>,
+         ApiVersion);
+topics([TopicName | T], Acc, ApiVersion) when ApiVersion == ?V0;
+                                              ApiVersion == ?V1 ->
+  topics([{TopicName, kafe:partitions(TopicName)} | T],
+         Acc,
+         ApiVersion).
+
+partitions(0, Remainder, Acc, _) ->
+  {Acc, Remainder};
 partitions(
   N,
   <<
@@ -143,10 +191,30 @@ partitions(
     Offsets:NumberOfOffsets/binary-unit:64,
     Remainder/binary
   >>,
-  Acc) ->
+  Acc,
+  ApiVersion) when ApiVersion == ?V0 ->
   partitions(N - 1,
              Remainder,
              [#{id => Partition,
                 error_code => kafe_error:code(ErrorCode),
-                offsets => [Offset || <<Offset:64/signed>> <= Offsets]} | Acc]).
+                offsets => [Offset || <<Offset:64/signed>> <= Offsets]} | Acc],
+             ApiVersion);
+partitions(
+  N,
+  <<
+    Partition:32/signed,
+    ErrorCode:16/signed,
+    Timestamp:64/unsigned,
+    Offset:64/signed,
+    Remainder/binary
+  >>,
+  Acc,
+  ApiVersion) when ApiVersion == ?V1 ->
+  partitions(N - 1,
+             Remainder,
+             [#{id => Partition,
+                error_code => kafe_error:code(ErrorCode),
+                timestamp => Timestamp,
+                offset => Offset} | Acc],
+             ApiVersion).
 

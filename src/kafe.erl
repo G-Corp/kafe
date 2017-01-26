@@ -103,7 +103,7 @@
 -type key() :: term().
 -type value() :: binary().
 -type partition() :: integer().
--type topics() :: [binary() | string() | atom()] | [{binary() | string() | atom(), [{integer(), integer(), integer()}]}].
+-type topics() :: [topic()] | [{topic(), [{partition(), integer(), integer()}]}] | [{topic(), [{partition(), integer()}]}].
 -type topic_partition_info() :: #{name => binary(),
                                   partitions => [#{error_code => error_code(),
                                                    id => integer(),
