@@ -29,7 +29,8 @@ request(TopicNames, #{api_version := ApiVersion} = State) ->
     encode_array_or_null(TopicNames, ApiVersion),
     State).
 
-encode_array_or_null([], ApiVersion) when ApiVersion /= 0 ->
+encode_array_or_null([], ApiVersion) when ApiVersion == ?V1;
+                                          ApiVersion == ?V2 ->
   <<-1:32/signed>>;
 encode_array_or_null(Array, _) ->
   <<(kafe_protocol:encode_array(
