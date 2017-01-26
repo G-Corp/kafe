@@ -80,7 +80,7 @@ error_code() = no_error | unknown | offset_out_of_range | invalid_message | unkn
 
 
 <pre><code>
-fetch_options() = #{partition =&gt; integer(), offset =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), retrieve =&gt; first | all}
+fetch_options() = #{partition =&gt; integer(), offset =&gt; integer(), response_max_bytes =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), retrieve =&gt; first | all}
 </code></pre>
 
 
@@ -370,7 +370,7 @@ topic_partition_info() = #{name =&gt; binary(), partitions =&gt; [#{error_code =
 
 
 <pre><code>
-topics() = [binary() | string() | atom()] | [{binary() | string() | atom(), [{integer(), integer(), integer()}]}]
+topics() = [<a href="#type-topic">topic()</a>] | [{<a href="#type-topic">topic()</a>, [{<a href="#type-partition">partition()</a>, integer(), integer()}]}] | [{<a href="#type-topic">topic()</a>, [{<a href="#type-partition">partition()</a>, integer()}]}]
 </code></pre>
 
 
@@ -388,7 +388,8 @@ value() = binary()
 ## Function Index ##
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#brokers-0">brokers/0</a></td><td>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#api_versions-0">api_versions/0</a></td><td>
+Return the list of API versions for each api key.</td></tr><tr><td valign="top"><a href="#brokers-0">brokers/0</a></td><td>
 Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#consumer_groups-0">consumer_groups/0</a></td><td>
 Return the list of availables consumers.</td></tr><tr><td valign="top"><a href="#default_key_to_partition-2">default_key_to_partition/2</a></td><td>
 Default fonction used to do partition assignment from the message key.</td></tr><tr><td valign="top"><a href="#default_protocol-4">default_protocol/4</a></td><td>
@@ -419,6 +420,14 @@ The sync group request is used by the group leader to assign state (e.g.</td></t
 <a name="functions"></a>
 
 ## Function Details ##
+
+<a name="api_versions-0"></a>
+
+### api_versions/0 ###
+
+`api_versions() -> any()`
+
+Return the list of API versions for each api key
 
 <a name="brokers-0"></a>
 
@@ -509,6 +518,9 @@ Options:
 * `partition :: integer()` : The id of the partition the fetch is for (default : partition with the highiest offset).
 
 * `offset :: integer()` : The offset to begin this fetch from (default : next offset for the partition)
+
+* `response_max_bytes :: integer()` : Maximum bytes to accumulate in the response. Note that this is not an absolute maximum, if the first message
+in the first non-empty partition of the fetch is larger than this value, the message will still be returned to ensure that progress can be made. (default: max_bytes)
 
 * `max_bytes :: integer()` : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 1024*1024)
@@ -826,7 +838,7 @@ Equivalent to [`produce(Messages, #{})`](#produce-2).
 ### produce/2 ###
 
 <pre><code>
-produce(Messages::[{<a href="#type-topic">topic()</a>, [{<a href="#type-key">key()</a>, <a href="#type-value">value()</a>, <a href="#type-partition">partition()</a>} | {<a href="#type-value">value()</a>, <a href="#type-partition">partition()</a>} | {<a href="#type-key">key()</a>, <a href="#type-value">value()</a>} | <a href="#type-value">value()</a>]}], Options::<a href="#type-produce_options">produce_options()</a>) -&gt; {ok, #{throttle_time =&gt; integer(), topics =&gt; [<a href="#type-topic_partition_info">topic_partition_info()</a>]}} | {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()}
+produce(Messages::[{<a href="#type-topic">topic()</a>, [{<a href="#type-key">key()</a>, <a href="#type-value">value()</a>, <a href="#type-partition">partition()</a>} | {<a href="#type-value">value()</a>, <a href="#type-partition">partition()</a>} | {<a href="#type-key">key()</a>, <a href="#type-value">value()</a>} | <a href="#type-value">value()</a>]}], Options::<a href="#type-produce_options">produce_options()</a>) -&gt; {ok, #{throttle_time =&gt; integer(), topics =&gt; [<a href="#type-topic_partition_info">topic_partition_info()</a>]}} | {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()} | ok
 </code></pre>
 <br />
 

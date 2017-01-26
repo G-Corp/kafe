@@ -15,14 +15,14 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 
 __Version 2.0.0 cause changes in the following APIs :__
 
-* [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe.md#start_consumer-3)
+* [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/update_protocol/doc/kafe.md#start_consumer-3)
 
-* [`kafe:fetch/3`](https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe.md#fetch-3)
+* [`kafe:fetch/3`](https://github.com/botsunit/kafe/blob/update_protocol/doc/kafe.md#fetch-3)
 
 
 __Kafe__ has been tested with Kafka 0.9 and 0.10
 
-You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe_consumer.md) is not compatible with this version.
+You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/botsunit/kafe/blob/update_protocol/doc/kafe_consumer.md) is not compatible with this version.
 
 
 ### Links ###
@@ -40,14 +40,14 @@ You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/bots
 <tr><td>chunk_pool_size</td><td><tt>integer()</tt></td><td>Size of new connection pool/brocker</td><td><tt>10</tt></td></tr>
 <tr><td>brokers_update_frequency</td><td><tt>integer()</tt></td><td>Frequency (ms) for brokers update</td><td><tt>60000</tt></td></tr>
 <tr><td>client_id</td><td><tt>binary()</tt></td><td>Client ID Name</td><td><tt><<"kafe">></tt></td></tr>
-<tr><td>api_version</td><td><tt>integer()</tt></td><td>API Version</td><td><tt>1<sup>*</sup></tt></td></tr>
+<tr><td>api_version</td><td><tt>integer() | auto</tt></td><td>API Version</td><td><tt>1<sup>*</sup></tt></td></tr>
 <tr><td>correlation_id</td><td><tt>integer()</tt></td><td>Correlation ID</td><td><tt>0</tt></td></tr>
 <tr><td>socket</td><td><tt>[{sndbuf, integer()}, {recbuf, integer()}, {buffer, integer()}]</tt></td><td>Socker configuration</td><td><tt>[{sndbuf, 4194304}, {recbuf, 4194304}, {buffer, 4194304}]</tt></td></tr>
 </table>
 
 
 <sup>*</sup>
- use `0` with Kafka >= 0.8 < 0.9 ; `1` with Kafka >= 0.9 < 0.10 ; `2` with Kafka >= 0.10
+ use `0` with Kafka >= 0.8 < 0.9 ; `1` with Kafka >= 0.9 < 0.10 ; `auto` with Kafka >= 0.10
 
 Example :
 
@@ -112,10 +112,10 @@ kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
 
 ```
 
-See [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe.md#start_consumer-3) for the available `Options`.
+See [`kafe:start_consumer/3`](https://github.com/botsunit/kafe/blob/update_protocol/doc/kafe.md#start_consumer-3) for the available `Options`.
 
 In the `consume` function, if you didn't start the consumer in autocommit mode (using `before_processing | after_processing` in the `commit` options),
-you need to commit manually when you have finished to treat the message. To do so, use [`kafe_consumer:commit/4`](https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe_consumer.md#commit-4).
+you need to commit manually when you have finished to treat the message. To do so, use [`kafe_consumer:commit/4`](https://github.com/botsunit/kafe/blob/update_protocol/doc/kafe_consumer.md#commit-4).
 
 When you are done with your consumer, stop it :
 
@@ -166,7 +166,7 @@ kafe:start_consumer(my_group, my_consumer, Options).
 
 ```
 
-To commit a message (if you need to), use [`kafe_consumer:commit/4`](https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe_consumer.md#commit-4).
+To commit a message (if you need to), use [`kafe_consumer:commit/4`](https://github.com/botsunit/kafe/blob/update_protocol/doc/kafe_consumer.md#commit-4).
 
 
 ### Using with Elixir ###
@@ -337,7 +337,7 @@ You can use the makefile rules `docker-compose.yml` and `docker-start` to help y
 
 ### API Documentation ###
 
-See [documentation](https://github.com/botsunit/kafe/blob/integration_tests/doc/.)
+See [documentation](https://github.com/botsunit/kafe/blob/update_protocol/doc/.)
 
 
 ### Contributing ###
@@ -372,7 +372,7 @@ THIS SOFTWARE IS PROVIDED BY THE AUTHOR `AS IS` AND ANY EXPRESS OR IMPLIED WARRA
 
 
 <table width="100%" border="0" summary="list of modules">
-<tr><td><a href="https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe.md" class="module">kafe</a></td></tr>
-<tr><td><a href="https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe_consumer.md" class="module">kafe_consumer</a></td></tr>
-<tr><td><a href="https://github.com/botsunit/kafe/blob/integration_tests/doc/kafe_consumer_subscriber.md" class="module">kafe_consumer_subscriber</a></td></tr></table>
+<tr><td><a href="https://github.com/botsunit/kafe/blob/update_protocol/doc/kafe.md" class="module">kafe</a></td></tr>
+<tr><td><a href="https://github.com/botsunit/kafe/blob/update_protocol/doc/kafe_consumer.md" class="module">kafe_consumer</a></td></tr>
+<tr><td><a href="https://github.com/botsunit/kafe/blob/update_protocol/doc/kafe_consumer_subscriber.md" class="module">kafe_consumer_subscriber</a></td></tr></table>
 

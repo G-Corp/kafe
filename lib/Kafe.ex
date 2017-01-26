@@ -9,6 +9,9 @@ defmodule Kafe do
   def unquote(:"brokers")() do
     :erlang.apply(:"kafe", :"brokers", [])
   end
+  def unquote(:"api_versions")() do
+    :erlang.apply(:"kafe", :"api_versions", [])
+  end
   def unquote(:"metadata")() do
     :erlang.apply(:"kafe", :"metadata", [])
   end

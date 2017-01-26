@@ -1,3 +1,4 @@
+% @hidden
 -module(kafe_protocol_api_versions).
 -compile([{parse_transform, lager_transform}]).
 
