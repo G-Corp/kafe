@@ -16,6 +16,7 @@
 -define(V0, 0).
 -define(V1, 1).
 -define(V2, 2).
+-define(V3, 3).
 
 -define(PRODUCE_REQUEST, 0).
 -define(FETCH_REQUEST, 1).

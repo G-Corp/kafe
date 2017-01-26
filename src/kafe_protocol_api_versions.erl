@@ -1,30 +1,35 @@
 -module(kafe_protocol_api_versions).
+-compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
 
 -export([
          run/0,
          request/1,
-         response/2
+         response/3 % TODO /2
         ]).
 
 run() ->
-  kafe_protocol:run({call,
-                     fun ?MODULE:request/1, [],
-                     fun ?MODULE:response/2}).
-
-request(State) ->
-  kafe_protocol:request(
+  kafe_protocol:run(
     ?API_VERSIONS_REQUEST,
-    <<>>,
-    State,
-    ?V0).
+    fun ?MODULE:request/1,
+    fun ?MODULE:response/3).
 
+% ApiVersions Request (Version: 0) =>
+request(State) ->
+  kafe_protocol:request(<<>>, State).
+
+% ApiVersions Response (Version: 0) => error_code [api_versions]
+%   error_code => INT16
+%   api_versions => api_key min_version max_version
+%     api_key => INT16
+%     min_version => INT16
+%     max_version => INT16
 response(<<
            ErrorCode:16/signed,
            ApiVersionsLen:32/signed,
            ApiVersions/binary
-         >>, _ApiVersion) ->
+         >>, _ApiVersion, _State) -> % TODO remove _ApiVersion
   {ok, #{error_code => kafe_error:code(ErrorCode),
          api_versions => api_versions(ApiVersionsLen, ApiVersions, [])}}.
 

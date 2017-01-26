@@ -118,6 +118,7 @@
                              key_to_partition => fun((binary(), term()) -> integer())}.
 -type fetch_options() :: #{partition => integer(),
                            offset => integer(),
+                           response_max_bytes => integer(),
                            max_bytes => integer(),
                            min_bytes => integer(),
                            max_wait_time => integer(),
@@ -427,6 +428,8 @@ fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_
 % <ul>
 % <li><tt>partition :: integer()</tt> : The id of the partition the fetch is for (default : partition with the highiest offset).</li>
 % <li><tt>offset :: integer()</tt> : The offset to begin this fetch from (default : next offset for the partition)</li>
+% <li><tt>response_max_bytes :: integer()</tt> : Maximum bytes to accumulate in the response. Note that this is not an absolute maximum, if the first message
+% in the first non-empty partition of the fetch is larger than this value, the message will still be returned to ensure that progress can be made. (default: max_bytes)</li>
 % <li><tt>max_bytes :: integer()</tt> : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 % 1024*1024)</li>
 % <li><tt>min_bytes :: integer()</tt> : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0

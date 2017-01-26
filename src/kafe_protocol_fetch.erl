@@ -29,6 +29,7 @@ run(ReplicaID, TopicName, Options) ->
                      fun ?MODULE:request/4, [ReplicaID, bucs:to_binary(TopicName), Options1],
                      fun ?MODULE:response/2}).
 
+% v0, v1, v2
 % FetchRequest => ReplicaId MaxWaitTime MinBytes [TopicName [Partition FetchOffset MaxBytes]]
 %   ReplicaId => int32
 %   MaxWaitTime => int32
@@ -37,7 +38,19 @@ run(ReplicaID, TopicName, Options) ->
 %   Partition => int32
 %   FetchOffset => int64
 %   MaxBytes => int32
-request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) ->
+%
+% v3
+% FetchRequest => ReplicaId MaxWaitTime MinBytes MaxBytes [TopicName [Partition FetchOffset MaxBytes]]
+%   ReplicaId => int32
+%   MaxWaitTime => int32
+%   MinBytes => int32
+%   TopicName => string
+%   Partition => int32
+%   FetchOffset => int64
+%   MaxBytes => int32
+request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V0;
+                                                                                  ApiVersion == ?V1;
+                                                                                  ApiVersion == ?V2 ->
   Partition = maps:get(partition, Options, ?DEFAULT_FETCH_PARTITION),
   Offset = maps:get(offset, Options),
   MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
@@ -55,6 +68,27 @@ request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) ->
       Offset:64/signed,
       MaxBytes:32/signed>>,
     State,
+    ApiVersion);
+request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V3 ->
+  Partition = maps:get(partition, Options, ?DEFAULT_FETCH_PARTITION),
+  Offset = maps:get(offset, Options),
+  MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
+  MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
+  ResponseMinBytes = maps:get(response_max_bytes, Options, MaxBytes),
+  MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
+  kafe_protocol:request(
+    ?FETCH_REQUEST,
+    <<ReplicaID:32/signed,
+      MaxWaitTime:32/signed,
+      MinBytes:32/signed,
+      ResponseMinBytes:32/signed,
+      1:32/signed,
+      (kafe_protocol:encode_string(TopicName))/binary,
+      1:32/signed,
+      Partition:32/signed,
+      Offset:64/signed,
+      MaxBytes:32/signed>>,
+    State,
     ApiVersion).
 
 % v0
@@ -65,7 +99,7 @@ request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) ->
 %   HighwaterMarkOffset => int64
 %   MessageSetSize => int32
 %
-% v1 (supported in 0.9.0 or later) and v2 (supported in 0.10.0 or later)
+% v1 (supported in 0.9.0 or later), v2 (supported in 0.10.0 or later) and v3
 % FetchResponse => [TopicName [Partition ErrorCode HighwaterMarkOffset MessageSetSize MessageSet]] ThrottleTime
 %   TopicName => string
 %   Partition => int32
@@ -76,7 +110,8 @@ request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) ->
 response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) when NumberOfTopics > 0, ApiVersion == ?V0 ->
   response(NumberOfTopics, Remainder, []);
 response(<<ThrottleTime:32/signed, NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) when ApiVersion == ?V1;
-                                                                                                  ApiVersion == ?V2 ->
+                                                                                                  ApiVersion == ?V2;
+                                                                                                  ApiVersion == ?V3 ->
   case response(NumberOfTopics, Remainder, []) of
     {ok, Response} ->
       {ok, #{topics => Response,

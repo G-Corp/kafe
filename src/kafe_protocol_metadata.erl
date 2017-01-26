@@ -1,27 +1,39 @@
 % @hidden
 -module(kafe_protocol_metadata).
+-compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
 
 -export([
          run/1,
          request/2,
-         response/2
+         response/3 % TODO /2
         ]).
 
+% run(Topics) ->
+%   kafe_protocol:run({call,
+%                      fun ?MODULE:request/2, [Topics],
+%                      fun ?MODULE:response/2}).
+
 run(Topics) ->
-  kafe_protocol:run({call,
-                     fun ?MODULE:request/2, [Topics],
-                     fun ?MODULE:response/2}).
+  kafe_protocol:run(
+    ?METADATA_REQUEST,
+    {fun ?MODULE:request/2, [Topics]},
+    fun ?MODULE:response/3).
 
 % Metadata Request (Version: 0) => [topics]
-request(TopicNames, State) ->
+% Metadata Request (Version: 1) => [topics]
+% Metadata Request (Version: 2) => [topics]
+request(TopicNames, #{api_version := ApiVersion} = State) ->
   kafe_protocol:request(
-    ?METADATA_REQUEST,
-    <<(kafe_protocol:encode_array(
-         [kafe_protocol:encode_string(bucs:to_binary(Name)) || Name <- TopicNames]))/binary>>,
-    State,
-    ?V0).
+    encode_array_or_null(TopicNames, ApiVersion),
+    State).
+
+encode_array_or_null([], ApiVersion) when ApiVersion /= 0 ->
+  <<-1:32/signed>>;
+encode_array_or_null(Array, _) ->
+  <<(kafe_protocol:encode_array(
+       [kafe_protocol:encode_string(bucs:to_binary(Element)) || Element <- Array]))/binary>>.
 
 % Metadata Response (Version: 0) => [brokers] [topic_metadata]
 %   brokers => node_id host port
@@ -35,17 +47,120 @@ request(TopicNames, State) ->
 %       partition_error_code => INT16
 %       partition_id => INT32
 %       leader => INT32
-response(<<NumberOfBrokers:32/signed, BrokerRemainder/binary>>, _ApiVersion) ->
+%       replicas => INT32
+%       isr => INT32
+%
+% Metadata Response (Version: 1) => [brokers] controller_id [topic_metadata]
+%   brokers => node_id host port rack
+%     node_id => INT32
+%     host => STRING
+%     port => INT32
+%     rack => NULLABLE_STRING
+%   controller_id => INT32
+%   topic_metadata => topic_error_code topic is_internal [partition_metadata]
+%     topic_error_code => INT16
+%     topic => STRING
+%     is_internal => BOOLEAN
+%     partition_metadata => partition_error_code partition_id leader [replicas] [isr]
+%       partition_error_code => INT16
+%       partition_id => INT32
+%       leader => INT32
+%       replicas => INT32
+%       isr => INT32
+%
+% Metadata Response (Version: 2) => [brokers] cluster_id controller_id [topic_metadata]
+%   brokers => node_id host port rack
+%     node_id => INT32
+%     host => STRING
+%     port => INT32
+%     rack => NULLABLE_STRING
+%   cluster_id => NULLABLE_STRING
+%   controller_id => INT32
+%   topic_metadata => topic_error_code topic is_internal [partition_metadata]
+%     topic_error_code => INT16
+%     topic => STRING
+%     is_internal => BOOLEAN
+%     partition_metadata => partition_error_code partition_id leader [replicas] [isr]
+%       partition_error_code => INT16
+%       partition_id => INT32
+%       leader => INT32
+%       replicas => INT32
+%       isr => INT32
+response(<<NumberOfBrokers:32/signed,
+           BrokerRemainder/binary>>,
+         _ApiVersion,
+         #{api_version := ApiVersion}) when ApiVersion == ?V0 -> % TODO : remove _ApiVersion
   {
    Brokers,
-   <<NumberOfTopics:32/signed, TopicMetadataRemainder/binary>>
-  } = brokers(NumberOfBrokers, BrokerRemainder, []),
-  {Topics, _} = topics(NumberOfTopics, TopicMetadataRemainder, []),
-  {ok, #{brokers => Brokers, topics => Topics}}.
+   <<
+     NumberOfTopics:32/signed,
+     TopicMetadataRemainder/binary
+   >>
+  } = brokers(NumberOfBrokers, BrokerRemainder, [], ApiVersion),
+  {Topics, _} = topics(NumberOfTopics, TopicMetadataRemainder, [], ApiVersion),
+  {ok, #{brokers => Brokers, topics => Topics}};
+response(<<NumberOfBrokers:32/signed,
+           BrokerRemainder/binary>>,
+         _ApiVersion,
+         #{api_version := ApiVersion}) when ApiVersion == ?V1 -> % TODO : remove _ApiVersion
+  {
+   Brokers,
+   <<
+     ControllerID:32/signed,
+     NumberOfTopics:32/signed,
+     TopicMetadataRemainder/binary
+   >>
+  } = brokers(NumberOfBrokers, BrokerRemainder, [], ApiVersion),
+  {Topics, _} = topics(NumberOfTopics, TopicMetadataRemainder, [], ApiVersion),
+  {ok, #{brokers => Brokers,
+         controller_id => ControllerID,
+         topics => Topics}};
+response(<<NumberOfBrokers:32/signed,
+           BrokerRemainder/binary>>,
+         _ApiVersion,
+         #{api_version := ApiVersion}) when ApiVersion == ?V2 -> % TODO : remove _ApiVersion
+  {
+   Brokers,
+   <<
+     ClusterIDLength:16/signed,
+     Remainder/binary
+   >>
+  } = brokers(NumberOfBrokers, BrokerRemainder, [], ApiVersion),
+  {ClusterID0,
+   ControllerID0,
+   NumberOfTopics0,
+   TopicMetadataRemainder0} = if
+                                ClusterIDLength == -1 ->
+                                  <<
+                                    ControllerID:32/signed,
+                                    NumberOfTopics:32/signed,
+                                    TopicMetadataRemainder/binary
+                                  >> = Remainder,
+                                  {<<>>,
+                                   ControllerID,
+                                   NumberOfTopics,
+                                   TopicMetadataRemainder};
+                                true ->
+                                  <<
+                                    ClusterID:ClusterIDLength/bytes,
+                                    ControllerID:32/signed,
+                                    NumberOfTopics:32/signed,
+                                    TopicMetadataRemainder/binary
+                                  >> = Remainder,
+                                  {ClusterID,
+                                   ControllerID,
+                                   NumberOfTopics,
+                                   TopicMetadataRemainder}
+                              end,
+  {Topics, _} = topics(NumberOfTopics0, TopicMetadataRemainder0, [], ApiVersion),
+  {ok, #{brokers => Brokers,
+         cluster_id => ClusterID0,
+         controller_id => ControllerID0,
+         topics => Topics}}.
 
 % Private
 
-brokers(0, Remainder, Acc) ->
+brokers(0, Remainder, Acc, _) ->
   {Acc, Remainder};
 brokers(
   N,
@@ -54,12 +169,40 @@ brokers(
     HostLength:16/signed,
     Host:HostLength/bytes,
     Port:32/signed,
+    RackLength:16/signed,
     Remainder/binary
-  >>, Acc) ->
-  brokers(N-1, Remainder, [#{id => NodeId, host => Host, port => Port} | Acc]).
+  >>,
+  Acc,
+  ApiVersion) when ApiVersion == ?V1;
+                   ApiVersion == ?V2->
+  {Rack0, Remainder0} = if
+                          RackLength == -1 ->
+                            {<<>>, Remainder};
+                          true ->
+                            <<Rack:RackLength/bytes, R/binary>> = Remainder,
+                            {Rack, R}
+                        end,
+  brokers(N-1,
+          Remainder0,
+          [#{id => NodeId, host => Host, port => Port, rack => Rack0} | Acc],
+          ApiVersion);
+brokers(
+  N,
+  <<
+    NodeId:32/signed,
+    HostLength:16/signed,
+    Host:HostLength/bytes,
+    Port:32/signed,
+    Remainder/binary
+  >>,
+  Acc,
+  ApiVersion) when ApiVersion == ?V0 ->
+  brokers(N-1,
+          Remainder,
+          [#{id => NodeId, host => Host, port => Port} | Acc],
+          ApiVersion).
 
-
-topics(0, <<Remainder/binary>>, Acc) ->
+topics(0, <<Remainder/binary>>, Acc, _) ->
   {Acc, Remainder};
 topics(
   N,
@@ -70,16 +213,38 @@ topics(
     PartitionLength:32/signed,
     PartitionsRemainder/binary
   >>,
-  Acc) ->
-
-  {Partitions, Remainder} = partitions(PartitionLength, PartitionsRemainder, []),
+  Acc,
+  ApiVersion) when ApiVersion == ?V0 ->
+  {Partitions, Remainder} = partitions(PartitionLength, PartitionsRemainder, [], ApiVersion),
   topics(N-1,
          Remainder,
          [#{error_code => kafe_error:code(ErrorCode),
             name => TopicName,
-            partitions => Partitions} | Acc]).
+            partitions => Partitions} | Acc],
+         ApiVersion);
+topics(
+  N,
+  <<
+    ErrorCode:16/signed,
+    TopicNameLen:16/signed,
+    TopicName:TopicNameLen/bytes,
+    IsInternal:1/bytes,
+    PartitionLength:32/signed,
+    PartitionsRemainder/binary
+  >>,
+  Acc,
+  ApiVersion) when ApiVersion == ?V1;
+                   ApiVersion == ?V2 ->
+  {Partitions, Remainder} = partitions(PartitionLength, PartitionsRemainder, [], ApiVersion),
+  topics(N-1,
+         Remainder,
+         [#{error_code => kafe_error:code(ErrorCode),
+            name => TopicName,
+            is_internal => not(IsInternal == <<0>>),
+            partitions => Partitions} | Acc],
+         ApiVersion).
 
-partitions(0, <<Remainder/binary>>, Acc) ->
+partitions(0, <<Remainder/binary>>, Acc, _) ->
   {Acc, Remainder};
 partitions(
   N,
@@ -90,7 +255,10 @@ partitions(
     NumberOfReplicas:32/signed,
     ReplicasRemainder/binary
   >>,
-  Acc) ->
+  Acc,
+  ApiVersion) when ApiVersion == ?V0;
+                   ApiVersion == ?V1;
+                   ApiVersion == ?V2 ->
   {
    Replicas,
    <<NumberOfISR:32/signed, ISRRemainder/binary>>
@@ -102,7 +270,8 @@ partitions(
                 id => Id,
                 leader => Leader,
                 replicas => Replicas,
-                isr => ISR} | Acc]).
+                isr => ISR} | Acc],
+             ApiVersion).
 
 isrs(0, Remainder, Acc) ->
   {Acc, Remainder};

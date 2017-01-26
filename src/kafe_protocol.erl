@@ -5,24 +5,89 @@
 -include("../include/kafe.hrl").
 
 -export([
-         run/1,
-         run/2,
-         request/3,
-         request/4,
+         run/3,
+         run/4,
+
+         request/2,
+
+
+         run/1, % TODO : private
+         run/2, % TODO : private
+         request/3, % TODO : delete
+         request/4, % TODO : delete
          response/2,
          encode_string/1,
          encode_bytes/1,
          encode_array/1
         ]).
 
+run(ApiKey, RequestFun, ResponseFun) when is_integer(ApiKey) ->
+  run(ApiKey, RequestFun, ResponseFun, #{}).
+
+run(ApiKey, RequestFun, ResponseFun, State) when is_integer(ApiKey),
+                                                 is_function(RequestFun),
+                                                 is_map(State)->
+  run(ApiKey, {RequestFun, []}, ResponseFun, State);
+run(ApiKey, RequestFun, ResponseFun, State) when is_integer(ApiKey),
+                                                 is_function(ResponseFun),
+                                                 is_map(State)->
+  run(ApiKey, RequestFun, {ResponseFun, []}, State);
+run(ApiKey, {RequestFun, RequestParams}, {ResponseFun, ResponseParams}, State) when is_integer(ApiKey),
+                                                                                    is_function(RequestFun),
+                                                                                    is_list(RequestParams),
+                                                                                    is_function(ResponseFun),
+                                                                                    is_list(ResponseParams),
+                                                                                    is_map(State) ->
+  ApiVersion = case maps:get(api_version, State, undefined) of
+                 undefined ->
+                   case ApiKey of
+                     ?API_VERSIONS_REQUEST -> 0;
+                     _ -> kafe:api_version(ApiKey)
+                   end;
+                 V -> V
+               end,
+  Broker = maps:get(broker, State, first_broker),
+  run(Broker,
+      {call,
+       {RequestFun, RequestParams},
+       {ResponseFun, ResponseParams},
+       State#{api_key => ApiKey,
+              api_version => ApiVersion}}).
+
+request(RequestMessage, #{api_key := ApiKey,
+                          api_version := ApiVersion,
+                          correlation_id := CorrelationId,
+                          client_id := ClientId} = State) ->
+  #{packet => <<
+                 ApiKey:16/signed,
+                 ApiVersion:16/signed,
+                 CorrelationId:32/signed,
+                 (encode_string(ClientId))/binary,
+                 RequestMessage/binary
+               >>,
+    state => maps:update(correlation_id, CorrelationId + 1, State),
+    api_version => ApiVersion}.
+
+
+
+
+
+
+
+
+
+% PRIVATE
+
 run(Request) ->
+  run(first_broker, Request).
+
+run(first_broker, Request) ->
   case kafe_brokers:first_broker(false) of
     undefined ->
       {error, no_broker_found};
     BrokerPID ->
       run(BrokerPID, Request)
-  end.
-
+  end;
 run(BrokerPID, Request) when is_pid(BrokerPID) ->
   case erlang:is_process_alive(BrokerPID) of
     true ->
@@ -93,6 +158,19 @@ retry_with_coordinator(GroupId, Request) ->
       {error, no_broker_found}
   end.
 
+
+
+
+
+
+
+
+
+
+
+
+% DELETE
+
 request(ApiKey, RequestMessage,
         #{api_version := ApiVersion} = State) ->
   request(ApiKey, RequestMessage, State, ApiVersion).
@@ -109,6 +187,8 @@ request(ApiKey, RequestMessage,
                >>,
     state => maps:update(correlation_id, CorrelationId + 1, State),
     api_version => ApiVersion}.
+
+% PRIVATE
 
 encode_string(undefined) ->
   <<-1:16/signed>>;
@@ -127,8 +207,8 @@ encode_array(List) ->
 
 response(<<CorrelationId:32/signed, Remainder/bytes>>, #{requests := Requests} = State) ->
   case orddict:find(CorrelationId, Requests) of
-    {ok, #{from := From, handler := {ResponseHandler, ResponseHandlerParams}, api_version := ApiVersion}} ->
-      _ = gen_server:reply(From, erlang:apply(ResponseHandler, [Remainder, ApiVersion|ResponseHandlerParams])),
+    {ok, #{from := From, handler := {ResponseHandler, ResponseHandlerParams}, api_version := ApiVersion}} -> % TODO : remove api_version
+      _ = gen_server:reply(From, erlang:apply(ResponseHandler, [Remainder, ApiVersion|ResponseHandlerParams])), % TODO : remove api_version
       {ok, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};
     error ->
       {error, request_not_found} %;
