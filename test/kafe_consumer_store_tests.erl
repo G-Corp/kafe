@@ -1,5 +1,4 @@
 -module(kafe_consumer_store_tests).
-
 -include_lib("eunit/include/eunit.hrl").
 
 kafe_consumer_store_base_test_() ->

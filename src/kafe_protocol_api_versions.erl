@@ -14,7 +14,7 @@ run() ->
   kafe_protocol:run(
     ?API_VERSIONS_REQUEST,
     fun ?MODULE:request/1,
-    fun ?MODULE:response/3).
+    fun ?MODULE:response/3). % TODO /2
 
 % ApiVersions Request (Version: 0) =>
 request(State) ->

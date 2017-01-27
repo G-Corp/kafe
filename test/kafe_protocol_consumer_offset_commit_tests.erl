@@ -1,5 +1,4 @@
 -module(kafe_protocol_consumer_offset_commit_tests).
-
 -include_lib("eunit/include/eunit.hrl").
 -include("../include/kafe.hrl").
 

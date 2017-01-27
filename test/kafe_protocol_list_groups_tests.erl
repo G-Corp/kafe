@@ -1,7 +1,6 @@
 -module(kafe_protocol_list_groups_tests).
-
 -include_lib("eunit/include/eunit.hrl").
--include("kafe_tests.hrl").
+-include("../include/kafe.hrl").
 
 kafe_protocol_list_groups_test_() ->
  [
@@ -10,10 +9,21 @@ kafe_protocol_list_groups_test_() ->
  ].
 
 t_request() ->
-  ?assertEqual(#{api_version => 0,
-                 packet => <<16:16, 0:16, 0:32, 4:16, "test">>,
-                 state => ?REQ_STATE2(1, 0)},
-     kafe_protocol_list_groups:request(?REQ_STATE2(0, 0))).
+  ?assertEqual(
+     #{api_version => 0,
+       packet => <<16:16, 0:16, 0:32, 4:16, "test">>,
+       state => #{
+         api_version => 0,
+         api_key => ?LIST_GROUPS_REQUEST,
+         correlation_id => 1,
+         client_id => <<"test">>
+        }},
+     kafe_protocol_list_groups:request(#{
+       api_version => 0,
+       api_key => ?LIST_GROUPS_REQUEST,
+       correlation_id => 0,
+       client_id => <<"test">>
+      })).
 
 t_response() ->
   ?assertEqual(
@@ -25,4 +35,6 @@ t_response() ->
          , 1:32                      % group count
            , 6:16, "group1"          % group id
            , 8:16, "consumer"        % protocol type
-         >>, 0)).
+         >>,
+      x, % TODO delete
+      #{api_version => 0})).

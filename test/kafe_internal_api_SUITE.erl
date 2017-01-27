@@ -1,4 +1,6 @@
 -module(kafe_internal_api_SUITE).
+-include_lib("common_test/include/ct.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 -export([
          init_per_suite/1
@@ -15,9 +17,6 @@
          , t_partitions/1
          , t_api_version/1
         ]).
-
--include_lib("common_test/include/ct.hrl").
--include_lib("eunit/include/eunit.hrl").
 
 suite() ->
    [{timetrap, {seconds, 30}}].

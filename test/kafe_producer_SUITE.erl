@@ -1,4 +1,6 @@
 -module(kafe_producer_SUITE).
+-include_lib("common_test/include/ct.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 -export([
          init_per_suite/1
@@ -13,9 +15,6 @@
          t_produce/1
          , t_produce_no_ack/1
         ]).
-
--include_lib("common_test/include/ct.hrl").
--include_lib("eunit/include/eunit.hrl").
 
 suite() ->
    [{timetrap, {seconds, 30}}].

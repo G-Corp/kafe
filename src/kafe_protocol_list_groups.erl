@@ -6,33 +6,34 @@
 -export([
          run/1,
          request/1,
-         response/2
+         response/3 % TODO /2
         ]).
 
 run(BrokerID) ->
-  kafe_protocol:run(BrokerID,
-                    {call,
-                     fun ?MODULE:request/1, [],
-                     fun ?MODULE:response/2}).
+  kafe_protocol:run(
+    ?LIST_GROUPS_REQUEST,
+    fun ?MODULE:request/1,
+    fun ?MODULE:response/3, % TODO /2
+    #{broker => BrokerID}).
 
 request(State) ->
-  kafe_protocol:request(?LIST_GROUPS_REQUEST, <<>>, State, ?V0).
+  kafe_protocol:request(<<>>, State).
 
 % ListGroups Response (Version: 0) => error_code [groups]
 %   error_code => INT16
 %   groups => group_id protocol_type
 %     group_id => STRING
 %     protocol_type => STRING
-response(<<ErrorCode:16/signed, GroupsLength:32/signed, Remainder/binary>>, _ApiVersion) ->
+response(<<ErrorCode:16/signed, GroupsLength:32/signed, Remainder/binary>>, _ApiVersion, _State) -> % TODO remove _ApiVersion
   {ok, #{error_code => kafe_error:code(ErrorCode),
-         groups => response(GroupsLength, Remainder, [])}}.
+         groups => groups(GroupsLength, Remainder, [])}}.
 
-response(0, _, Groups) ->
+groups(0, _, Groups) ->
   Groups;
-response(N, <<GroupIDLength:16/signed,
+groups(N, <<GroupIDLength:16/signed,
               GroupID:GroupIDLength/binary,
               ProtocolTypeLength:16/signed,
               ProtocolType:ProtocolTypeLength/binary,
               Remainder/binary>>, Acc) ->
-  response(N - 1, Remainder, [#{group_id => GroupID, protocol_type => ProtocolType}|Acc]).
+  groups(N - 1, Remainder, [#{group_id => GroupID, protocol_type => ProtocolType}|Acc]).
 

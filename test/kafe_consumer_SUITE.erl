@@ -1,4 +1,6 @@
 -module(kafe_consumer_SUITE).
+-include_lib("common_test/include/ct.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 -export([
          init_per_suite/1
@@ -12,9 +14,6 @@
 -export([
          t_consumer/1
         ]).
-
--include_lib("common_test/include/ct.hrl").
--include_lib("eunit/include/eunit.hrl").
 
 suite() ->
    [{timetrap, {seconds, 30}}].

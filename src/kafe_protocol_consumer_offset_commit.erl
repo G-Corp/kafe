@@ -46,13 +46,11 @@ run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topi
 %       metadata => NULLABLE_STRING
 request_v0(ConsumerGroup, Topics, State) ->
   kafe_protocol:request(
-    ?OFFSET_COMMIT_REQUEST,
     <<
       (kafe_protocol:encode_string(ConsumerGroup))/binary,
       (topics_v0_v2(Topics))/binary
     >>,
-    State,
-    ?V0).
+    State).
 
 % OffsetCommit Request (Version: 1) => group_id group_generation_id member_id [topics]
 %   group_id => STRING
@@ -67,15 +65,13 @@ request_v0(ConsumerGroup, Topics, State) ->
 %       metadata => NULLABLE_STRING
 request_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics, State) ->
   kafe_protocol:request(
-    ?OFFSET_COMMIT_REQUEST,
     <<
       (kafe_protocol:encode_string(ConsumerGroup))/binary,
       ConsumerGroupGenerationId:32/signed,
       (kafe_protocol:encode_string(ConsumerId))/binary,
       (topics_v1(Topics))/binary
     >>,
-    State,
-    ?V1).
+    State).
 
 % OffsetCommit Request (Version: 2) => group_id group_generation_id member_id retention_time [topics]
 %   group_id => STRING
@@ -90,7 +86,6 @@ request_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics, State) 
 %       metadata => NULLABLE_STRING
 request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics, State) ->
   kafe_protocol:request(
-    ?OFFSET_COMMIT_REQUEST,
     <<
       (kafe_protocol:encode_string(ConsumerGroup))/binary,
       ConsumerGroupGenerationId:32/signed,
@@ -98,8 +93,7 @@ request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, 
       RetentionTime:64/signed,
       (topics_v0_v2(Topics))/binary
     >>,
-    State,
-    ?V2).
+    State).
 
 % OffsetCommit Response (Version: 0) => [responses]
 %   responses => topic [partition_responses]

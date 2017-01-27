@@ -1,5 +1,4 @@
 -module(kafe_protocol_group_coordinator_tests).
-
 -include_lib("eunit/include/eunit.hrl").
 -include("../include/kafe.hrl").
 

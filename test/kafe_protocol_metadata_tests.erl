@@ -1,7 +1,5 @@
 -module(kafe_protocol_metadata_tests).
-
 -include_lib("eunit/include/eunit.hrl").
--include("kafe_tests.hrl").
 -include("../include/kafe.hrl").
 
 kafe_protocol_metadata_test_() ->
