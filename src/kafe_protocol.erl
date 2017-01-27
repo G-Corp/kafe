@@ -7,14 +7,7 @@
 -export([
          run/3,
          run/4,
-
          request/2,
-
-
-         run/1, % TODO : private
-         run/2, % TODO : private
-         request/3, % TODO : delete
-         request/4, % TODO : delete
          response/2,
          encode_string/1,
          encode_bytes/1,
@@ -47,48 +40,37 @@ run(ApiKey, {RequestFun, RequestParams}, {ResponseFun, ResponseParams}, State) w
                  V -> V
                end,
   Broker = maps:get(broker, State, first_broker),
-  run(Broker,
-      {call,
-       {RequestFun, RequestParams},
-       {ResponseFun, ResponseParams},
-       State#{api_key => ApiKey,
-              api_version => ApiVersion}}).
+  do_run(Broker,
+         {call,
+          {RequestFun, RequestParams},
+          {ResponseFun, ResponseParams},
+          State#{api_key => ApiKey,
+                 api_version => ApiVersion}}).
 
 request(RequestMessage, #{api_key := ApiKey,
                           api_version := ApiVersion,
                           correlation_id := CorrelationId,
                           client_id := ClientId} = State) ->
   #{packet => <<
-                 ApiKey:16/signed,
-                 ApiVersion:16/signed,
-                 CorrelationId:32/signed,
-                 (encode_string(ClientId))/binary,
-                 RequestMessage/binary
-               >>,
+                ApiKey:16/signed,
+                ApiVersion:16/signed,
+                CorrelationId:32/signed,
+                (encode_string(ClientId))/binary,
+                RequestMessage/binary
+              >>,
     state => maps:update(correlation_id, CorrelationId + 1, State),
     api_version => ApiVersion}.
 
-
-
-
-
-
-
-
-
 % PRIVATE
 
-run(Request) ->
-  run(first_broker, Request).
-
-run(first_broker, Request) ->
+do_run(first_broker, Request) ->
   case kafe_brokers:first_broker(false) of
     undefined ->
       {error, no_broker_found};
     BrokerPID ->
-      run(BrokerPID, Request)
+      do_run(BrokerPID, Request)
   end;
-run(BrokerPID, Request) when is_pid(BrokerPID) ->
+do_run(BrokerPID, Request) when is_pid(BrokerPID) ->
   case erlang:is_process_alive(BrokerPID) of
     true ->
       try
@@ -105,40 +87,40 @@ run(BrokerPID, Request) when is_pid(BrokerPID) ->
       _ = kafe_brokers:release_broker(BrokerPID),
       {error, broker_not_available}
   end;
-run(BrokerName, Request) when is_list(BrokerName) ->
+do_run(BrokerName, Request) when is_list(BrokerName) ->
   case kafe_brokers:broker_by_name(BrokerName) of
     undefined ->
       {error, no_broker_found};
     BrokerPID ->
-      run(BrokerPID, Request)
+      do_run(BrokerPID, Request)
   end;
-run(BrokerID, Request) when is_atom(BrokerID) ->
+do_run(BrokerID, Request) when is_atom(BrokerID) ->
   case kafe_brokers:broker_by_id(BrokerID) of
     undefined ->
       {error, no_broker_found};
     BrokerPID ->
-      run(BrokerPID, Request)
+      do_run(BrokerPID, Request)
   end;
-run({host_and_port, Host, Port}, Request) ->
+do_run({host_and_port, Host, Port}, Request) ->
   case kafe_brokers:broker_by_host_and_port(Host, Port) of
     undefined ->
       {error, no_broker_found};
     BrokerPID ->
-      run(BrokerPID, Request)
+      do_run(BrokerPID, Request)
   end;
-run({topic_and_partition, Topic, Partition}, Request) ->
+do_run({topic_and_partition, Topic, Partition}, Request) ->
   case kafe_brokers:broker_by_topic_and_partition(Topic, Partition) of
     undefined ->
       {error, no_broker_found};
     BrokerPID ->
-      run(BrokerPID, Request)
+      do_run(BrokerPID, Request)
   end;
-run({coordinator, GroupId}, Request) ->
+do_run({coordinator, GroupId}, Request) ->
   case kafe:group_coordinator(bucs:to_binary(GroupId)) of
     {ok, #{coordinator_host := Host,
            coordinator_port := Port,
            error_code := none}} ->
-      case run({host_and_port, Host, Port}, Request) of
+      case do_run({host_and_port, Host, Port}, Request) of
         {ok, #{error_code := not_coordinator_for_group}} ->
           retry_with_coordinator(GroupId, Request);
         {ok, [#{error_code := not_coordinator_for_group}]} ->
@@ -153,40 +135,10 @@ run({coordinator, GroupId}, Request) ->
 retry_with_coordinator(GroupId, Request) ->
   case kafe_protocol_group_coordinator:run(GroupId, force) of
     {ok, #{error_code := none}} ->
-      run({coordinator, GroupId}, Request);
+      do_run({coordinator, GroupId}, Request);
     _ ->
       {error, no_broker_found}
   end.
-
-
-
-
-
-
-
-
-
-
-
-
-% DELETE
-
-request(ApiKey, RequestMessage,
-        #{api_version := ApiVersion} = State) ->
-  request(ApiKey, RequestMessage, State, ApiVersion).
-request(ApiKey, RequestMessage,
-        #{correlation_id := CorrelationId,
-          client_id := ClientId} = State,
-       ApiVersion) ->
-  #{packet => <<
-                 ApiKey:16/signed,
-                 ApiVersion:16/signed,
-                 CorrelationId:32/signed,
-                 (encode_string(ClientId))/binary,
-                 RequestMessage/binary
-               >>,
-    state => maps:update(correlation_id, CorrelationId + 1, State),
-    api_version => ApiVersion}.
 
 % PRIVATE
 
