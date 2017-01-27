@@ -1,6 +1,5 @@
 % @hidden
 -module(kafe_protocol_consumer_offset_commit).
-
 -include("../include/kafe.hrl").
 
 -export([
@@ -10,34 +9,41 @@
          request_v0/3,
          request_v1/5,
          request_v2/6,
-         response/2
+         response/3 % TODO /2
         ]).
 
 run_v0(ConsumerGroup, Topics) ->
-  kafe_protocol:run({coordinator, ConsumerGroup},
-                    {call,
-                     fun ?MODULE:request_v0/3, [ConsumerGroup, Topics],
-                     fun ?MODULE:response/2}).
+  kafe_protocol:run(
+    ?OFFSET_COMMIT_REQUEST,
+    {fun ?MODULE:request_v0/3, [ConsumerGroup, Topics]},
+    fun ?MODULE:response/3, % TODO /2
+    #{api_version => 0,
+      broker => {coordinator, ConsumerGroup}}).
 
 run_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
-  kafe_protocol:run({coordinator, ConsumerGroup},
-                    {call,
-                     fun ?MODULE:request_v1/5, [ConsumerGroup,
-                                                ConsumerGroupGenerationId,
-                                                ConsumerId,
-                                                Topics],
-                     fun ?MODULE:response/2}).
+  kafe_protocol:run(
+    ?OFFSET_COMMIT_REQUEST,
+    {fun ?MODULE:request_v1/5, [ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics]},
+    fun ?MODULE:response/3, % TODO /2
+    #{api_version => 1,
+      broker => {coordinator, ConsumerGroup}}).
 
 run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics) ->
-  kafe_protocol:run({coordinator, ConsumerGroup},
-                    {call,
-                     fun ?MODULE:request_v2/6, [ConsumerGroup,
-                                                ConsumerGroupGenerationId,
-                                                ConsumerId,
-                                                RetentionTime,
-                                                Topics],
-                     fun ?MODULE:response/2}).
+  kafe_protocol:run(
+    ?OFFSET_COMMIT_REQUEST,
+    {fun ?MODULE:request_v2/6, [ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics]},
+    fun ?MODULE:response/3, % TODO /2
+    #{api_version => 1,
+      broker => {coordinator, ConsumerGroup}}).
 
+% OffsetCommit Request (Version: 0) => group_id [topics]
+%   group_id => STRING
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition offset metadata
+%       partition => INT32
+%       offset => INT64
+%       metadata => NULLABLE_STRING
 request_v0(ConsumerGroup, Topics, State) ->
   kafe_protocol:request(
     ?OFFSET_COMMIT_REQUEST,
@@ -48,6 +54,17 @@ request_v0(ConsumerGroup, Topics, State) ->
     State,
     ?V0).
 
+% OffsetCommit Request (Version: 1) => group_id group_generation_id member_id [topics]
+%   group_id => STRING
+%   group_generation_id => INT32
+%   member_id => STRING
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition offset timestamp metadata
+%       partition => INT32
+%       offset => INT64
+%       timestamp => INT64
+%       metadata => NULLABLE_STRING
 request_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics, State) ->
   kafe_protocol:request(
     ?OFFSET_COMMIT_REQUEST,
@@ -60,6 +77,17 @@ request_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics, State) 
     State,
     ?V1).
 
+% OffsetCommit Request (Version: 2) => group_id group_generation_id member_id retention_time [topics]
+%   group_id => STRING
+%   group_generation_id => INT32
+%   member_id => STRING
+%   retention_time => INT64
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition offset metadata
+%       partition => INT32
+%       offset => INT64
+%       metadata => NULLABLE_STRING
 request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics, State) ->
   kafe_protocol:request(
     ?OFFSET_COMMIT_REQUEST,
@@ -73,7 +101,27 @@ request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, 
     State,
     ?V2).
 
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, _ApiVersion) ->
+% OffsetCommit Response (Version: 0) => [responses]
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code
+%       partition => INT32
+%       error_code => INT16
+%
+% OffsetCommit Response (Version: 1) => [responses]
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code
+%       partition => INT32
+%       error_code => INT16
+%
+% OffsetCommit Response (Version: 2) => [responses]
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code
+%       partition => INT32
+%       error_code => INT16
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, _ApiVersion, _State) -> % TODO remove _ApiVersion
   {ok, response2(NumberOfTopics, Remainder)}.
 
 % Private
