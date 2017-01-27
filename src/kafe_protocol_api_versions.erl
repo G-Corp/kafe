@@ -7,14 +7,14 @@
 -export([
          run/0,
          request/1,
-         response/3 % TODO /2
+         response/2
         ]).
 
 run() ->
   kafe_protocol:run(
     ?API_VERSIONS_REQUEST,
     fun ?MODULE:request/1,
-    fun ?MODULE:response/3). % TODO /2
+    fun ?MODULE:response/2).
 
 % ApiVersions Request (Version: 0) =>
 request(State) ->
@@ -30,7 +30,8 @@ response(<<
            ErrorCode:16/signed,
            ApiVersionsLen:32/signed,
            ApiVersions/binary
-         >>, _ApiVersion, _State) -> % TODO remove _ApiVersion
+         >>,
+         _State) ->
   {ok, #{error_code => kafe_error:code(ErrorCode),
          api_versions => api_versions(ApiVersionsLen, ApiVersions, [])}}.
 

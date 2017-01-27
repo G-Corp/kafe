@@ -7,14 +7,14 @@
 -export([
          run/4,
          request/5,
-         response/3 % TODO /2
+         response/2
         ]).
 
 run(GroupId, GenerationId, MemberId, Assignments) ->
   kafe_protocol:run(
     ?SYNC_GROUP_REQUEST,
     {fun ?MODULE:request/5, [GroupId, GenerationId, MemberId, Assignments]},
-    fun ?MODULE:response/3, % TODO /2
+    fun ?MODULE:response/2,
     #{broker => {coordinator, GroupId}}).
 
 % SyncGroup Request (Version: 0) => group_id generation_id member_id [group_assignment]
@@ -67,7 +67,6 @@ response(<<ErrorCode:16/signed,
            MemberAssignmentSize:32/signed,
            MemberAssignment:MemberAssignmentSize/binary,
            _/binary>>,
-         _ApiVersion, % TODO delete
          _State) ->
   case MemberAssignment of
     <<Version:16/signed,

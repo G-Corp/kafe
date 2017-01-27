@@ -8,14 +8,14 @@
          run/2,
          run/1,
          request/2,
-         response/3 % TODO /2
+         response/2
         ]).
 
 run(ConsumerGroup, force) ->
   case kafe_protocol:run(
          ?GROUP_COORDINATOR_REQUEST,
          {fun ?MODULE:request/2, [ConsumerGroup]},
-         fun ?MODULE:response/3) of % TODO /2
+         fun ?MODULE:response/2) of
     {ok, #{error_code := none} = Coordinator} = Result ->
       kafe_consumer_store:insert(ConsumerGroup, coordinator, Coordinator),
       Result;
@@ -50,7 +50,6 @@ response(<<ErrorCode:16/signed,
            CoordinatorHostLength:16/signed,
            CoordinatorHost:CoordinatorHostLength/bytes,
            CoordinatorPort:32/signed>>,
-         _ApiVersion, % TODO remove
          _State) ->
   {ok, #{error_code => kafe_error:code(ErrorCode),
          coordinator_id => CoordinatorID,

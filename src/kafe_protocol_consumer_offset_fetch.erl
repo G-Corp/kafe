@@ -6,7 +6,7 @@
 -export([
          run/2,
          request/3,
-         response/3 % TODO /2
+         response/2
         ]).
 
 run(ConsumerGroup, Options) ->
@@ -17,7 +17,7 @@ run(ConsumerGroup, Options) ->
   kafe_protocol:run(
     ?OFFSET_FETCH_REQUEST,
     {fun ?MODULE:request/3, [ConsumerGroup, Options1]},
-    fun ?MODULE:response/3, % TODO /2
+    fun ?MODULE:response/2,
     #{broker => {coordinator, ConsumerGroup}}).
 
 % OffsetFetch Request (Version: 0) => group_id [topics]
@@ -55,7 +55,7 @@ request(ConsumerGroup, Options, State) ->
 %       offset => INT64
 %       metadata => NULLABLE_STRING
 %       error_code => INT16
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, _ApiVersion, _State) -> % TODO remove _ApiVersion
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, _State) ->
   {ok, response2(NumberOfTopics, Remainder)}.
 
 % Private

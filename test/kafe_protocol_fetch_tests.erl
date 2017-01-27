@@ -20,8 +20,7 @@ teardown(_) ->
 
 t_request() ->
   ?assertEqual(
-     #{api_version => 0,
-       packet => <<0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116,
+     #{packet => <<0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116,
                    255, 255, 255, 255, 0, 0, 0, 100, 0, 0, 0, 1, 0,
                    0, 0, 1, 0, 5, 116, 111, 112, 105, 99, 0, 0, 0, 1,
                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 16, 0, 0>>,
@@ -39,8 +38,7 @@ t_request() ->
                                    client_id => <<"test">>})),
 
   ?assertEqual(
-     #{api_version => 1,
-       packet => <<0, 1, 0, 1, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116,
+     #{packet => <<0, 1, 0, 1, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116,
                    255, 255, 255, 255, 0, 0, 0, 100, 0, 0, 0, 1, 0,
                    0, 0, 1, 0, 5, 116, 111, 112, 105, 99, 0, 0, 0, 1,
                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 16, 0, 0>>,
@@ -58,8 +56,7 @@ t_request() ->
                                    client_id => <<"test">>})),
 
   ?assertEqual(
-     #{api_version => 2,
-       packet => <<0, 1, 0, 2, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116,
+     #{packet => <<0, 1, 0, 2, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116,
                    255, 255, 255, 255, 0, 0, 0, 100, 0, 0, 0, 1, 0,
                    0, 0, 1, 0, 5, 116, 111, 112, 105, 99, 0, 0, 0, 1,
                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 16, 0, 0>>,
@@ -77,8 +74,7 @@ t_request() ->
                                    client_id => <<"test">>})),
 
   ?assertEqual(
-     #{api_version => 3,
-       packet => <<0, 1, 0, 3, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116,
+     #{packet => <<0, 1, 0, 3, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116,
                    255, 255, 255, 255, 0, 0, 0, 100, 0, 0, 0, 1, 0,
                    16, 0, 0, 0, 0, 0, 1, 0, 5, 116, 111, 112, 105,
                    99, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -147,7 +143,6 @@ t_response() ->
                , 3:64, 25:32, 1940715388:32, 0, 0, -1:32, 11:32, "hello world"
                , 4:64, 25:32, 1940715388:32, 0, 0, -1:32, 11:32, "hello world"
        >>,
-       x, % TODO delete
        #{api_version => 0})),
 
   ?assertEqual(
@@ -207,17 +202,14 @@ t_response() ->
                , 3:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
                , 4:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
        >>,
-       x, % TODO delete
        #{api_version => 1})).
 
 t_incomplete_response() ->
   ?assertEqual({error, incomplete_data},
                kafe_protocol_fetch:response(<<>>,
-                                            x, % TODO delete
                                             #{api_version => 0})),
   ?assertEqual({error, incomplete_data},
                kafe_protocol_fetch:response(<<0>>,
-                                            x, % TODO delete,
                                             #{api_version => 0})),
   ?assertEqual({error, incomplete_data},
                kafe_protocol_fetch:response(
@@ -230,7 +222,6 @@ t_incomplete_response() ->
                    , ((8+4+25)*5):32      % message set size
                    , 0 % message set truncated, does not match size
                  >>,
-                 x, % TODO delete
                  #{api_version => 0})).
 
 t_response_incomplete_final_message_is_ignored() ->
@@ -265,7 +256,6 @@ t_response_incomplete_final_message_is_ignored() ->
                , 1:64, 25:32, 1940715388:32, 0, 0, -1:32, 11:32, "hello world"
                , 0 % message truncated after 1 byte
        >>,
-       x, % TODO delete
        #{api_version =>0})),
 
   ?assertEqual(
@@ -303,6 +293,5 @@ t_response_incomplete_final_message_is_ignored() ->
                , 1:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
                , 0 % message truncated after 1 byte
        >>,
-       x, % TODO delete
        #{api_version => 1})).
 

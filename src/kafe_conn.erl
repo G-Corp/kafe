@@ -60,22 +60,6 @@ handle_call({call, {Request, RequestParams}, {Response, ResponseParams}, Request
       lager:error("Request error: ~p:~p~nStacktrace:~s", [Class, Reason, lager:pr_stacktrace(erlang:get_stacktrace(), {Class, Reason})]),
       {reply, {error, Reason}, State}
   end;
-
-% TODO ---> DELETE
-handle_call({call, Request, RequestParams, Response}, From, State) ->
-  handle_call({call, Request, RequestParams, Response, []}, From, State);
-handle_call({call, Request, RequestParams, Response, ResponseParams}, From, State) ->
-  try
-    send_request(erlang:apply(Request, RequestParams ++ [State]),
-                 From,
-                 {Response, ResponseParams},
-                 State)
-  catch
-    Class:Reason ->
-      lager:error("Request error: ~p:~p~nStacktrace:~s", [Class, Reason, lager:pr_stacktrace(erlang:get_stacktrace(), {Class, Reason})]),
-      {reply, {error, Reason}, State}
-  end;
-% TODO <--- DELETE
 handle_call(alive, _From, #{socket := Socket} = State) ->
   case inet:setopts(Socket, []) of
     ok ->
@@ -122,7 +106,7 @@ send_request(#{packet := Packet},
     {error, _} = Error ->
       {stop, normal, Error, State1}
   end;
-send_request(#{packet := Packet, state := State2, api_version := ApiVersion},
+send_request(#{packet := Packet, state := State2},
              From,
              Handler,
              #{correlation_id := CorrelationId,
@@ -134,7 +118,7 @@ send_request(#{packet := Packet, state := State2, api_version := ApiVersion},
        maps:update(
          requests,
          orddict:store(CorrelationId,
-                       #{from => From, handler => Handler, socket => Socket, api_version => ApiVersion}, % TODO remove api_version
+                       #{from => From, handler => Handler, socket => Socket},
                        Requests),
          State2)};
     {error, _} = Error ->

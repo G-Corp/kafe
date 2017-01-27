@@ -58,8 +58,7 @@ request(RequestMessage, #{api_key := ApiKey,
                 (encode_string(ClientId))/binary,
                 RequestMessage/binary
               >>,
-    state => maps:update(correlation_id, CorrelationId + 1, State),
-    api_version => ApiVersion}.
+    state => maps:update(correlation_id, CorrelationId + 1, State)}.
 
 % PRIVATE
 
@@ -159,8 +158,8 @@ encode_array(List) ->
 
 response(<<CorrelationId:32/signed, Remainder/bytes>>, #{requests := Requests} = State) ->
   case orddict:find(CorrelationId, Requests) of
-    {ok, #{from := From, handler := {ResponseHandler, ResponseHandlerParams}, api_version := ApiVersion}} -> % TODO : remove api_version
-      _ = gen_server:reply(From, erlang:apply(ResponseHandler, [Remainder, ApiVersion|ResponseHandlerParams])), % TODO : remove api_version
+    {ok, #{from := From, handler := {ResponseHandler, ResponseHandlerParams}}} ->
+      _ = gen_server:reply(From, erlang:apply(ResponseHandler, [Remainder|ResponseHandlerParams])),
       {ok, maps:update(requests, orddict:erase(CorrelationId, Requests), State)};
     error ->
       {error, request_not_found} %;

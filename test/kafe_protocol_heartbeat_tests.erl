@@ -13,8 +13,7 @@ kafe_protocol_heartbeat_tests_test_() ->
    [
     fun() ->
         ?assertEqual(
-           #{api_version => 0,
-             packet => <<0, 12, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 5, 103, 114, 111, 117, 112, 0, 0, 0, 1,
+           #{packet => <<0, 12, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 5, 103, 114, 111, 117, 112, 0, 0, 0, 1,
                          0, 6, 109, 101, 109, 98, 101, 114>>,
              state => #{
                api_version => 0,
@@ -32,7 +31,6 @@ kafe_protocol_heartbeat_tests_test_() ->
         ?assertEqual(
            {ok, #{error_code => none}},
            kafe_protocol_heartbeat:response(<<0, 0>>,
-                                            x, % TODO delete,
                                             #{api_version => 0}))
     end
    ]}.

@@ -6,14 +6,14 @@
 -export([
          run/1,
          request/1,
-         response/3 % TODO /2
+         response/2
         ]).
 
 run(BrokerID) ->
   kafe_protocol:run(
     ?LIST_GROUPS_REQUEST,
     fun ?MODULE:request/1,
-    fun ?MODULE:response/3, % TODO /2
+    fun ?MODULE:response/2,
     #{broker => BrokerID}).
 
 request(State) ->
@@ -24,7 +24,7 @@ request(State) ->
 %   groups => group_id protocol_type
 %     group_id => STRING
 %     protocol_type => STRING
-response(<<ErrorCode:16/signed, GroupsLength:32/signed, Remainder/binary>>, _ApiVersion, _State) -> % TODO remove _ApiVersion
+response(<<ErrorCode:16/signed, GroupsLength:32/signed, Remainder/binary>>, _State) ->
   {ok, #{error_code => kafe_error:code(ErrorCode),
          groups => groups(GroupsLength, Remainder, [])}}.
 

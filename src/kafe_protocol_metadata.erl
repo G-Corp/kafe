@@ -7,14 +7,14 @@
 -export([
          run/1,
          request/2,
-         response/3 % TODO /2
+         response/2
         ]).
 
 run(Topics) ->
   kafe_protocol:run(
     ?METADATA_REQUEST,
     {fun ?MODULE:request/2, [Topics]},
-    fun ?MODULE:response/3).
+    fun ?MODULE:response/2).
 
 % Metadata Request (Version: 0) => [topics]
 % Metadata Request (Version: 1) => [topics]
@@ -84,8 +84,7 @@ encode_array_or_null(Array, _) ->
 %       isr => INT32
 response(<<NumberOfBrokers:32/signed,
            BrokerRemainder/binary>>,
-         _ApiVersion,
-         #{api_version := ApiVersion}) when ApiVersion == ?V0 -> % TODO : remove _ApiVersion
+         #{api_version := ApiVersion}) when ApiVersion == ?V0 ->
   {
    Brokers,
    <<
@@ -97,8 +96,7 @@ response(<<NumberOfBrokers:32/signed,
   {ok, #{brokers => Brokers, topics => Topics}};
 response(<<NumberOfBrokers:32/signed,
            BrokerRemainder/binary>>,
-         _ApiVersion,
-         #{api_version := ApiVersion}) when ApiVersion == ?V1 -> % TODO : remove _ApiVersion
+         #{api_version := ApiVersion}) when ApiVersion == ?V1 ->
   {
    Brokers,
    <<
@@ -113,8 +111,7 @@ response(<<NumberOfBrokers:32/signed,
          topics => Topics}};
 response(<<NumberOfBrokers:32/signed,
            BrokerRemainder/binary>>,
-         _ApiVersion,
-         #{api_version := ApiVersion}) when ApiVersion == ?V2 -> % TODO : remove _ApiVersion
+         #{api_version := ApiVersion}) when ApiVersion == ?V2 ->
   {
    Brokers,
    <<

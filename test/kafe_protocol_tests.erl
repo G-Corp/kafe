@@ -18,8 +18,7 @@ teardown(_) ->
   ok.
 
 t_protocol_request() ->
-  ?assertEqual(#{api_version => 0,
-                 packet => <<0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
+  ?assertEqual(#{packet => <<0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
                  state => #{
                    api_version => 0,
                    api_key => 1,
@@ -29,8 +28,7 @@ t_protocol_request() ->
                                                api_key => 1,
                                                correlation_id => 0,
                                                client_id => <<"test">>})),
-  ?assertEqual(#{api_version => 1,
-                 packet => <<0, 1, 0, 1, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
+  ?assertEqual(#{packet => <<0, 1, 0, 1, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116>>,
                  state => #{
                    api_version => 1,
                    api_key => 1,

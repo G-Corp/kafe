@@ -6,7 +6,7 @@
 -export([
          run/2,
          request/3,
-         response/3 % TODO /2
+         response/2
         ]).
 
 % [{broker_id, [{topic, [{partition, [message]}]}]}]
@@ -29,7 +29,7 @@ run(Messages, Options) ->
             [kafe_protocol:run(
                ?PRODUCE_REQUEST,
                {fun ?MODULE:request/3, [Messages0, Options]},
-               fun ?MODULE:response/3,
+               fun ?MODULE:response/2,
                #{broker => BrokerID})
              || {BrokerID, Messages0} <- Dispatch])
       end;
@@ -174,14 +174,12 @@ message_set([{Key, Value}|Rest], Options, ApiVersion, Acc) ->
 %   throttle_time_ms => INT32
 response(<<NumberOfTopics:32/signed,
            Remainder/binary>>,
-         _ApiVersion,
          #{api_version := ApiVersion}) when ApiVersion == ?V0 ->
   {Topics,
    <<_/binary>>} = topics(NumberOfTopics, [], Remainder, ApiVersion),
   {ok, Topics};
 response(<<NumberOfTopics:32/signed,
            Remainder/binary>>,
-         _ApiVersion,
          #{api_version := ApiVersion}) when ApiVersion == ?V1;
                                             ApiVersion == ?V2 ->
   {Topics,

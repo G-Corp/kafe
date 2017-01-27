@@ -9,14 +9,14 @@
          request_v0/3,
          request_v1/5,
          request_v2/6,
-         response/3 % TODO /2
+         response/2
         ]).
 
 run_v0(ConsumerGroup, Topics) ->
   kafe_protocol:run(
     ?OFFSET_COMMIT_REQUEST,
     {fun ?MODULE:request_v0/3, [ConsumerGroup, Topics]},
-    fun ?MODULE:response/3, % TODO /2
+    fun ?MODULE:response/2,
     #{api_version => 0,
       broker => {coordinator, ConsumerGroup}}).
 
@@ -24,7 +24,7 @@ run_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
   kafe_protocol:run(
     ?OFFSET_COMMIT_REQUEST,
     {fun ?MODULE:request_v1/5, [ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics]},
-    fun ?MODULE:response/3, % TODO /2
+    fun ?MODULE:response/2,
     #{api_version => 1,
       broker => {coordinator, ConsumerGroup}}).
 
@@ -32,7 +32,7 @@ run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topi
   kafe_protocol:run(
     ?OFFSET_COMMIT_REQUEST,
     {fun ?MODULE:request_v2/6, [ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics]},
-    fun ?MODULE:response/3, % TODO /2
+    fun ?MODULE:response/2,
     #{api_version => 2,
       broker => {coordinator, ConsumerGroup}}).
 
@@ -115,7 +115,7 @@ request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, 
 %     partition_responses => partition error_code
 %       partition => INT32
 %       error_code => INT16
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, _ApiVersion, _State) -> % TODO remove _ApiVersion
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, _State) ->
   {ok, response2(NumberOfTopics, Remainder)}.
 
 % Private

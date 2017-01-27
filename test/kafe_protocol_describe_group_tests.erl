@@ -13,8 +13,7 @@ kafe_protocol_describe_group_tests_test_() ->
    [
     fun() ->
         ?assertEqual(
-           #{api_version => 0,
-             packet => <<0, 15, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 0, 0, 1, 0, 5, 103, 114, 111, 117, 112>>,
+           #{packet => <<0, 15, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 0, 0, 1, 0, 5, 103, 114, 111, 117, 112>>,
              state => #{api_key => ?DESCRIBE_GROUPS_REQUEST,
                         api_version => 0,
                         client_id => <<"test">>,
@@ -46,7 +45,6 @@ kafe_protocol_describe_group_tests_test_() ->
                48, 56, 55, 48, 45, 52, 53, 101, 53, 45, 98, 54, 50, 55, 45, 52, 99, 101, 100,
                51, 48, 49, 57, 56, 101, 52, 102, 0, 4, 107, 97, 102, 101, 0, 11, 47, 49, 55,
                50, 46, 49, 56, 46, 48, 46, 49, 0, 0, 0, 0, 0, 0, 0, 0>>,
-             x, % TODO delete
              #{api_version => 1}))
     end
    ]}.

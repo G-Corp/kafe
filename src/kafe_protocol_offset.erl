@@ -6,7 +6,7 @@
 -export([
          run/2,
          request/3,
-         response/3 % TODO /2
+         response/2
         ]).
 
 run(ReplicaID, []) ->
@@ -26,7 +26,7 @@ run(ReplicaID, Topics) ->
                case kafe_protocol:run(
                       ?OFFSET_REQUEST,
                       {fun ?MODULE:request/3, [ReplicaID, TopicsForBroker]},
-                      fun ?MODULE:response/3,
+                      fun ?MODULE:response/2,
                       #{broker => BrokerID}) of
                  {ok, Result} ->
                    [Result|Acc];
@@ -89,8 +89,9 @@ request(ReplicaId, Topics, #{api_version := ApiVersion} = State) ->
 %       error_code => INT16
 %       timestamp => INT64
 %       offset => INT64
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, _ApiVersion, #{api_version := ApiVersion}) -> % TODO remove _ApiVersion
-  {ok, response(NumberOfTopics, Remainder, ApiVersion)};
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, #{api_version := ApiVersion}) ->
+  {ok, response(NumberOfTopics, Remainder, ApiVersion)}.
+
 response(0, <<>>, _ApiVersion) ->
   [];
 response(

@@ -7,14 +7,14 @@
 -export([
          run/2,
          request/3,
-         response/3 % TODO /2
+         response/2
         ]).
 
 run(GroupId, Options) ->
   kafe_protocol:run(
     ?JOIN_GROUP_REQUEST,
     {fun ?MODULE:request/3, [GroupId, Options]},
-    fun ?MODULE:response/3, % TODO /2
+    fun ?MODULE:response/2,
     #{broker => {coordinator, GroupId}}).
 
 % JoinGroup Request (Version: 0) => group_id session_timeout member_id protocol_type [group_protocols]
@@ -91,7 +91,6 @@ response(<<ErrorCode:16/signed,
            MemberId:MemberIdSize/binary,
            MembersLength:32/signed,
            Members/binary>>,
-         _ApiVersion,
          #{api_version := ApiVersion}) when ApiVersion == ?V0;
                                            ApiVersion == ?V1 ->
   {ok, #{error_code => kafe_error:code(ErrorCode),

@@ -7,14 +7,14 @@
 -export([
          run/1,
          request/2,
-         response/3 % TODO /2
+         response/2
         ]).
 
 run(GroupId) ->
   kafe_protocol:run(
     ?DESCRIBE_GROUPS_REQUEST,
     {fun ?MODULE:request/2, [GroupId]},
-    fun ?MODULE:response/3, % TODO /2
+    fun ?MODULE:response/2,
     #{broker => {coordinator, GroupId}}).
 
 % DescribeGroups Request (Version: 0) => [group_ids]
@@ -44,7 +44,6 @@ request(GroupId, State) ->
 %         UserData => bytes ??? NOT ???
 response(<<GroupesLength:32/signed,
            Remainder/binary>>,
-         _ApiVersion, % TODO delete
          _State) ->
   {ok, groups(GroupesLength, Remainder, [])}.
 

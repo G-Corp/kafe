@@ -6,14 +6,14 @@
 -export([
          run/3,
          request/4,
-         response/3 % TODO /2
+         response/2
         ]).
 
 run(GroupId, GenerationId, MemberId) ->
   kafe_protocol:run(
     ?HEARTBEAT_REQUEST,
     {fun ?MODULE:request/4, [GroupId, GenerationId, MemberId]},
-    fun ?MODULE:response/3, % TODO /2
+    fun ?MODULE:response/2,
     #{broker => {coordinator, GroupId}}).
 
 % Heartbeat Request (Version: 0) => group_id group_generation_id member_id
@@ -30,7 +30,6 @@ request(GroupId, GenerationId, MemberId, State) ->
 % Heartbeat Response (Version: 0) => error_code
 %   error_code => INT16
 response(<<ErrorCode:16/signed>>,
-         _ApiVersion,
          _State) ->
       {ok, #{error_code => kafe_error:code(ErrorCode)}}.
 

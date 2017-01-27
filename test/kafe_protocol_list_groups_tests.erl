@@ -10,8 +10,7 @@ kafe_protocol_list_groups_test_() ->
 
 t_request() ->
   ?assertEqual(
-     #{api_version => 0,
-       packet => <<16:16, 0:16, 0:32, 4:16, "test">>,
+     #{packet => <<16:16, 0:16, 0:32, 4:16, "test">>,
        state => #{
          api_version => 0,
          api_key => ?LIST_GROUPS_REQUEST,
@@ -36,5 +35,4 @@ t_response() ->
            , 6:16, "group1"          % group id
            , 8:16, "consumer"        % protocol type
          >>,
-      x, % TODO delete
       #{api_version => 0})).

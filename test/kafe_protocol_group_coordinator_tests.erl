@@ -17,8 +17,7 @@ teardown(_) ->
   ok.
 
 t_request() ->
-  ?assertEqual(#{api_version => 0,
-                 packet => <<0, 10, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 5, 104, 101, 108, 108, 111>>,
+  ?assertEqual(#{packet => <<0, 10, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0, 5, 104, 101, 108, 108, 111>>,
                  state => #{api_key => ?GROUP_COORDINATOR_REQUEST,
                             api_version => 0,
                             correlation_id => 1,
@@ -35,6 +34,5 @@ t_response() ->
                       coordinator_port => 8080}},
                kafe_protocol_group_coordinator:response(
                  <<0, 0, 0, 0, 0, 1, 0, 9, 108, 111, 99, 97, 108, 104, 111, 115, 116, 0, 0, 31, 144>>,
-                 x, % TODO delete
                  #{api_version => 0})).
 

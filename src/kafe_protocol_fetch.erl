@@ -7,7 +7,7 @@
 -export([
          run/3,
          request/4,
-         response/3 % TODO /2
+         response/2
         ]).
 
 run(ReplicaID, TopicName, Options) ->
@@ -26,7 +26,7 @@ run(ReplicaID, TopicName, Options) ->
   kafe_protocol:run(
     ?FETCH_REQUEST,
     {fun ?MODULE:request/4, [ReplicaID, bucs:to_binary(TopicName), Options1]},
-    fun ?MODULE:response/3,
+    fun ?MODULE:response/2,
     #{broker => {topic_and_partition, TopicName, Partition}}).
 
 % Fetch Request (Version: 0) => replica_id max_wait_time min_bytes [topics]
@@ -152,16 +152,14 @@ request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) whe
 %       record_set => BYTES
 response(<<NumberOfTopics:32/signed,
            Remainder/binary>>,
-         _ApiVersion,
-         #{api_version := ApiVersion}) when ApiVersion == ?V0 -> % TODO remove _ApiVersion
+         #{api_version := ApiVersion}) when ApiVersion == ?V0 ->
   topics(NumberOfTopics, Remainder, []);
 response(<<ThrottleTime:32/signed,
            NumberOfTopics:32/signed,
            Remainder/binary>>,
-         _ApiVersion,
          #{api_version := ApiVersion}) when ApiVersion == ?V1;
                                             ApiVersion == ?V2;
-                                            ApiVersion == ?V3 -> % TODO remove _ApiVersion
+                                            ApiVersion == ?V3 ->
   case topics(NumberOfTopics, Remainder, []) of
     {ok, Response} ->
       {ok, #{topics => Response,
@@ -169,7 +167,7 @@ response(<<ThrottleTime:32/signed,
     Error ->
       Error
   end;
-response(_, _, _) ->
+response(_, _) ->
   {error, incomplete_data}.
 
 % Private
