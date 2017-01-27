@@ -62,5 +62,5 @@ t_partitions(_Config) ->
   ?assertEqual([0, 1, 2], kafe:partitions(<<"testthree">>)).
 
 t_api_version(_Config) ->
-  ?assertEqual(1, kafe:api_version()).
+  ?assertEqual(auto, kafe:api_version()).
 

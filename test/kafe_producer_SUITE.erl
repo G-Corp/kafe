@@ -65,8 +65,9 @@ t_produce(Config) ->
                                        messages := [#{attributes := 0,
                                                       crc := _,
                                                       key := <<"t_produce_key_0">>,
-                                                      magic_byte := 0,
+                                                      magic_byte := 1,
                                                       offset := NextOffset,
+                                                      timestamp := _,
                                                       value := <<"t_produce_value_0">>}],
                                        partition := 0}]}]}} =
   kafe:fetch(<<"testone">>, #{partition => Partition, offset => NextOffset}),
@@ -85,8 +86,9 @@ t_produce_no_ack(Config) ->
                                        messages := [#{attributes := 0,
                                                       crc := _,
                                                       key := <<"t_produce_no_ack_key_0">>,
-                                                      magic_byte := 0,
+                                                      magic_byte := 1,
                                                       offset := NextOffset,
+                                                      timestamp := _,
                                                       value := <<"t_produce_no_ack_value_0">>}],
                                        partition := 0}]}]}} =
   kafe:fetch(<<"testone">>, #{partition => 0,

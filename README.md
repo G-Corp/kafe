@@ -40,7 +40,7 @@ You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/bots
 <tr><td>chunk_pool_size</td><td><tt>integer()</tt></td><td>Size of new connection pool/brocker</td><td><tt>10</tt></td></tr>
 <tr><td>brokers_update_frequency</td><td><tt>integer()</tt></td><td>Frequency (ms) for brokers update</td><td><tt>60000</tt></td></tr>
 <tr><td>client_id</td><td><tt>binary()</tt></td><td>Client ID Name</td><td><tt><<"kafe">></tt></td></tr>
-<tr><td>api_version</td><td><tt>integer() | auto</tt></td><td>API Version</td><td><tt>1<sup>*</sup></tt></td></tr>
+<tr><td>api_version</td><td><tt>integer() | auto</tt></td><td>API Version</td><td><tt>auto<sup>*</sup></tt></td></tr>
 <tr><td>correlation_id</td><td><tt>integer()</tt></td><td>Correlation ID</td><td><tt>0</tt></td></tr>
 <tr><td>socket</td><td><tt>[{sndbuf, integer()}, {recbuf, integer()}, {buffer, integer()}]</tt></td><td>Socker configuration</td><td><tt>[{sndbuf, 4194304}, {recbuf, 4194304}, {buffer, 4194304}]</tt></td></tr>
 </table>

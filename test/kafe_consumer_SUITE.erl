@@ -117,6 +117,9 @@ get_coordinator() ->
     {ok, #{error_code := group_coordinator_not_available}} ->
       timer:sleep(100),
       get_coordinator();
+    {error, E} ->
+      ?debugFmt("==> ERROR : ~p", [E]),
+      erlang:exit(1);
     _ ->
       ok
   end.
