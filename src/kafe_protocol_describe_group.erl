@@ -1,27 +1,27 @@
 % @hidden
 -module(kafe_protocol_describe_group).
+-compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
 
 -export([
          run/1,
          request/2,
-         response/2
+         response/3 % TODO /2
         ]).
 
 run(GroupId) ->
-  kafe_protocol:run({coordinator, GroupId},
-                    {call,
-                     fun ?MODULE:request/2, [GroupId],
-                     fun ?MODULE:response/2}).
+  kafe_protocol:run(
+    ?DESCRIBE_GROUPS_REQUEST,
+    {fun ?MODULE:request/2, [GroupId]},
+    fun ?MODULE:response/3, % TODO /2
+    #{broker => {coordinator, GroupId}}).
 
 % DescribeGroups Request (Version: 0) => [group_ids]
 request(GroupId, State) ->
   kafe_protocol:request(
-    ?DESCRIBE_GROUPS_REQUEST,
     <<(kafe_protocol:encode_array([kafe_protocol:encode_string(GroupId)]))/binary>>,
-    State,
-    ?V0).
+    State).
 
 % DescribeGroups Response (Version: 0) => [groups]
 %   groups => error_code group_id state protocol_type protocol [members]
@@ -44,7 +44,8 @@ request(GroupId, State) ->
 %         UserData => bytes ??? NOT ???
 response(<<GroupesLength:32/signed,
            Remainder/binary>>,
-         _ApiVersion) ->
+         _ApiVersion, % TODO delete
+         _State) ->
   {ok, groups(GroupesLength, Remainder, [])}.
 
 groups(0, _, Acc) ->

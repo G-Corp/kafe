@@ -8,14 +8,13 @@
          run/2,
          request/3,
          response/3 % TODO /2
-         , p_response/3 % TODO /2
         ]).
 
 run(GroupId, Options) ->
   kafe_protocol:run(
     ?JOIN_GROUP_REQUEST,
     {fun ?MODULE:request/3, [GroupId, Options]},
-    fun ?MODULE:p_response/3, % TODO /2
+    fun ?MODULE:response/3, % TODO /2
     #{broker => {coordinator, GroupId}}).
 
 % JoinGroup Request (Version: 0) => group_id session_timeout member_id protocol_type [group_protocols]
@@ -82,10 +81,6 @@ request(GroupId, Options, #{api_version := ApiVersion} = State) when ApiVersion 
 %   members => member_id member_metadata
 %     member_id => STRING
 %     member_metadata => BYTES
-p_response(R, V, S) ->
-  lager:info("===> ~p", [R]),
-  lager:info("===> ~p", [S]),
-  response(R, V, S).
 response(<<ErrorCode:16/signed,
            GenerationId:32/signed,
            ProtocolGroupSize:16/signed,
