@@ -33,7 +33,7 @@ run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topi
     ?OFFSET_COMMIT_REQUEST,
     {fun ?MODULE:request_v2/6, [ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics]},
     fun ?MODULE:response/3, % TODO /2
-    #{api_version => 1,
+    #{api_version => 2,
       broker => {coordinator, ConsumerGroup}}).
 
 % OffsetCommit Request (Version: 0) => group_id [topics]
