@@ -165,6 +165,7 @@
                         members => [group_member()]}.
 -type protocol() :: binary().
 -type join_group_options() :: #{session_timeout => integer(),
+                                rebalance_timeout => integer(),
                                 member_id => binary(),
                                 protocol_type => binary(),
                                 protocols => [protocol()]}.
@@ -518,6 +519,7 @@ join_group(GroupID) ->
 % Options:
 % <ul>
 % <li><tt>session_timeout :: integer()</tt> : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)</li>
+% <li><tt>rebalance_timeout :: integer()</tt> : The maximum time that the coordinator will wait for each member to rejoin when rebalancing the group. (default: 20000)</li>
 % <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberID must be
 % empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberID from the previous generation.</li>
 % <li><tt>protocol_type :: binary()</tt> : Unique name for class of protocols implemented by group (default &lt;&lt;"consumer"&gt;&gt;).</li>

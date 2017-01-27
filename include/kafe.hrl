@@ -66,6 +66,7 @@
                                                       end, [], kafe:topics())).
 
 -define(DEFAULT_JOIN_GROUP_SESSION_TIMEOUT, 30000).
+-define(DEFAULT_JOIN_GROUP_REBALANCE_TIMEOUT, ?DEFAULT_JOIN_GROUP_SESSION_TIMEOUT*2).
 -define(DEFAULT_JOIN_GROUP_MEMBER_ID, <<>>).
 -define(DEFAULT_JOIN_GROUP_PROTOCOL_TYPE, <<"consumer">>).
 -define(DEFAULT_JOIN_GROUP_PROTOCOLS, [kafe:default_protocol(
