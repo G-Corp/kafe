@@ -93,7 +93,6 @@ init([Topic, Partition, FetchInterval,
               errors_actions = maps:get(fetch, ErrorsActions, ?DEFAULT_CONSUMER_FETCH_ERROR_ACTIONS)
              }};
     _ ->
-      lager:error("Failed to fetch offset for topic ~s, partition ~p in group ~s", [Topic, Partition, GroupID]),
       {stop, fetch_offset_faild}
   end.
 
@@ -334,6 +333,11 @@ get_partition_offset(Topic, Partition, Time) ->
             partitions := [#{error_code := none,
                              id := Partition,
                              offsets := [Offset]}]}]} ->
+      {ok, Offset};
+    {ok, [#{name := Topic,
+            partitions := [#{error_code := none,
+                             id := Partition,
+                             offset := Offset}]}]} ->
       {ok, Offset};
     _ ->
       error
