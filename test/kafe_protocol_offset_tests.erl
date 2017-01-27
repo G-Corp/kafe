@@ -71,7 +71,7 @@ t_response() ->
              partitions => [#{error_code => none,
                               id => 0,
                               offset => 4,
-                              timestamp => 18446744073709551615}]}]},
+                              timestamp => -1}]}]},
      kafe_protocol_offset:response(
        <<0, 0, 0, 1, 0, 5, 116, 111, 112, 105, 99, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 4>>,
        x, % TODO delete

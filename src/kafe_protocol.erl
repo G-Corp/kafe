@@ -29,13 +29,13 @@ run(ApiKey, RequestFun, ResponseFun, State) when is_integer(ApiKey),
                                                  is_map(State)->
   run(ApiKey, {RequestFun, []}, ResponseFun, State);
 run(ApiKey, RequestFun, ResponseFun, State) when is_integer(ApiKey),
-                                                 is_function(ResponseFun),
+                                                 (is_function(ResponseFun) orelse ResponseFun == undefined),
                                                  is_map(State)->
   run(ApiKey, RequestFun, {ResponseFun, []}, State);
 run(ApiKey, {RequestFun, RequestParams}, {ResponseFun, ResponseParams}, State) when is_integer(ApiKey),
                                                                                     is_function(RequestFun),
                                                                                     is_list(RequestParams),
-                                                                                    is_function(ResponseFun),
+                                                                                    (is_function(ResponseFun) orelse ResponseFun == undefined),
                                                                                     is_list(ResponseParams),
                                                                                     is_map(State) ->
   ApiVersion = case maps:get(api_version, State, undefined) of

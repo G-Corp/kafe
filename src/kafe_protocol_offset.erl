@@ -89,7 +89,7 @@ request(ReplicaId, Topics, #{api_version := ApiVersion} = State) ->
 %       error_code => INT16
 %       timestamp => INT64
 %       offset => INT64
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, _ApiVersion, #{api_version := ApiVersion}) ->
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, _ApiVersion, #{api_version := ApiVersion}) -> % TODO remove _ApiVersion
   {ok, response(NumberOfTopics, Remainder, ApiVersion)};
 response(0, <<>>, _ApiVersion) ->
   [];
@@ -204,7 +204,7 @@ partitions(
   <<
     Partition:32/signed,
     ErrorCode:16/signed,
-    Timestamp:64/unsigned,
+    Timestamp:64/signed,
     Offset:64/signed,
     Remainder/binary
   >>,

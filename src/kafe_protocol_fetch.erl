@@ -7,7 +7,7 @@
 -export([
          run/3,
          request/4,
-         response/2
+         response/3 % TODO /2
         ]).
 
 run(ReplicaID, TopicName, Options) ->
@@ -23,31 +23,56 @@ run(ReplicaID, TopicName, Options) ->
                         end,
   Options1 = Options#{partition => Partition,
                       offset => Offset},
-  lager:debug("Fetch topic ~s (partition ~p, offset ~p)", [TopicName, Partition, Offset]),
-  kafe_protocol:run({topic_and_partition, TopicName, Partition},
-                    {call,
-                     fun ?MODULE:request/4, [ReplicaID, bucs:to_binary(TopicName), Options1],
-                     fun ?MODULE:response/2}).
+  kafe_protocol:run(
+    ?FETCH_REQUEST,
+    {fun ?MODULE:request/4, [ReplicaID, bucs:to_binary(TopicName), Options1]},
+    fun ?MODULE:response/3,
+    #{broker => {topic_and_partition, TopicName, Partition}}).
 
-% v0, v1, v2
-% FetchRequest => ReplicaId MaxWaitTime MinBytes [TopicName [Partition FetchOffset MaxBytes]]
-%   ReplicaId => int32
-%   MaxWaitTime => int32
-%   MinBytes => int32
-%   TopicName => string
-%   Partition => int32
-%   FetchOffset => int64
-%   MaxBytes => int32
+% Fetch Request (Version: 0) => replica_id max_wait_time min_bytes [topics]
+%   replica_id => INT32
+%   max_wait_time => INT32
+%   min_bytes => INT32
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition fetch_offset max_bytes
+%       partition => INT32
+%       fetch_offset => INT64
+%       max_bytes => INT32
 %
-% v3
-% FetchRequest => ReplicaId MaxWaitTime MinBytes MaxBytes [TopicName [Partition FetchOffset MaxBytes]]
-%   ReplicaId => int32
-%   MaxWaitTime => int32
-%   MinBytes => int32
-%   TopicName => string
-%   Partition => int32
-%   FetchOffset => int64
-%   MaxBytes => int32
+% Fetch Request (Version: 1) => replica_id max_wait_time min_bytes [topics]
+%   replica_id => INT32
+%   max_wait_time => INT32
+%   min_bytes => INT32
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition fetch_offset max_bytes
+%       partition => INT32
+%       fetch_offset => INT64
+%       max_bytes => INT32
+%
+% Fetch Request (Version: 2) => replica_id max_wait_time min_bytes [topics]
+%   replica_id => INT32
+%   max_wait_time => INT32
+%   min_bytes => INT32
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition fetch_offset max_bytes
+%       partition => INT32
+%       fetch_offset => INT64
+%       max_bytes => INT32
+%
+% Fetch Request (Version: 3) => replica_id max_wait_time min_bytes max_bytes [topics]
+%   replica_id => INT32
+%   max_wait_time => INT32
+%   min_bytes => INT32
+%   max_bytes => INT32
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition fetch_offset max_bytes
+%       partition => INT32
+%       fetch_offset => INT64
+%       max_bytes => INT32
 request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V0;
                                                                                   ApiVersion == ?V1;
                                                                                   ApiVersion == ?V2 ->
@@ -57,7 +82,6 @@ request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) whe
   MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
   MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
   kafe_protocol:request(
-    ?FETCH_REQUEST,
     <<ReplicaID:32/signed,
       MaxWaitTime:32/signed,
       MinBytes:32/signed,
@@ -67,66 +91,92 @@ request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) whe
       Partition:32/signed,
       Offset:64/signed,
       MaxBytes:32/signed>>,
-    State,
-    ApiVersion);
+    State);
 request(ReplicaID, TopicName, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V3 ->
   Partition = maps:get(partition, Options, ?DEFAULT_FETCH_PARTITION),
   Offset = maps:get(offset, Options),
   MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
   MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
-  ResponseMinBytes = maps:get(response_max_bytes, Options, MaxBytes),
+  ResponseMaxBytes = maps:get(response_max_bytes, Options, MaxBytes),
   MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
   kafe_protocol:request(
-    ?FETCH_REQUEST,
     <<ReplicaID:32/signed,
       MaxWaitTime:32/signed,
       MinBytes:32/signed,
-      ResponseMinBytes:32/signed,
+      ResponseMaxBytes:32/signed,
       1:32/signed,
       (kafe_protocol:encode_string(TopicName))/binary,
       1:32/signed,
       Partition:32/signed,
       Offset:64/signed,
       MaxBytes:32/signed>>,
-    State,
-    ApiVersion).
+    State).
 
-% v0
-% FetchResponse => [TopicName [Partition ErrorCode HighwaterMarkOffset MessageSetSize MessageSet]]
-%   TopicName => string
-%   Partition => int32
-%   ErrorCode => int16
-%   HighwaterMarkOffset => int64
-%   MessageSetSize => int32
+% Fetch Response (Version: 0) => [responses]
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code high_watermark record_set
+%       partition => INT32
+%       error_code => INT16
+%       high_watermark => INT64
+%       record_set => BYTES
 %
-% v1 (supported in 0.9.0 or later), v2 (supported in 0.10.0 or later) and v3
-% FetchResponse => [TopicName [Partition ErrorCode HighwaterMarkOffset MessageSetSize MessageSet]] ThrottleTime
-%   TopicName => string
-%   Partition => int32
-%   ErrorCode => int16
-%   HighwaterMarkOffset => int64
-%   MessageSetSize => int32
-%   ThrottleTime => int32
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) when NumberOfTopics > 0, ApiVersion == ?V0 ->
-  response(NumberOfTopics, Remainder, []);
-response(<<ThrottleTime:32/signed, NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) when ApiVersion == ?V1;
-                                                                                                  ApiVersion == ?V2;
-                                                                                                  ApiVersion == ?V3 ->
-  case response(NumberOfTopics, Remainder, []) of
+% Fetch Response (Version: 1) => throttle_time_ms [responses]
+%   throttle_time_ms => INT32
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code high_watermark record_set
+%       partition => INT32
+%       error_code => INT16
+%       high_watermark => INT64
+%       record_set => BYTES
+%
+% Fetch Response (Version: 2) => throttle_time_ms [responses]
+%   throttle_time_ms => INT32
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code high_watermark record_set
+%       partition => INT32
+%       error_code => INT16
+%       high_watermark => INT64
+%       record_set => BYTES
+%
+% Fetch Response (Version: 3) => throttle_time_ms [responses]
+%   throttle_time_ms => INT32
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code high_watermark record_set
+%       partition => INT32
+%       error_code => INT16
+%       high_watermark => INT64
+%       record_set => BYTES
+response(<<NumberOfTopics:32/signed,
+           Remainder/binary>>,
+         _ApiVersion,
+         #{api_version := ApiVersion}) when ApiVersion == ?V0 -> % TODO remove _ApiVersion
+  topics(NumberOfTopics, Remainder, []);
+response(<<ThrottleTime:32/signed,
+           NumberOfTopics:32/signed,
+           Remainder/binary>>,
+         _ApiVersion,
+         #{api_version := ApiVersion}) when ApiVersion == ?V1;
+                                            ApiVersion == ?V2;
+                                            ApiVersion == ?V3 -> % TODO remove _ApiVersion
+  case topics(NumberOfTopics, Remainder, []) of
     {ok, Response} ->
       {ok, #{topics => Response,
              throttle_time => ThrottleTime}};
     Error ->
       Error
   end;
-response(_, _) ->
+response(_, _, _) ->
   {error, incomplete_data}.
 
 % Private
 
-response(0, _, Result) ->
+topics(0, _, Result) ->
   {ok, Result};
-response(
+topics(
   N,
   <<TopicNameLength:16/signed,
     TopicName:TopicNameLength/bytes,
@@ -135,12 +185,12 @@ response(
   Acc) ->
   case partitions(NumberOfPartitions, PartitionRemainder, []) of
     {ok, Partitions, Remainder} ->
-      response(N - 1, Remainder, [#{name => TopicName,
-                                    partitions => Partitions}|Acc]);
+      topics(N - 1, Remainder, [#{name => TopicName,
+                                  partitions => Partitions}|Acc]);
     Error ->
       Error
   end;
-response(_, _, _) ->
+topics(_, _, _) ->
   {error, incomplete_data}.
 
 partitions(0, Remainder, Acc) ->

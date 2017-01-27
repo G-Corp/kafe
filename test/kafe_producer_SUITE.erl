@@ -29,10 +29,16 @@ end_per_suite(_Config) ->
   ok.
 
 init_per_testcase(_Case, Config) ->
-  Config.
+  {ok, #{throttle_time := 0,
+         topics := [#{name := <<"testone">>,
+                      partitions := [#{error_code := none,
+                                       high_watermark_offset := HWO,
+                                       partition := 0}]}]}} =
+  kafe:fetch(<<"testone">>, #{partition => 0}),
+  [{offset, HWO}|Config].
 
 end_per_testcase(_Case, Config) ->
-  Config.
+  lists:keydelete(offset, 1, Config).
 
 all() ->
   [F||{F, _A} <- module_info(exports),
@@ -41,13 +47,16 @@ all() ->
         _ -> false
       end].
 
-t_produce(_Config) ->
+t_produce(Config) ->
+  {offset, NextOffset} = lists:keyfind(offset, 1, Config),
+
   {ok, #{throttle_time := 0,
          topics := [#{name := <<"testone">>,
                       partitions := [#{error_code := none,
                                        offset := Offset,
                                        partition := Partition}]}]}} =
   kafe:produce([{<<"testone">>, [{<<"t_produce_key_0">>, <<"t_produce_value_0">>}]}]),
+  Offset = NextOffset,
 
   {ok, #{throttle_time := 0,
          topics := [#{name := <<"testone">>,
@@ -57,31 +66,15 @@ t_produce(_Config) ->
                                                       crc := _,
                                                       key := <<"t_produce_key_0">>,
                                                       magic_byte := 0,
-                                                      offset := Offset,
+                                                      offset := NextOffset,
                                                       value := <<"t_produce_value_0">>}],
                                        partition := 0}]}]}} =
-  kafe:fetch(<<"testone">>, #{partition => Partition,
-                              offset => Offset}),
-  HWO = Offset + 1,
-
-  {ok, #{throttle_time := 0,
-         topics := [#{name := <<"testone">>,
-                      partitions := [#{error_code := none,
-                                       high_watermark_offset := HWO,
-                                       messages := [],
-                                       partition := 0}]}]}} =
-  kafe:fetch(<<"testone">>, #{partition => 0}),
-  HWO = Offset + 1.
+  kafe:fetch(<<"testone">>, #{partition => Partition, offset => NextOffset}),
+  HWO = NextOffset + 1.
 
 
-t_produce_no_ack(_Config) ->
-  {ok, #{throttle_time := 0,
-         topics := [#{name := <<"testone">>,
-                      partitions := [#{error_code := none,
-                                       high_watermark_offset := Offset,
-                                       messages := [],
-                                       partition := 0}]}]}} =
-  kafe:fetch(<<"testone">>, #{partition => 0}),
+t_produce_no_ack(Config) ->
+  {offset, NextOffset} = lists:keyfind(offset, 1, Config),
 
   ok = kafe:produce([{<<"testone">>, [{<<"t_produce_no_ack_key_0">>, <<"t_produce_no_ack_value_0">>}]}], #{required_acks => 0}),
 
@@ -93,10 +86,10 @@ t_produce_no_ack(_Config) ->
                                                       crc := _,
                                                       key := <<"t_produce_no_ack_key_0">>,
                                                       magic_byte := 0,
-                                                      offset := Offset,
+                                                      offset := NextOffset,
                                                       value := <<"t_produce_no_ack_value_0">>}],
                                        partition := 0}]}]}} =
   kafe:fetch(<<"testone">>, #{partition => 0,
-                              offset => Offset}),
-  HWO = Offset + 1.
+                              offset => NextOffset}),
+  HWO = NextOffset + 1.
 
