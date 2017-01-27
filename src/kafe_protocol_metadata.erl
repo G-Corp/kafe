@@ -10,11 +10,6 @@
          response/3 % TODO /2
         ]).
 
-% run(Topics) ->
-%   kafe_protocol:run({call,
-%                      fun ?MODULE:request/2, [Topics],
-%                      fun ?MODULE:response/2}).
-
 run(Topics) ->
   kafe_protocol:run(
     ?METADATA_REQUEST,

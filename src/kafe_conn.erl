@@ -134,7 +134,7 @@ send_request(#{packet := Packet, state := State2, api_version := ApiVersion},
        maps:update(
          requests,
          orddict:store(CorrelationId,
-                       #{from => From, handler => Handler, socket => Socket, api_version => ApiVersion},
+                       #{from => From, handler => Handler, socket => Socket, api_version => ApiVersion}, % TODO remove api_version
                        Requests),
          State2)};
     {error, _} = Error ->

@@ -8,6 +8,8 @@ release: dist lint tag ## Tag and release to hex.pm
 integ: ## Run integration tests
 	$(verbose) $(REBAR) ct
 
+tests-all: tests integ
+
 KAFKA_ADVERTISED_HOST_NAME = $(shell ip addr list docker0 |grep "inet " |cut -d' ' -f6|cut -d/ -f1)
 
 define docker_compose_yml_v1
