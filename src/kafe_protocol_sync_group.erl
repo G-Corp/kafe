@@ -1,19 +1,21 @@
 % @hidden
 -module(kafe_protocol_sync_group).
+-compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
 
 -export([
          run/4,
          request/5,
-         response/2
+         response/3 % TODO /2
         ]).
 
 run(GroupId, GenerationId, MemberId, Assignments) ->
-  kafe_protocol:run({coordinator, GroupId},
-                    {call,
-                     fun ?MODULE:request/5, [GroupId, GenerationId, MemberId, Assignments],
-                     fun ?MODULE:response/2}).
+  kafe_protocol:run(
+    ?SYNC_GROUP_REQUEST,
+    {fun ?MODULE:request/5, [GroupId, GenerationId, MemberId, Assignments]},
+    fun ?MODULE:response/3, % TODO /2
+    #{broker => {coordinator, GroupId}}).
 
 % SyncGroup Request (Version: 0) => group_id generation_id member_id [group_assignment]
 %   group_id => STRING
@@ -31,13 +33,11 @@ run(GroupId, GenerationId, MemberId, Assignments) ->
 %   UserData => bytes
 request(GroupId, GenerationId, MemberId, Assignments, State) ->
   kafe_protocol:request(
-    ?SYNC_GROUP_REQUEST,
     <<(kafe_protocol:encode_string(GroupId))/binary,
       GenerationId:32/signed,
       (kafe_protocol:encode_string(MemberId))/binary,
       (group_assignment(Assignments, []))/binary>>,
-    State,
-    ?V0).
+    State).
 
 group_assignment([], Acc) ->
   kafe_protocol:encode_array(lists:reverse(Acc));
@@ -67,7 +67,8 @@ response(<<ErrorCode:16/signed,
            MemberAssignmentSize:32/signed,
            MemberAssignment:MemberAssignmentSize/binary,
            _/binary>>,
-         _ApiVersion) ->
+         _ApiVersion, % TODO delete
+         _State) ->
   case MemberAssignment of
     <<Version:16/signed,
       PartitionAssignmentSize:32/signed,

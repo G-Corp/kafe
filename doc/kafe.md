@@ -180,7 +180,7 @@ groups_list() = [#{broker =&gt; <a href="#type-broker_id">broker_id()</a>, group
 
 
 <pre><code>
-join_group_options() = #{session_timeout =&gt; integer(), member_id =&gt; binary(), protocol_type =&gt; binary(), protocols =&gt; [<a href="#type-protocol">protocol()</a>]}
+join_group_options() = #{session_timeout =&gt; integer(), rebalance_timeout =&gt; integer(), member_id =&gt; binary(), protocol_type =&gt; binary(), protocols =&gt; [<a href="#type-protocol">protocol()</a>]}
 </code></pre>
 
 
@@ -608,6 +608,8 @@ Join Group
 Options:
 
 * `session_timeout :: integer()` : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)
+
+* `rebalance_timeout :: integer()` : The maximum time that the coordinator will wait for each member to rejoin when rebalancing the group. (default: 20000)
 
 * `member_id :: binary()` : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberID must be
 empty (i.e. <<>>, default), but a rejoining member should use the same memberID from the previous generation.
