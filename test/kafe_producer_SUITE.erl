@@ -33,7 +33,7 @@ init_per_testcase(_Case, Config) ->
                       partitions := [#{error_code := none,
                                        high_watermark_offset := HWO,
                                        partition := 0}]}]}} =
-  kafe:fetch(<<"testone">>, #{partition => 0}),
+  kafe:fetch(-1, [{<<"testone">>, 0}], #{}),
   [{offset, HWO}|Config].
 
 end_per_testcase(_Case, Config) ->
@@ -69,7 +69,7 @@ t_produce(Config) ->
                                                       timestamp := _,
                                                       value := <<"t_produce_value_0">>}],
                                        partition := 0}]}]}} =
-  kafe:fetch(<<"testone">>, #{partition => Partition, offset => NextOffset}),
+  kafe:fetch(-1, [{<<"testone">>, [{Partition, NextOffset}]}], #{}),
   HWO = NextOffset + 1.
 
 
@@ -90,7 +90,6 @@ t_produce_no_ack(Config) ->
                                                       timestamp := _,
                                                       value := <<"t_produce_no_ack_value_0">>}],
                                        partition := 0}]}]}} =
-  kafe:fetch(<<"testone">>, #{partition => 0,
-                              offset => NextOffset}),
+  kafe:fetch(-1, [{<<"testone">>, [{0, NextOffset}]}], #{}),
   HWO = NextOffset + 1.
 

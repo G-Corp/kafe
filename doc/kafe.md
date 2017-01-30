@@ -394,7 +394,7 @@ Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#c
 Return the list of availables consumers.</td></tr><tr><td valign="top"><a href="#default_key_to_partition-2">default_key_to_partition/2</a></td><td>
 Default fonction used to do partition assignment from the message key.</td></tr><tr><td valign="top"><a href="#default_protocol-4">default_protocol/4</a></td><td>
 Create a default protocol as defined in the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest">Kafka Protocol Guide</a>.</td></tr><tr><td valign="top"><a href="#describe_group-1">describe_group/1</a></td><td> 
-Return the description of the given consumer group.</td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
+Return the description of the given consumer group.</td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, Topics, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
 Fetch messages.</td></tr><tr><td valign="top"><a href="#group_coordinator-1">group_coordinator/1</a></td><td> 
 Group coordinator Request.</td></tr><tr><td valign="top"><a href="#heartbeat-3">heartbeat/3</a></td><td> 
 Once a member has joined and synced, it will begin sending periodic heartbeats to keep itself in the group.</td></tr><tr><td valign="top"><a href="#join_group-1">join_group/1</a></td><td>Equivalent to <a href="#join_group-2"><tt>join_group(GroupID, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#join_group-2">join_group/2</a></td><td> 
@@ -489,15 +489,21 @@ For more informations, see the
 
 ### fetch/1 ###
 
-`fetch(TopicName) -> any()`
+<pre><code>
+fetch(Topics::binary() | [{Topic::binary(), [{Partition::integer(), Offset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer()}]}] | [{Topic::binary(), [Partition::integer()]}] | [{Topic::binary(), Partition::integer()}] | [Topic::binary()]) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {ok, #{topics =&gt; [<a href="#type-message_set">message_set()</a>], throttle_time =&gt; integer()}} | {error, term()}
+</code></pre>
+<br />
 
-Equivalent to [`fetch(-1, TopicName, #{})`](#fetch-3).
+Equivalent to [`fetch(-1, Topics, #{})`](#fetch-3).
 
 <a name="fetch-2"></a>
 
 ### fetch/2 ###
 
-`fetch(ReplicatID, TopicName) -> any()`
+<pre><code>
+fetch(ReplicatID::integer() | binary() | [{Topic::binary(), [{Partition::integer(), Offset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer()}]}] | [{Topic::binary(), [Partition::integer()]}] | [{Topic::binary(), Partition::integer()}] | [Topic::binary()], Topics::binary() | [{Topic::binary(), [{Partition::integer(), Offset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer()}]}] | [{Topic::binary(), [Partition::integer()]}] | [{Topic::binary(), Partition::integer()}] | [Topic::binary()] | <a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {ok, #{topics =&gt; [<a href="#type-message_set">message_set()</a>], throttle_time =&gt; integer()}} | {error, term()}
+</code></pre>
+<br />
 
 Equivalent to [`fetch(ReplicatID, TopicName, #{})`](#fetch-3).
 
@@ -506,7 +512,7 @@ Equivalent to [`fetch(ReplicatID, TopicName, #{})`](#fetch-3).
 ### fetch/3 ###
 
 <pre><code>
-fetch(ReplicatID::integer(), TopicName::binary(), Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {ok, #{topics =&gt; [<a href="#type-message_set">message_set()</a>], throttle_time =&gt; integer()}} | {error, term()}
+fetch(ReplicatID::integer(), TopicName::binary() | [{Topic::binary(), [{Partition::integer(), Offset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer()}]}] | [{Topic::binary(), [Partition::integer()]}] | [{Topic::binary(), Partition::integer()}] | [Topic::binary()], Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {ok, #{topics =&gt; [<a href="#type-message_set">message_set()</a>], throttle_time =&gt; integer()}} | {error, term()}
 </code></pre>
 <br />
 
@@ -515,12 +521,13 @@ Fetch messages
 
 Options:
 
-* `partition :: integer()` : The id of the partition the fetch is for (default : partition with the highiest offset).
+* `partition :: integer()` : The id of the partition to fetch, if not specified. _This option exist for compatibility but it will be removedin the next major release._
 
-* `offset :: integer()` : The offset to begin this fetch from (default : next offset for the partition)
+* `offset :: integer()` : The default offset to begin this fetch from, if not specified. _This option exist for compatibility but it will be removedin the next major release._
 
 * `response_max_bytes :: integer()` : Maximum bytes to accumulate in the response. Note that this is not an absolute maximum, if the first message
-in the first non-empty partition of the fetch is larger than this value, the message will still be returned to ensure that progress can be made. (default: max_bytes)
+in the first non-empty partition of the fetch is larger than this value, the message will still be returned to ensure that progress can be made.
+(default: sum of all max_bytes)
 
 * `max_bytes :: integer()` : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
 1024*1024)
@@ -535,18 +542,20 @@ MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait
 * `max_wait_time :: integer()` : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
 at the time the request is issued (default : 100).
 
-* `retrieve :: all | first` : if the Kafka's response buffer contains more than one complete message ; with `first` we will ignore the
-remaining data ; with `all` we will parse all complete messages in the buffer (default : first).
-
 
 ReplicatID must __always__ be -1.
 
-Example:
+Examples:
 
 ```
 
- Response = kafe:fetch(<<"topic">>)
+ Response0 = kafe:fetch(<<"topic">>).
  Response1 = kafe:fetch(<<"topic">>, #{offset => 2, partition => 3}).
+ Response2 = fetch(-1, [{Topic, [{Partition, Offset, MaxBytes, Options).
+ Response3 = fetch(-1, [{Topic, [{Partition, Offset}]}], Options).
+ Response4 = fetch(-1, [{Topic, [Partition]}], Options).
+ Response5 = fetch(-1, [{Topic, Partition}], Options).
+ Response6 = fetch(-1, [Topic, Options).
 ```
 
 For more informations, see the
