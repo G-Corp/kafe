@@ -530,7 +530,7 @@ in the first non-empty partition of the fetch is larger than this value, the mes
 (default: sum of all max_bytes)
 
 * `max_bytes :: integer()` : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
-1024*1024)
+1024*1024) _This option exist for compatibility but it will be removed in the next major release._
 
 * `min_bytes :: integer()` : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0
 the server will always respond immediately, however if there is no new data since their last request they will just get back empty message sets. If this is
