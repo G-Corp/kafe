@@ -2,6 +2,7 @@
 -module(kafe_protocol_produce).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 2).
 
 -export([
          run/2,
@@ -19,6 +20,7 @@ run(Messages, Options) ->
         0 ->
           [kafe_protocol:run(
              ?PRODUCE_REQUEST,
+             ?MAX_VERSION,
              {fun ?MODULE:request/3, [Messages0, Options]},
              undefined,
              #{broker => BrokerID})
@@ -28,6 +30,7 @@ run(Messages, Options) ->
           consolidate(
             [kafe_protocol:run(
                ?PRODUCE_REQUEST,
+               ?MAX_VERSION,
                {fun ?MODULE:request/3, [Messages0, Options]},
                fun ?MODULE:response/2,
                #{broker => BrokerID})

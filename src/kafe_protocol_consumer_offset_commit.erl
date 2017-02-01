@@ -1,6 +1,8 @@
 % @hidden
 -module(kafe_protocol_consumer_offset_commit).
+
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 2).
 
 -export([
          run_v0/2,
@@ -15,6 +17,7 @@
 run_v0(ConsumerGroup, Topics) ->
   kafe_protocol:run(
     ?OFFSET_COMMIT_REQUEST,
+    ?MAX_VERSION,
     {fun ?MODULE:request_v0/3, [ConsumerGroup, Topics]},
     fun ?MODULE:response/2,
     #{api_version => 0,
@@ -23,6 +26,7 @@ run_v0(ConsumerGroup, Topics) ->
 run_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
   kafe_protocol:run(
     ?OFFSET_COMMIT_REQUEST,
+    ?MAX_VERSION,
     {fun ?MODULE:request_v1/5, [ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics]},
     fun ?MODULE:response/2,
     #{api_version => 1,
@@ -31,6 +35,7 @@ run_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics) ->
 run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics) ->
   kafe_protocol:run(
     ?OFFSET_COMMIT_REQUEST,
+    ?MAX_VERSION,
     {fun ?MODULE:request_v2/6, [ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics]},
     fun ?MODULE:response/2,
     #{api_version => 2,

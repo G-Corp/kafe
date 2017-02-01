@@ -3,6 +3,7 @@
 -compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 0).
 
 -export([
          run/4,
@@ -13,6 +14,7 @@
 run(GroupId, GenerationId, MemberId, Assignments) ->
   kafe_protocol:run(
     ?SYNC_GROUP_REQUEST,
+    ?MAX_VERSION,
     {fun ?MODULE:request/5, [GroupId, GenerationId, MemberId, Assignments]},
     fun ?MODULE:response/2,
     #{broker => {coordinator, GroupId}}).

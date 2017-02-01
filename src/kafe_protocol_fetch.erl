@@ -3,6 +3,7 @@
 -compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 3).
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
@@ -19,6 +20,7 @@ run(ReplicaID, Topics, Options) ->
       consolidate(
         [kafe_protocol:run(
            ?FETCH_REQUEST,
+           ?MAX_VERSION,
            {fun ?MODULE:request/4, [ReplicaID, Topics0, Options]},
            fun ?MODULE:response/2,
            #{broker => BrokerID})

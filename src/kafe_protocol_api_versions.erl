@@ -3,6 +3,7 @@
 -compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 0).
 
 -export([
          run/0,
@@ -13,6 +14,7 @@
 run() ->
   kafe_protocol:run(
     ?API_VERSIONS_REQUEST,
+    ?MAX_VERSION,
     fun ?MODULE:request/1,
     fun ?MODULE:response/2).
 

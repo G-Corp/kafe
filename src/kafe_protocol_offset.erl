@@ -2,6 +2,7 @@
 -module(kafe_protocol_offset).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 1).
 
 -export([
          run/2,
@@ -25,6 +26,7 @@ run(ReplicaID, Topics) ->
              (BrokerID, TopicsForBroker, Acc) ->
                case kafe_protocol:run(
                       ?OFFSET_REQUEST,
+                      ?MAX_VERSION,
                       {fun ?MODULE:request/3, [ReplicaID, TopicsForBroker]},
                       fun ?MODULE:response/2,
                       #{broker => BrokerID}) of

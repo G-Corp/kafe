@@ -5,8 +5,8 @@
 -include("../include/kafe.hrl").
 
 -export([
-         run/3,
          run/4,
+         run/5,
          request/2,
          response/2,
          encode_string/1,
@@ -14,31 +14,35 @@
          encode_array/1
         ]).
 
-run(ApiKey, RequestFun, ResponseFun) when is_integer(ApiKey) ->
-  run(ApiKey, RequestFun, ResponseFun, #{}).
+run(ApiKey, MaxVersion, RequestFun, ResponseFun) when is_integer(ApiKey),
+                                                      is_integer(MaxVersion) ->
+  run(ApiKey, MaxVersion, RequestFun, ResponseFun, #{}).
 
-run(ApiKey, RequestFun, ResponseFun, State) when is_integer(ApiKey),
-                                                 is_function(RequestFun),
-                                                 is_map(State)->
-  run(ApiKey, {RequestFun, []}, ResponseFun, State);
-run(ApiKey, RequestFun, ResponseFun, State) when is_integer(ApiKey),
-                                                 (is_function(ResponseFun) orelse ResponseFun == undefined),
-                                                 is_map(State)->
-  run(ApiKey, RequestFun, {ResponseFun, []}, State);
-run(ApiKey, {RequestFun, RequestParams}, {ResponseFun, ResponseParams}, State) when is_integer(ApiKey),
-                                                                                    is_function(RequestFun),
-                                                                                    is_list(RequestParams),
-                                                                                    (is_function(ResponseFun) orelse ResponseFun == undefined),
-                                                                                    is_list(ResponseParams),
-                                                                                    is_map(State) ->
-  ApiVersion = case maps:get(api_version, State, undefined) of
-                 undefined ->
-                   case ApiKey of
-                     ?API_VERSIONS_REQUEST -> 0;
-                     _ -> kafe:api_version(ApiKey)
-                   end;
-                 V -> V
-               end,
+run(ApiKey, MaxVersion, RequestFun, ResponseFun, State) when is_integer(ApiKey),
+                                                             is_integer(MaxVersion),
+                                                             is_function(RequestFun),
+                                                             is_map(State)->
+  run(ApiKey, MaxVersion, {RequestFun, []}, ResponseFun, State);
+run(ApiKey, MaxVersion, RequestFun, ResponseFun, State) when is_integer(ApiKey),
+                                                             is_integer(MaxVersion),
+                                                             (is_function(ResponseFun) orelse ResponseFun == undefined),
+                                                             is_map(State)->
+  run(ApiKey, MaxVersion, RequestFun, {ResponseFun, []}, State);
+run(ApiKey, MaxVersion, {RequestFun, RequestParams}, {ResponseFun, ResponseParams}, State) when is_integer(ApiKey),
+                                                                                                is_integer(MaxVersion),
+                                                                                                is_function(RequestFun),
+                                                                                                is_list(RequestParams),
+                                                                                                (is_function(ResponseFun) orelse ResponseFun == undefined),
+                                                                                                is_list(ResponseParams),
+                                                                                                is_map(State) ->
+  ApiVersion = check_version(case maps:get(api_version, State, undefined) of
+                               undefined ->
+                                 case ApiKey of
+                                   ?API_VERSIONS_REQUEST -> 0;
+                                   _ -> kafe:api_version(ApiKey)
+                                 end;
+                               V -> V
+                             end, MaxVersion),
   Broker = maps:get(broker, State, first_broker),
   do_run(Broker,
          {call,
@@ -130,6 +134,10 @@ do_run({coordinator, GroupId}, Request) ->
     _ ->
       {error, no_broker_found}
   end.
+
+check_version(V, Max) when V > Max ->
+  Max;
+check_version(V, _) -> V.
 
 retry_with_coordinator(GroupId, Request) ->
   case kafe_protocol_group_coordinator:run(GroupId, force) of

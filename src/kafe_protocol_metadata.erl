@@ -3,6 +3,7 @@
 -compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 2).
 
 -export([
          run/1,
@@ -13,6 +14,7 @@
 run(Topics) ->
   kafe_protocol:run(
     ?METADATA_REQUEST,
+    ?MAX_VERSION,
     {fun ?MODULE:request/2, [Topics]},
     fun ?MODULE:response/2).
 

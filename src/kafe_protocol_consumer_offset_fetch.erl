@@ -2,6 +2,7 @@
 -module(kafe_protocol_consumer_offset_fetch).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 1).
 
 -export([
          run/2,
@@ -16,6 +17,7 @@ run(ConsumerGroup, Options) ->
              end,
   kafe_protocol:run(
     ?OFFSET_FETCH_REQUEST,
+    ?MAX_VERSION,
     {fun ?MODULE:request/3, [ConsumerGroup, Options1]},
     fun ?MODULE:response/2,
     #{broker => {coordinator, ConsumerGroup}}).

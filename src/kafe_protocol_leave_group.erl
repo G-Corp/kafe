@@ -2,6 +2,7 @@
 -module(kafe_protocol_leave_group).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 0).
 
 -export([
          run/2,
@@ -12,6 +13,7 @@
 run(GroupId, MemberId) ->
   kafe_protocol:run(
     ?LEAVE_GROUP_REQUEST,
+    ?MAX_VERSION,
     {fun ?MODULE:request/3, [GroupId, MemberId]},
     fun ?MODULE:response/2,
     #{broker => {coordinator, GroupId}}).

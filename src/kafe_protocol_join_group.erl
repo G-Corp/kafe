@@ -1,8 +1,9 @@
 % @hidden
 -module(kafe_protocol_join_group).
+-compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
--compile([{parse_transform, lager_transform}]).
+-define(MAX_VERSION, 1).
 
 -export([
          run/2,
@@ -13,6 +14,7 @@
 run(GroupId, Options) ->
   kafe_protocol:run(
     ?JOIN_GROUP_REQUEST,
+    ?MAX_VERSION,
     {fun ?MODULE:request/3, [GroupId, Options]},
     fun ?MODULE:response/2,
     #{broker => {coordinator, GroupId}}).

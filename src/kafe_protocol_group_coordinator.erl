@@ -3,6 +3,7 @@
 -compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 0).
 
 -export([
          run/2,
@@ -14,6 +15,7 @@
 run(ConsumerGroup, force) ->
   case kafe_protocol:run(
          ?GROUP_COORDINATOR_REQUEST,
+         ?MAX_VERSION,
          {fun ?MODULE:request/2, [ConsumerGroup]},
          fun ?MODULE:response/2) of
     {ok, #{error_code := none} = Coordinator} = Result ->

@@ -2,6 +2,7 @@
 -module(kafe_protocol_heartbeat).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 0).
 
 -export([
          run/3,
@@ -12,6 +13,7 @@
 run(GroupId, GenerationId, MemberId) ->
   kafe_protocol:run(
     ?HEARTBEAT_REQUEST,
+    ?MAX_VERSION,
     {fun ?MODULE:request/4, [GroupId, GenerationId, MemberId]},
     fun ?MODULE:response/2,
     #{broker => {coordinator, GroupId}}).

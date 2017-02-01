@@ -2,6 +2,7 @@
 -module(kafe_protocol_list_groups).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 0).
 
 -export([
          run/1,
@@ -12,6 +13,7 @@
 run(BrokerID) ->
   kafe_protocol:run(
     ?LIST_GROUPS_REQUEST,
+    ?MAX_VERSION,
     fun ?MODULE:request/1,
     fun ?MODULE:response/2,
     #{broker => BrokerID}).
