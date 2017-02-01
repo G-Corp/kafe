@@ -37,12 +37,12 @@ You can also use it with Kafka 0.8 but {@link kafe_consumer} is not compatible w
 <tr><td>chunk_pool_size</td><td><tt>integer()</tt></td><td>Size of new connection pool/brocker</td><td><tt>10</tt></td></tr>
 <tr><td>brokers_update_frequency</td><td><tt>integer()</tt></td><td>Frequency (ms) for brokers update</td><td><tt>60000</tt></td></tr>
 <tr><td>client_id</td><td><tt>binary()</tt></td><td>Client ID Name</td><td><tt>&lt;&lt;"kafe"&gt;&gt;</tt></td></tr>
-<tr><td>api_version</td><td><tt>integer()</tt></td><td>API Version</td><td><tt>1<sup>*</sup></tt></td></tr>
+<tr><td>api_version</td><td><tt>integer() | auto</tt></td><td>API Version</td><td><tt>auto<sup>*</sup></tt></td></tr>
 <tr><td>correlation_id</td><td><tt>integer()</tt></td><td>Correlation ID</td><td><tt>0</tt></td></tr>
 <tr><td>socket</td><td><tt>[{sndbuf, integer()}, {recbuf, integer()}, {buffer, integer()}]</tt></td><td>Socker configuration</td><td><tt>[{sndbuf, 4194304}, {recbuf, 4194304}, {buffer, 4194304}]</tt></td></tr>
 </table>
 
-<sup>*</sup> use <tt>0</tt> with Kafka &gt;= 0.8 &lt; 0.9 ; <tt>1</tt> with Kafka &gt;= 0.9 &lt; 0.10 ; <tt>2</tt> with Kafka &gt;= 0.10
+<sup>*</sup> use <tt>0</tt> with Kafka &gt;= 0.8 &lt; 0.9 ; <tt>1</tt> with Kafka &gt;= 0.9 &lt; 0.10 ; <tt>auto</tt> with Kafka &gt;= 0.10
 
 Example :
 
@@ -234,17 +234,50 @@ You can add a prefix to all metrics by adding a <tt>metrics_prefix</tt> in the <
 ]}
 </pre>
 
-<h3>Build</h3>
+<h3>Build and tests</h3>
 
-<b>Kafe</b> use <a href="http://www.rebar3.org">rebar3</a>. So, you can use :
+<b>Kafe</b> use <a href="http://www.rebar3.org">rebar3</a> and <a href="https://github.com/botsunit/bu.mk">bu.mk</a>. So, you can use :
 
 <ul>
 <li><tt>./rebar3 compile</tt> to compile Kafe.</li>
 <li><tt>./rebar3 eunit</tt> to run tests.</li>
+<li><tt>./rebar3 ct</tt> to run (integration) tests.</li>
 <li><tt>./rebar3 edoc</tt> to build documentation.</li>
 <li><tt>./rebar3 elixir generate_mix</tt> to generate <tt>mix.exs</tt> file.</li>
 <li><tt>./rebar3 elixir generate_lib</tt> to generate Elixir bindings.</li>
 </ul>
+
+Or
+
+<ul>
+<li><tt>make release</tt> Tag and release to hex.pm</li>
+<li><tt>make integ</tt> Run integration tests</li>
+<li><tt>make docker-compose.yml</tt> Create docker-compose.yml</li>
+<li><tt>make docker-start</tt> Start docker</li>
+<li><tt>make docker-stop</tt> Stop docker</li>
+<li><tt>make elixir</tt> Generate Elixir bindings (mix.exs and libs)</li>
+<li><tt>make tests</tt> Run tests</li>
+<li><tt>make doc</tt> Generate doc</li>
+<li><tt>make dist</tt> Create a distribution</li>
+<li><tt>make clean</tt> Clean</li>
+<li><tt>make distclean</tt> Clean the distribution</li>
+<li><tt>make info</tt> Display application informations</li>
+<li><tt>make tag</tt> Create a git tag</li>
+<li><tt>make local.hex</tt> Install hexfor Mix</li>
+<li><tt>make local.rebar</tt> Install rebar for Mix</li>
+<li><tt>make bu-mk</tt> Update bu.mk</li>
+<li><tt>make help</tt> Show this help.</li>
+</ul>
+
+To run the integration tests, you must start zookeeper and a kafka cluster (3 brokers) and have the following three topics :
+
+<ul>
+<li><tt>testone</tt> : replication factor: 1, partitions: 1</li>
+<li><tt>testtwo</tt> : replication factor: 2, partitions: 2</li>
+<li><tt>testthree</tt> : replication factor: 3, partitions: 3</li>
+</ul>
+
+You can use the makefile rules <tt>docker-compose.yml</tt> and <tt>docker-start</tt> to help you to create this environment using docker (tested on Linux only).
 
 <h3>API Documentation</h3>
 

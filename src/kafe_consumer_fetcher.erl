@@ -93,7 +93,6 @@ init([Topic, Partition, FetchInterval,
               errors_actions = maps:get(fetch, ErrorsActions, ?DEFAULT_CONSUMER_FETCH_ERROR_ACTIONS)
              }};
     _ ->
-      lager:error("Failed to fetch offset for topic ~s, partition ~p in group ~s", [Topic, Partition, GroupID]),
       {stop, fetch_offset_faild}
   end.
 
@@ -143,11 +142,9 @@ fetch(#state{topic = Topic,
              errors_actions = ErrorsActions}) ->
   case kafe_consumer:can_fetch(GroupID) of
     true ->
-      case kafe:fetch(-1, Topic, #{partition => Partition,
-                                   offset => Offset,
-                                   max_bytes => MaxBytes,
-                                   min_bytes => MinBytes,
-                                   max_wait_time => MaxWaitTime}) of
+      case kafe:fetch(-1, [{Topic, [{Partition, Offset, MaxBytes}]}],
+                      #{min_bytes => MinBytes,
+                        max_wait_time => MaxWaitTime}) of
         {ok, #{topics :=
                [#{name := Topic,
                   partitions :=
@@ -335,6 +332,11 @@ get_partition_offset(Topic, Partition, Time) ->
                              id := Partition,
                              offsets := [Offset]}]}]} ->
       {ok, Offset};
+    {ok, [#{name := Topic,
+            partitions := [#{error_code := none,
+                             id := Partition,
+                             offset := Offset}]}]} ->
+      {ok, Offset};
     _ ->
       error
   end.
@@ -350,8 +352,7 @@ fetch_without_error_test() ->
                                                          id => Partition,
                                                          offsets => [102]}]}]}
                             end),
-  meck:expect(kafe, fetch, fun(_, Topic, #{partition := Partition,
-                                           offset := Offset}) ->
+  meck:expect(kafe, fetch, fun(_, [{Topic, [{Partition, Offset, _}]}], _) ->
                                {ok, #{topics =>
                                       [#{name => Topic,
                                          partitions =>
@@ -413,8 +414,7 @@ kafka_fetch_error_test() ->
   meck:new(kafe_consumer),
   meck:expect(kafe_consumer, can_fetch, fun(_) -> true end),
   meck:new(kafe),
-  meck:expect(kafe, fetch, fun(_, Topic, #{partition := Partition,
-                                           offset := _Offset}) ->
+  meck:expect(kafe, fetch, fun(_, [{Topic, [{Partition, _Offset, _}]}], _) ->
                                {ok, #{topics =>
                                       [#{name => Topic,
                                          partitions =>
@@ -440,8 +440,7 @@ kafka_fetch_offset_out_of_range_error_test() ->
   meck:new(kafe_consumer),
   meck:expect(kafe_consumer, can_fetch, fun(_) -> true end),
   meck:new(kafe),
-  meck:expect(kafe, fetch, fun(_, Topic, #{partition := Partition,
-                                           offset := _Offset}) ->
+  meck:expect(kafe, fetch, fun(_, [{Topic, [{Partition, _Offset, _}]}], _) ->
                                {ok, #{topics =>
                                       [#{name => Topic,
                                          partitions =>

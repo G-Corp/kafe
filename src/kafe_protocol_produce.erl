@@ -2,6 +2,7 @@
 -module(kafe_protocol_produce).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 2).
 
 -export([
          run/2,
@@ -15,47 +16,62 @@ run(Messages, Options) ->
            maps:get(key_to_partition, Options, fun kafe:default_key_to_partition/2),
            []) of
     {ok, Dispatch} ->
-      consolidate(
-        [kafe_protocol:run(BrokerID,
-                           {call,
-                            fun ?MODULE:request/3, [Messages0, Options],
-                            fun ?MODULE:response/2})
-         || {BrokerID, Messages0} <- Dispatch]);
+      case maps:get(required_acks, Options, ?DEFAULT_PRODUCE_REQUIRED_ACKS) of
+        0 ->
+          [kafe_protocol:run(
+             ?PRODUCE_REQUEST,
+             ?MAX_VERSION,
+             {fun ?MODULE:request/3, [Messages0, Options]},
+             undefined,
+             #{broker => BrokerID})
+           || {BrokerID, Messages0} <- Dispatch],
+          ok;
+        _ ->
+          consolidate(
+            [kafe_protocol:run(
+               ?PRODUCE_REQUEST,
+               ?MAX_VERSION,
+               {fun ?MODULE:request/3, [Messages0, Options]},
+               fun ?MODULE:response/2,
+               #{broker => BrokerID})
+             || {BrokerID, Messages0} <- Dispatch])
+      end;
     {error, _} = Error ->
       Error
   end.
 
-%% Produce Request (Version: 0) => acks timeout [topic_data]
-%%   acks => INT16
-%%   timeout => INT32
-%%   topic_data => topic [data]
-%%     topic => STRING
-%%     data => partition record_set
-%%       partition => INT32
-%%       record_set => BYTES
-%% Options:
-%%   * timeout :: integer()       (default: 5000)
-%%   * required_acks :: integer() (default: -1)
-%%   * partition :: integer()     (default: 0)
-%%   * timestamp :: integer()     (default: now)
-%%
-%% Message Set:
-%% v0
-%% Message => Crc MagicByte Attributes Key Value
-%%   Crc => int32
-%%   MagicByte => int8
-%%   Attributes => int8
-%%   Key => bytes
-%%   Value => bytes
-%%
-%% v1 (supported since 0.10.0)
-%% Message => Crc MagicByte Attributes Timestamp Key Value
-%%   Crc => int32
-%%   MagicByte => int8
-%%   Attributes => int8
-%%   Timestamp => int64
-%%   Key => bytes
-%%   Value => bytes
+% Options:
+%   * timeout :: integer()       (default: 5000)
+%   * required_acks :: integer() (default: -1)
+%   * partition :: integer()     (default: 0)
+%   * timestamp :: integer()     (default: now)
+%
+% Produce Request (Version: 0) => acks timeout [topic_data]
+%   acks => INT16
+%   timeout => INT32
+%   topic_data => topic [data]
+%     topic => STRING
+%     data => partition record_set
+%       partition => INT32
+%       record_set => BYTES
+%
+% Produce Request (Version: 1) => acks timeout [topic_data]
+%   acks => INT16
+%   timeout => INT32
+%   topic_data => topic [data]
+%     topic => STRING
+%     data => partition record_set
+%       partition => INT32
+%       record_set => BYTES
+%
+% Produce Request (Version: 2) => acks timeout [topic_data]
+%   acks => INT16
+%   timeout => INT32
+%   topic_data => topic [data]
+%     topic => STRING
+%     data => partition record_set
+%       partition => INT32
+%       record_set => BYTES
 request(Messages, Options, #{api_version := ApiVersion} = State) ->
   Timeout = maps:get(timeout, Options, ?DEFAULT_PRODUCE_SYNC_TIMEOUT),
   RequiredAcks = maps:get(required_acks,
@@ -63,10 +79,8 @@ request(Messages, Options, #{api_version := ApiVersion} = State) ->
                           ?DEFAULT_PRODUCE_REQUIRED_ACKS),
   Encoded = encode_messages_topics(Messages, Options, ApiVersion, []),
   kafe_protocol:request(
-    ?PRODUCE_REQUEST,
     <<RequiredAcks:16, Timeout:32, Encoded/binary>>,
-    State,
-    ApiVersion).
+    State).
 
 encode_messages_topics([], _, _, Acc) ->
   kafe_protocol:encode_array(lists:reverse(Acc));
@@ -91,6 +105,23 @@ encode_messages_partitions([{Partition, Messages}|Rest], Options, ApiVersion, Ac
        (kafe_protocol:encode_bytes(MessageSet))/binary>>
      |Acc]).
 
+% Message Set:
+% v0
+% Message => Crc MagicByte Attributes Key Value
+%   Crc => int32
+%   MagicByte => int8
+%   Attributes => int8
+%   Key => bytes
+%   Value => bytes
+%
+% v1 (supported since 0.10.0)
+% Message => Crc MagicByte Attributes Timestamp Key Value
+%   Crc => int32
+%   MagicByte => int8
+%   Attributes => int8
+%   Timestamp => int64
+%   Key => bytes
+%   Value => bytes
 message_set([], _, _, Result) ->
   Result;
 message_set([{Key, Value}|Rest], Options, ApiVersion, Acc) ->
@@ -118,100 +149,91 @@ message_set([{Key, Value}|Rest], Options, ApiVersion, Acc) ->
                 0:64/signed, % Offset
                 (kafe_protocol:encode_bytes(SignedMsg))/binary>>). % MessageSize Message
 
-%% Produce Response
-%% v0
-%% ProduceResponse => [TopicName [Partition ErrorCode Offset]]
-%%   TopicName => string
-%%   Partition => int32
-%%   ErrorCode => int16
-%%   Offset => int64
-%%
-%% v1 (supported in 0.9.0 or later)
-%% ProduceResponse => [TopicName [Partition ErrorCode Offset]] ThrottleTime
-%%   TopicName => string
-%%   Partition => int32
-%%   ErrorCode => int16
-%%   Offset => int64
-%%   ThrottleTime => int32
-%%
-%% v2 (supported in 0.10.0 or later)
-%% ProduceResponse => [TopicName [Partition ErrorCode Offset Timestamp]] ThrottleTime
-%%   TopicName => string
-%%   Partition => int32
-%%   ErrorCode => int16
-%%   Offset => int64
-%%   Timestamp => int64
-%%   ThrottleTime => int32
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, ApiVersion) ->
-  {ok, response(NumberOfTopics, Remainder, ApiVersion)}.
+% Produce Response (Version: 0) => [responses]
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code base_offset
+%       partition => INT32
+%       error_code => INT16
+%       base_offset => INT64
+%
+% Produce Response (Version: 1) => [responses] throttle_time_ms
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code base_offset
+%       partition => INT32
+%       error_code => INT16
+%       base_offset => INT64
+%   throttle_time_ms => INT32
+%
+% Produce Response (Version: 2) => [responses] throttle_time_ms
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code base_offset timestamp
+%       partition => INT32
+%       error_code => INT16
+%       base_offset => INT64
+%       timestamp => INT64
+%   throttle_time_ms => INT32
+response(<<NumberOfTopics:32/signed,
+           Remainder/binary>>,
+         #{api_version := ApiVersion}) when ApiVersion == ?V0 ->
+  {Topics,
+   <<_/binary>>} = topics(NumberOfTopics, [], Remainder, ApiVersion),
+  {ok, Topics};
+response(<<NumberOfTopics:32/signed,
+           Remainder/binary>>,
+         #{api_version := ApiVersion}) when ApiVersion == ?V1;
+                                            ApiVersion == ?V2 ->
+  {Topics,
+   <<ThrottleTime:32/signed,
+     _/binary>>} = topics(NumberOfTopics, [], Remainder, ApiVersion),
+  {ok, #{topics => Topics,
+         throttle_time => ThrottleTime}}.
 
 % Private
 
-% v0
-response(0, _, ApiVersion) when ApiVersion == ?V0 ->
-  [];
-response(
-  N,
-  <<
-    TopicNameLength:16/signed,
-    TopicName:TopicNameLength/bytes,
-    NumberOfPartitions:32/signed,
-    PartitionRemainder/binary
-  >>,
-  ApiVersion) when ApiVersion == ?V0 ->
-  {Partitions, Remainder} = partitions(NumberOfPartitions, PartitionRemainder, [], ApiVersion),
-  [#{name => TopicName,
-     partitions => Partitions} | response(N - 1, Remainder, 0)];
-% v1 & v2
-response(N, Remainder, ApiVersion) when ApiVersion == ?V1;
-                                        ApiVersion == ?V2 ->
-  {Topics, <<ThrottleTime:32/signed, _/binary>>} = response(N, Remainder, ApiVersion, []),
-  #{topics => Topics,
-    throttle_time => ThrottleTime}.
-
-response(0, Remainder, ApiVersion, Acc) when ApiVersion == ?V1;
-                                             ApiVersion == ?V2 ->
+topics(0, Acc, Remainder, _) ->
   {Acc, Remainder};
-response(
+topics(
   N,
+  Acc,
   <<
     TopicNameLength:16/signed,
     TopicName:TopicNameLength/bytes,
     NumberOfPartitions:32/signed,
     PartitionRemainder/binary
   >>,
-  ApiVersion,
-  Acc) when ApiVersion == ?V1;
-            ApiVersion == ?V2 ->
-  {Partitions, Remainder} = partitions(NumberOfPartitions, PartitionRemainder, [], ApiVersion),
-  response(N - 1, Remainder, ApiVersion, [#{name => TopicName,
-                                            partitions => Partitions} | Acc]).
+  ApiVersion) ->
+  {Partitions, Remainder} = partitions(NumberOfPartitions,
+                                       [],
+                                       PartitionRemainder,
+                                       ApiVersion),
+  topics(N - 1, [#{name => TopicName,
+                   partitions => Partitions}|Acc], Remainder, ApiVersion).
 
-% v0 & v1
-partitions(0, Remainder, Acc, ApiVersion) when ApiVersion == ?V0;
-                                               ApiVersion == ?V1 ->
+partitions(0, Acc, Remainder, _) ->
   {Acc, Remainder};
 partitions(
   N,
+  Acc,
   <<
     Partition:32/signed,
     ErrorCode:16/signed,
     Offset:64/signed,
     Remainder/binary
   >>,
-  Acc,
   ApiVersion) when ApiVersion == ?V0;
                    ApiVersion == ?V1 ->
   partitions(N - 1,
-             Remainder,
              [#{partition => Partition,
                 error_code => kafe_error:code(ErrorCode),
-                offset => Offset} | Acc], ApiVersion);
-partitions(0, Remainder, Acc, ApiVersion) when ApiVersion == ?V2 ->
-  {Acc, Remainder};
-% v2
+                offset => Offset} | Acc],
+             Remainder,
+             ApiVersion);
 partitions(
   N,
+  Acc,
   <<
     Partition:32/signed,
     ErrorCode:16/signed,
@@ -219,14 +241,14 @@ partitions(
     Timestamp:64/signed,
     Remainder/binary
   >>,
-  Acc,
   ApiVersion) when ApiVersion == ?V2 ->
   partitions(N - 1,
-             Remainder,
              [#{partition => Partition,
                 error_code => kafe_error:code(ErrorCode),
                 offset => Offset,
-                timestamp => Timestamp} | Acc], ApiVersion).
+                timestamp => Timestamp} | Acc],
+             Remainder,
+             ApiVersion).
 
 get_timestamp() ->
   {Mega, Sec, Micro} = erlang:timestamp(),

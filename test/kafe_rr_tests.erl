@@ -1,5 +1,4 @@
 -module(kafe_rr_tests).
-
 -include_lib("eunit/include/eunit.hrl").
 
 kafe_rr_test_() ->
@@ -15,7 +14,8 @@ kafe_rr_test_() ->
        kafe_rr:start_link()
    end,
    fun(_) ->
-       kafe_rr:stop()
+       kafe_rr:stop(),
+       meck:unload(kafe)
    end,
    [
     fun() ->

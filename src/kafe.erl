@@ -19,6 +19,7 @@
 -export([
          start/0,
          brokers/0,
+         api_versions/0,
          metadata/0,
          metadata/1,
          offset/0,
@@ -65,6 +66,7 @@
          max_offset/2,
          partition_for_offset/2,
          api_version/0,
+         api_version/1,
          update_brokers/0
         ]).
 
@@ -101,7 +103,7 @@
 -type key() :: term().
 -type value() :: binary().
 -type partition() :: integer().
--type topics() :: [binary() | string() | atom()] | [{binary() | string() | atom(), [{integer(), integer(), integer()}]}].
+-type topics() :: [topic()] | [{topic(), [{partition(), integer(), integer()}]}] | [{topic(), [{partition(), integer()}]}].
 -type topic_partition_info() :: #{name => binary(),
                                   partitions => [#{error_code => error_code(),
                                                    id => integer(),
@@ -116,6 +118,7 @@
                              key_to_partition => fun((binary(), term()) -> integer())}.
 -type fetch_options() :: #{partition => integer(),
                            offset => integer(),
+                           response_max_bytes => integer(),
                            max_bytes => integer(),
                            min_bytes => integer(),
                            max_wait_time => integer(),
@@ -162,6 +165,7 @@
                         members => [group_member()]}.
 -type protocol() :: binary().
 -type join_group_options() :: #{session_timeout => integer(),
+                                rebalance_timeout => integer(),
                                 member_id => binary(),
                                 protocol_type => binary(),
                                 protocols => [protocol()]}.
@@ -264,7 +268,11 @@ update_brokers() ->
 
 % @hidden
 api_version() ->
-  doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION).
+  kafe_brokers:api_version().
+
+% @hidden
+api_version(ApiKey) ->
+  kafe_brokers:api_version(ApiKey).
 
 % -- Public APIs --
 
@@ -279,6 +287,12 @@ start() ->
 % @end
 brokers() ->
   kafe_brokers:list().
+
+% @doc
+% Return the list of API versions for each api key
+% @end
+api_versions() ->
+  kafe_protocol_api_versions:run().
 
 % @equiv metadata([])
 metadata() ->
@@ -370,7 +384,8 @@ produce(Messages) ->
   {ok, #{throttle_time => integer(),
          topics => [topic_partition_info()]}}
   | {ok, [topic_partition_info()]}
-  | {error,  term()}.
+  | {error,  term()}
+  | ok.
 produce(Messages, Options) when is_list(Messages), is_map(Options) ->
   kafe_protocol_produce:run(Messages, Options);
 produce(Topic, Message) when is_binary(Topic),
@@ -395,27 +410,51 @@ produce(Topic, Message, Options) when is_binary(Topic),
 default_key_to_partition(Topic, Key) ->
   erlang:crc32(term_to_binary(Key)) rem erlang:length(kafe:partitions(Topic)).
 
-% @equiv fetch(-1, TopicName, #{})
-fetch(TopicName) when is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName) ->
-  fetch(-1, TopicName, #{}).
+% @equiv fetch(-1, Topics, #{})
+-spec fetch(binary()
+            | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer(), MaxBytes :: integer()}]}]
+            | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer()}]}]
+            | [{Topic :: binary(), [Partition :: integer()]}]
+            | [{Topic :: binary(), Partition :: integer()}]
+            | [Topic :: binary()]) -> {ok, [message_set()]} | {ok, #{topics => [message_set()], throttle_time => integer()}} | {error, term()}.
+fetch(Topics) when is_binary(Topics) orelse is_list(Topics) ->
+  fetch(-1, Topics, #{}).
 
 % @equiv fetch(ReplicatID, TopicName, #{})
-fetch(ReplicatID, TopicName) when is_integer(ReplicatID), (is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName)) ->
-  fetch(ReplicatID, TopicName, #{});
-% @equiv fetch(-1, TopicName, Options)
-fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName)) ->
-  fetch(-1, TopicName, Options).
-
+-spec fetch(integer()
+            | binary()
+            | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer(), MaxBytes :: integer()}]}]
+            | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer()}]}]
+            | [{Topic :: binary(), [Partition :: integer()]}]
+            | [{Topic :: binary(), Partition :: integer()}]
+            | [Topic :: binary()],
+            binary()
+            | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer(), MaxBytes :: integer()}]}]
+            | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer()}]}]
+            | [{Topic :: binary(), [Partition :: integer()]}]
+            | [{Topic :: binary(), Partition :: integer()}]
+            | [Topic :: binary()]
+            | fetch_options()) -> {ok, [message_set()]} | {ok, #{topics => [message_set()], throttle_time => integer()}} | {error, term()}.
+fetch(ReplicatID, Topics) when is_integer(ReplicatID), (is_binary(Topics) orelse is_list(Topics)) ->
+  fetch(ReplicatID, Topics, #{});
+% @equiv fetch(-1, Topics, Options)
+fetch(Topics, Options) when is_map(Options), (is_binary(Topics) orelse is_list(Topics)) ->
+  fetch(-1, Topics, Options).
 
 % @doc
 % Fetch messages
 %
 % Options:
 % <ul>
-% <li><tt>partition :: integer()</tt> : The id of the partition the fetch is for (default : partition with the highiest offset).</li>
-% <li><tt>offset :: integer()</tt> : The offset to begin this fetch from (default : next offset for the partition)</li>
+% <li><tt>partition :: integer()</tt> : The id of the partition to fetch, if not specified. <i>This option exist for compatibility but it will be removed
+% in the next major release.</i></li>
+% <li><tt>offset :: integer()</tt> : The default offset to begin this fetch from, if not specified. <i>This option exist for compatibility but it will be removed
+% in the next major release.</i></li>
+% <li><tt>response_max_bytes :: integer()</tt> : Maximum bytes to accumulate in the response. Note that this is not an absolute maximum, if the first message
+% in the first non-empty partition of the fetch is larger than this value, the message will still be returned to ensure that progress can be made.
+% (default: sum of all max_bytes)</li>
 % <li><tt>max_bytes :: integer()</tt> : The maximum bytes to include in the message set for this partition. This helps bound the size of the response (default :
-% 1024*1024)</li>
+% 1024*1024) <i>This option exist for compatibility but it will be removed in the next major release.</i></li>
 % <li><tt>min_bytes :: integer()</tt> : This is the minimum number of bytes of messages that must be available to give a response. If the client sets this to 0
 % the server will always respond immediately, however if there is no new data since their last request they will just get back empty message sets. If this is
 % set to 1, the server will respond as soon as at least one partition has at least 1 byte of data or the specified timeout occurs. By setting higher values in
@@ -424,32 +463,36 @@ fetch(TopicName, Options) when is_map(Options), (is_binary(TopicName) orelse is_
 % 1).</li>
 % <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
 % at the time the request is issued (default : 100).</li>
-% <li><tt>retrieve :: all | first</tt> : if the Kafka's response buffer contains more than one complete message ; with <tt>first</tt> we will ignore the
-% remaining data ; with <tt>all</tt> we will parse all complete messages in the buffer (default : first).</li>
 % </ul>
 %
 % ReplicatID must <b>always</b> be -1.
 %
-% Example:
+% Examples:
 % <pre>
-% Response = kafe:fetch(&lt;&lt;"topic"&gt;&gt;)
+% Response0 = kafe:fetch(&lt;&lt;"topic"&gt;&gt;).
 % Response1 = kafe:fetch(&lt;&lt;"topic"&gt;&gt;, #{offset =&gt; 2, partition =&gt; 3}).
+% Response2 = fetch(-1, [{Topic, [{Partition, Offset, MaxBytes, Options).
+% Response3 = fetch(-1, [{Topic, [{Partition, Offset}]}], Options).
+% Response4 = fetch(-1, [{Topic, [Partition]}], Options).
+% Response5 = fetch(-1, [{Topic, Partition}], Options).
+% Response6 = fetch(-1, [Topic, Options).
 % </pre>
 %
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-FetchAPI">Kafka protocol documentation</a>.
 % @end
--spec fetch(integer(), binary(), fetch_options()) -> {ok, [message_set()]} | {ok, #{topics => [message_set()], throttle_time => integer()}} | {error, term()}.
-fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), (is_binary(TopicName) orelse is_list(TopicName) orelse is_atom(TopicName)), is_map(Options) ->
-  case kafe_protocol_fetch:run(ReplicatID, TopicName, Options) of
-    {ok, #{topics :=
-           [#{partitions :=
-              [#{error_code := ErrorCode}]}]}} = Result when ErrorCode =:= not_leader_for_partition ->
-      update_brokers(),
-      Result;
-    Other ->
-      Other
-  end.
+-spec fetch(integer(),
+            binary()
+            | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer(), MaxBytes :: integer()}]}]
+            | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer()}]}]
+            | [{Topic :: binary(), [Partition :: integer()]}]
+            | [{Topic :: binary(), Partition :: integer()}]
+            | [Topic :: binary()],
+            fetch_options()) -> {ok, [message_set()]} | {ok, #{topics => [message_set()], throttle_time => integer()}} | {error, term()}.
+fetch(ReplicatID, TopicName, Options) when is_integer(ReplicatID), is_binary(TopicName), is_map(Options) ->
+  fetch(ReplicatID, [TopicName], Options);
+fetch(ReplicatID, Topics, Options) when is_integer(ReplicatID), is_list(Topics), is_map(Options) ->
+  kafe_protocol_fetch:run(ReplicatID, Topics, Options).
 
 % @doc
 % Find groups managed by all brokers.
@@ -502,6 +545,7 @@ join_group(GroupID) ->
 % Options:
 % <ul>
 % <li><tt>session_timeout :: integer()</tt> : The coordinator considers the consumer dead if it receives no heartbeat after this timeout in ms. (default: 10000)</li>
+% <li><tt>rebalance_timeout :: integer()</tt> : The maximum time that the coordinator will wait for each member to rejoin when rebalancing the group. (default: 20000)</li>
 % <li><tt>member_id :: binary()</tt> : The assigned consumer id or an empty string for a new consumer. When a member first joins the group, the memberID must be
 % empty (i.e. &lt;&lt;&gt;&gt;, default), but a rejoining member should use the same memberID from the previous generation.</li>
 % <li><tt>protocol_type :: binary()</tt> : Unique name for class of protocols implemented by group (default &lt;&lt;"consumer"&gt;&gt;).</li>

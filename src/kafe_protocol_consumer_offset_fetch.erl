@@ -2,6 +2,7 @@
 -module(kafe_protocol_consumer_offset_fetch).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 1).
 
 -export([
          run/2,
@@ -14,25 +15,52 @@ run(ConsumerGroup, Options) ->
                Options =:= [] -> maps:keys(kafe:topics());
                true -> Options
              end,
-  kafe_protocol:run({coordinator, ConsumerGroup},
-                    {call,
-                     fun ?MODULE:request/3, [ConsumerGroup, Options1],
-                     fun ?MODULE:response/2}).
-
-request(ConsumerGroup, Options, #{api_version := ApiVersion} = State) ->
-  kafe_protocol:request(
+  kafe_protocol:run(
     ?OFFSET_FETCH_REQUEST,
-    <<(kafe_protocol:encode_string(ConsumerGroup))/binary, (topics(Options))/binary>>,
-    State,
-    api_version(ApiVersion)).
+    ?MAX_VERSION,
+    {fun ?MODULE:request/3, [ConsumerGroup, Options1]},
+    fun ?MODULE:response/2,
+    #{broker => {coordinator, ConsumerGroup}}).
 
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, _ApiVersion) ->
+% OffsetFetch Request (Version: 0) => group_id [topics]
+%   group_id => STRING
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition
+%       partition => INT32
+%
+% OffsetFetch Request (Version: 1) => group_id [topics]
+%   group_id => STRING
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition
+%       partition => INT32
+request(ConsumerGroup, Options, State) ->
+  kafe_protocol:request(
+    <<(kafe_protocol:encode_string(ConsumerGroup))/binary, (topics(Options))/binary>>,
+    State).
+
+% OffsetFetch Response (Version: 0) => [responses]
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition offset metadata error_code
+%       partition => INT32
+%       offset => INT64
+%       metadata => NULLABLE_STRING
+%       error_code => INT16
+%
+% OffsetFetch Response (Version: 1) => [responses]
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition offset metadata error_code
+%       partition => INT32
+%       offset => INT64
+%       metadata => NULLABLE_STRING
+%       error_code => INT16
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, _State) ->
   {ok, response2(NumberOfTopics, Remainder)}.
 
 % Private
-
-api_version(?V0) -> ?V0;
-api_version(_) -> ?V1.
 
 topics(Options) ->
   topics(Options, <<(length(Options)):32/signed>>).

@@ -1,5 +1,4 @@
 -module(kafe_utils_tests).
-
 -include_lib("eunit/include/eunit.hrl").
 
 kafe_utils_test_() ->

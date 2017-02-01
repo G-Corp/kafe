@@ -19,7 +19,9 @@
          partitions/1,
          update/0,
          list/0,
-         size/0
+         size/0,
+         api_version/0,
+         api_version/1
         ]).
 
 -export([
@@ -183,9 +185,45 @@ list() ->
 size() ->
   length(list()).
 
+% @doc
+% Return the configured API version
+% @end
+api_version() ->
+  ets_get(?ETS_TABLE, api_version, undefined).
+
+% @doc
+% Return the API Version for the given API Key
+% @end
+api_version(ApiKey) ->
+  api_version(ApiKey, api_version()).
+
+api_version(ApiKey, auto) ->
+  buclists:keyfind(
+    ApiKey, 1,
+    case ets_get(?ETS_TABLE, api_versions, undefined) of
+      undefined ->
+        case kafe:api_versions() of
+          {ok, #{api_versions := Versions,
+                 error_code := none}} ->
+            ApiVersionsList = [{Key, Version}
+                               || #{api_key := Key,
+                                     max_version := Version} <- Versions],
+            ets:insert(?ETS_TABLE, [{api_versions, ApiVersionsList}]),
+            ApiVersionsList;
+          _ ->
+            []
+        end;
+      List ->
+        List
+    end,
+    undefined);
+api_version(_, Version) ->
+  Version.
+
 % @hidden
 init(_) ->
   ets:new(?ETS_TABLE, [public, named_table]),
+  ets:insert(?ETS_TABLE, [{api_version, doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION)}]),
   Timeout = doteki:get_env(
               [kafe, brokers_update_frequency],
               ?DEFAULT_BROKER_UPDATE),

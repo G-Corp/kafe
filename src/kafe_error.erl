@@ -40,7 +40,20 @@
          {invalid_commit_offset_size, 28, false, "The committing offset data size is not valid "},
          {topic_authorization_failed, 29, false, "Topic authorization failed."},
          {group_authorization_failed, 30, false, "Group authorization failed."},
-         {cluster_authorization_failed, 31, false, "Cluster authorization failed."}
+         {cluster_authorization_failed, 31, false, "Cluster authorization failed."},
+         {invalid_timestamp, 32, false, "The timestamp of the message is out of acceptable range."},
+         {unsupported_sasl_mechanism, 33, false, "The broker does not support the requested SASL mechanism."},
+         {illegal_sasl_state, 34, false, "Request is not valid given the current SASL state."},
+         {unsupported_version, 35, false, "The version of API is not supported."},
+         {topic_already_exists, 36, false, "Topic with this name already exists."},
+         {invalid_partitions, 37, false, "Number of partitions is invalid."},
+         {invalid_replication_factor, 38, false, "Replication-factor is invalid."},
+         {invalid_replica_assignment, 39, false, "Replica assignment is invalid."},
+         {invalid_config, 40, false, "Configuration is invalid."},
+         {not_controller, 41, true, "This is not the correct controller for this cluster."},
+         {invalid_request, 42, false, "This most likely occurs because of a request being malformed by the client library or the message was sent to an incompatible broker. " ++
+          "See the broker logs for more details."},
+         {unsupported_for_message_format, 43, false, "The message format version on the broker does not support the request."}
         ]).
 
 code(N) when is_integer(N) ->

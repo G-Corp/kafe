@@ -2,7 +2,7 @@
 -define(DEFAULT_PORT, 9092).
 -define(DEFAULT_CLIENT_ID, <<"kafe">>).
 -define(DEFAULT_CORRELATION_ID, 0).
--define(DEFAULT_API_VERSION, 1).
+-define(DEFAULT_API_VERSION, auto).
 -define(DEFAULT_OFFSET, 0).
 -define(DEFAULT_BROKER_UPDATE, 60000).
 -define(DEFAULT_SOCKET_SNDBUF, 4194304).
@@ -16,6 +16,7 @@
 -define(V0, 0).
 -define(V1, 1).
 -define(V2, 2).
+-define(V3, 3).
 
 -define(PRODUCE_REQUEST, 0).
 -define(FETCH_REQUEST, 1).
@@ -34,6 +35,10 @@
 -define(SYNC_GROUP_REQUEST, 14).
 -define(DESCRIBE_GROUPS_REQUEST, 15).
 -define(LIST_GROUPS_REQUEST, 16).
+-define(SASL_HANDSHAKE_REQUEST, 17).
+-define(API_VERSIONS_REQUEST, 18).
+-define(CREATE_TOPICS_REQUEST, 19).
+-define(DELETE_TOPICS_REQUEST, 20).
 
 -define(DEFAULT_OFFSET_PARTITION, 0).
 -define(DEFAULT_OFFSET_TIMESTAMP, -1).
@@ -61,6 +66,7 @@
                                                       end, [], kafe:topics())).
 
 -define(DEFAULT_JOIN_GROUP_SESSION_TIMEOUT, 30000).
+-define(DEFAULT_JOIN_GROUP_REBALANCE_TIMEOUT, ?DEFAULT_JOIN_GROUP_SESSION_TIMEOUT*2).
 -define(DEFAULT_JOIN_GROUP_MEMBER_ID, <<>>).
 -define(DEFAULT_JOIN_GROUP_PROTOCOL_TYPE, <<"consumer">>).
 -define(DEFAULT_JOIN_GROUP_PROTOCOLS, [kafe:default_protocol(
