@@ -63,22 +63,22 @@ response(<<NumberOfTopics:32/signed, Remainder/binary>>, _State) ->
 % Private
 
 topics(Options) ->
-  topics(Options, <<(length(Options)):32/signed>>).
+  topics(Options, []).
 
-topics([], Result) -> Result;
-topics([{TopicName, Partitions}|Rest], Result) when is_list(Partitions) ->
+topics([], Acc) ->
+  kafe_protocol:encode_array(lists:reverse(Acc));
+topics([{TopicName, Partitions}|Rest], Acc) when is_list(Partitions) ->
   topics(Rest,
-         <<
-           Result/binary,
-           (kafe_protocol:encode_string(TopicName))/binary,
-           (kafe_protocol:encode_array(
-              [<<Partition:32/signed>> || Partition <- Partitions]
-             ))/binary
-         >>);
-topics([{TopicName, Partition}|Rest], Result) when is_integer(Partition) ->
-  topics([{TopicName, [Partition]}|Rest], Result);
-topics([TopicName|Rest], Result) ->
-  topics([{TopicName, maps:keys(maps:get(TopicName, kafe:topics(), #{}))}|Rest], Result).
+         [<<
+            (kafe_protocol:encode_string(TopicName))/binary,
+            (kafe_protocol:encode_array(
+               [<<Partition:32/signed>> || Partition <- Partitions]
+              ))/binary
+          >> | Acc]);
+topics([{TopicName, Partition}|Rest], Acc) when is_integer(Partition) ->
+  topics([{TopicName, [Partition]}|Rest], Acc);
+topics([TopicName|Rest], Acc) ->
+  topics([{TopicName, maps:keys(maps:get(TopicName, kafe:topics(), #{}))}|Rest], Acc).
 
 response2(0, <<>>) ->
   [];
