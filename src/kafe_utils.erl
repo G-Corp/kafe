@@ -4,7 +4,7 @@
 -export([
          broker_id/2
          , broker_name/2
-
+         , timestamp/0
          , gen_server_call/2
         ]).
 
@@ -20,5 +20,11 @@ broker_name(Host, Port) ->
           end,
   string:join([bucs:to_string(Host1), bucs:to_string(Port)], ":").
 
-gen_server_call(PID, Request) ->
-  gen_server:call(PID, Request).
+timestamp() ->
+  {Mega, Sec, Micro} = erlang:timestamp(),
+  (Mega * 1000000 + Sec) * 1000000 + Micro.
+
+% Because meck can't mock gen_server:call/2
+gen_server_call(ServerRef, Request) ->
+  gen_server:call(ServerRef, Request).
+
