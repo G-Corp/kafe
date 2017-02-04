@@ -2,6 +2,9 @@
 -module(kafe_protocol_consumer_offset_commit).
 
 -include("../include/kafe.hrl").
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
 -define(MAX_VERSION, 2).
 
 -export([
@@ -49,11 +52,11 @@ run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topi
 %       partition => INT32
 %       offset => INT64
 %       metadata => NULLABLE_STRING
-request_v0(ConsumerGroup, Topics, State) ->
+request_v0(ConsumerGroup, Topics, #{api_version := ApiVersion} = State) ->
   kafe_protocol:request(
     <<
       (kafe_protocol:encode_string(ConsumerGroup))/binary,
-      (topics_v0_v2(Topics))/binary
+      (topics(Topics, ApiVersion))/binary
     >>,
     State).
 
@@ -68,13 +71,13 @@ request_v0(ConsumerGroup, Topics, State) ->
 %       offset => INT64
 %       timestamp => INT64
 %       metadata => NULLABLE_STRING
-request_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics, State) ->
+request_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics, #{api_version := ApiVersion} = State) ->
   kafe_protocol:request(
     <<
       (kafe_protocol:encode_string(ConsumerGroup))/binary,
       ConsumerGroupGenerationId:32/signed,
       (kafe_protocol:encode_string(ConsumerId))/binary,
-      (topics_v1(Topics))/binary
+      (topics(Topics, ApiVersion))/binary
     >>,
     State).
 
@@ -89,14 +92,14 @@ request_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics, State) 
 %       partition => INT32
 %       offset => INT64
 %       metadata => NULLABLE_STRING
-request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics, State) ->
+request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics, #{api_version := ApiVersion} = State) ->
   kafe_protocol:request(
     <<
       (kafe_protocol:encode_string(ConsumerGroup))/binary,
       ConsumerGroupGenerationId:32/signed,
       (kafe_protocol:encode_string(ConsumerId))/binary,
       RetentionTime:64/signed,
-      (topics_v0_v2(Topics))/binary
+      (topics(Topics, ApiVersion))/binary
     >>,
     State).
 
@@ -125,38 +128,87 @@ response(<<NumberOfTopics:32/signed, Remainder/binary>>, _State) ->
 
 % Private
 
-topics_v0_v2(Topics) ->
-  topics_v0_v2(Topics, <<(length(Topics)):32/signed>>).
+topics(Topics, ApiVersion) ->
+  topics(Topics, ApiVersion, []).
 
-topics_v0_v2([], Acc) -> Acc;
-topics_v0_v2([{TopicName, Partitions}|Rest], Acc) ->
-  topics_v0_v2(Rest,
-               <<
-                 Acc/binary,
-                 (kafe_protocol:encode_string(TopicName))/binary,
-                 (kafe_protocol:encode_array(
-                    [<<Partition:32/signed, Offset:64/signed, (kafe_protocol:encode_string(Metadata))/binary>> ||
-                     {Partition, Offset, Metadata} <- Partitions]
-                   ))/binary
-               >>).
+topics([], _, Acc) ->
+  kafe_protocol:encode_array(lists:reverse(Acc));
 
-topics_v1(Topics) ->
-  topics_v1(Topics, <<(length(Topics)):32/signed>>).
+topics([{TopicName, Partitions}|Rest], ApiVersion, Acc) when ApiVersion == ?V0;
+                                                             ApiVersion == ?V2 ->
+  topics(Rest,
+         ApiVersion,
+         [<<
+            (kafe_protocol:encode_string(TopicName))/binary,
+            (kafe_protocol:encode_array(
+               [begin
+                  {Partition, Offset, Metadata} = check_partition(P, ApiVersion),
+                  <<Partition:32/signed, Offset:64/signed, (kafe_protocol:encode_string(Metadata))/binary>>
+                end || P <- Partitions]
+              ))/binary
+          >> | Acc]);
+topics([{TopicName, Partitions}|Rest], ApiVersion, Acc) when ApiVersion == ?V1 ->
+  topics(Rest,
+         ApiVersion,
+         [<<
+            (kafe_protocol:encode_string(TopicName))/binary,
+            (kafe_protocol:encode_array(
+               [begin
+                  {Partition, Offset, Timestamp, Metadata} = check_partition(P, ApiVersion),
+                  <<Partition:32/signed,
+                    Offset:64/signed,
+                    Timestamp:64/signed,
+                    (kafe_protocol:encode_string(Metadata))/binary>>
+                end || P <- Partitions]
+              ))/binary
+          >> | Acc]).
 
-topics_v1([], Acc) -> Acc;
-topics_v1([{TopicName, Partitions}|Rest], Acc) ->
-  topics_v1(Rest,
-               <<
-                 Acc/binary,
-                 (kafe_protocol:encode_string(TopicName))/binary,
-                 (kafe_protocol:encode_array(
-                    [<<Partition:32/signed,
-                       Offset:64/signed,
-                       Timestamp:64/signed,
-                       (kafe_protocol:encode_string(Metadata))/binary>> ||
-                     {Partition, Offset, Timestamp, Metadata} <- Partitions]
-                   ))/binary
-               >>).
+check_partition({Partition, Offset}, ApiVersion) when (ApiVersion == ?V0 orelse
+                                                       ApiVersion == ?V2),
+                                                      is_integer(Partition),
+                                                      is_integer(Offset) ->
+  {Partition, Offset, undefined};
+check_partition({Partition, Offset}, ApiVersion) when ApiVersion == ?V1,
+                                                      is_integer(Partition),
+                                                      is_integer(Offset) ->
+  {Partition, Offset, kafe_utils:timestamp(), undefined};
+check_partition({Partition, Offset, Timestamp}, ApiVersion) when (ApiVersion == ?V0 orelse
+                                                                  ApiVersion == ?V2),
+                                                                 is_integer(Partition),
+                                                                 is_integer(Offset),
+                                                                 is_integer(Timestamp) ->
+  {Partition, Offset, undefined};
+check_partition({Partition, Offset, Timestamp}, ApiVersion) when ApiVersion == ?V1,
+                                                                 is_integer(Partition),
+                                                                 is_integer(Offset),
+                                                                 is_integer(Timestamp) ->
+  {Partition, Offset, Timestamp, undefined};
+check_partition({Partition, Offset, Metadata}, ApiVersion) when (ApiVersion == ?V0 orelse
+                                                                 ApiVersion == ?V2),
+                                                                is_integer(Partition),
+                                                                is_integer(Offset),
+                                                                is_binary(Metadata) ->
+  {Partition, Offset, Metadata};
+check_partition({Partition, Offset, Metadata}, ApiVersion) when ApiVersion == ?V1,
+                                                                is_integer(Partition),
+                                                                is_integer(Offset),
+                                                                is_binary(Metadata) ->
+  {Partition, Offset, kafe_utils:timestamp(), Metadata};
+check_partition({Partition, Offset, Timestamp, Metadata}, ApiVersion) when (ApiVersion == ?V0 orelse
+                                                                            ApiVersion == ?V2),
+                                                                           is_integer(Partition),
+                                                                           is_integer(Offset),
+                                                                           is_integer(Timestamp),
+                                                                           is_binary(Metadata) ->
+  {Partition, Offset, Metadata};
+check_partition({Partition, Offset, Timestamp, Metadata}, ApiVersion) when ApiVersion == ?V1,
+                                                                           is_integer(Partition),
+                                                                           is_integer(Offset),
+                                                                           is_integer(Timestamp),
+                                                                           is_binary(Metadata) ->
+  {Partition, Offset, Timestamp, Metadata};
+check_partition(P, _) ->
+  P.
 
 response2(0, <<>>) ->
   [];
@@ -184,4 +236,72 @@ partitions(N,
              [#{partition => Partition,
                 error_code => kafe_error:code(ErrorCode)} | Acc]).
 
+-ifdef(TEST).
+kafe_protocol_consumer_offset_commit_test_() ->
+  {setup,
+   fun() ->
+       meck:new(kafe_utils, [passthrough]),
+       meck:expect(kafe_utils, timestamp, 0, 123456789),
+       ok
+   end,
+   fun(_) ->
+       meck:unload(kafe_utils),
+       ok
+   end,
+   [
+    fun() ->
+        ?assertEqual(
+           {1, 1000, 999999999, <<"metadata">>},
+           check_partition({1, 1000, 999999999, <<"metadata">>}, ?V1)
+          ),
+        ?assertEqual(
+           {1, 1000, <<"metadata">>},
+           check_partition({1, 1000, 999999999, <<"metadata">>}, ?V0)
+          ),
+        ?assertEqual(
+           {1, 1000, <<"metadata">>},
+           check_partition({1, 1000, 999999999, <<"metadata">>}, ?V2)
+          ),
+
+        ?assertEqual(
+           {1, 1000, 999999999, undefined},
+           check_partition({1, 1000, 999999999}, ?V1)
+          ),
+        ?assertEqual(
+           {1, 1000, undefined},
+           check_partition({1, 1000, 999999999}, ?V0)
+          ),
+        ?assertEqual(
+           {1, 1000, undefined},
+           check_partition({1, 1000, 999999999}, ?V2)
+          ),
+
+        ?assertEqual(
+           {1, 1000, 123456789, <<"metadata">>},
+           check_partition({1, 1000, <<"metadata">>}, ?V1)
+          ),
+        ?assertEqual(
+           {1, 1000, <<"metadata">>},
+           check_partition({1, 1000, <<"metadata">>}, ?V0)
+          ),
+        ?assertEqual(
+           {1, 1000, <<"metadata">>},
+           check_partition({1, 1000, <<"metadata">>}, ?V2)
+          ),
+
+        ?assertEqual(
+           {1, 1000, 123456789, undefined},
+           check_partition({1, 1000}, ?V1)
+          ),
+        ?assertEqual(
+           {1, 1000, undefined},
+           check_partition({1, 1000}, ?V0)
+          ),
+        ?assertEqual(
+           {1, 1000, undefined},
+           check_partition({1, 1000}, ?V2)
+          )
+    end
+   ]}.
+-endif.
 

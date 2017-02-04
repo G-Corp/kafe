@@ -147,7 +147,10 @@
 -type offset_commit_set() :: [#{name => binary(),
                                 partitions => [#{partition => integer(),
                                                  error_code => error_code()}]}].
--type offset_commit_topics() :: [{binary(), [{integer(), integer(), binary()}]}].
+-type offset_commit_topics() :: [{binary(), [{integer(), integer(), integer(), binary()}]}]
+                                | [{binary(), [{integer(), integer(), binary()}]}]
+                                | [{binary(), [{integer(), integer(), integer()}]}]
+                                | [{binary(), [{integer(), integer()}]}].
 -type offset_commit_topics_v1() :: [{binary(), [{integer(), integer(), integer(), binary()}]}].
 -type broker_id() :: atom().
 -type group() :: #{group_id => binary(), protocol_type => binary()}.

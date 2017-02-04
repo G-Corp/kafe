@@ -240,7 +240,7 @@ offset_commit_set() = [#{name =&gt; binary(), partitions =&gt; [#{partition =&gt
 
 
 <pre><code>
-offset_commit_topics() = [{binary(), [{integer(), integer(), binary()}]}]
+offset_commit_topics() = [{binary(), [{integer(), integer(), integer(), binary()}]}] | [{binary(), [{integer(), integer(), binary()}]}] | [{binary(), [{integer(), integer(), integer()}]}] | [{binary(), [{integer(), integer()}]}]
 </code></pre>
 
 

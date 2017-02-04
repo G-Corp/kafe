@@ -127,7 +127,7 @@ message_set([], _, _, Result) ->
 message_set([{Key, Value}|Rest], Options, ApiVersion, Acc) ->
   Msg = if
           ApiVersion >= ?V2 ->
-            Timestamp = maps:get(timestamp, Options, get_timestamp()),
+            Timestamp = maps:get(timestamp, Options, kafe_utils:timestamp()),
             <<
               1:8/signed, % MagicByte
               0:8/signed, % Attributes
@@ -249,10 +249,6 @@ partitions(
                 timestamp => Timestamp} | Acc],
              Remainder,
              ApiVersion).
-
-get_timestamp() ->
-  {Mega, Sec, Micro} = erlang:timestamp(),
-  (Mega * 1000000 + Sec) * 1000000 + Micro.
 
 % Message dispatch per brocker
 dispatch([], _, Result) ->
