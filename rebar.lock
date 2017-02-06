@@ -1,7 +1,18 @@
-[{<<"bristow">>,{pkg,<<"bristow">>,<<"0.2.1">>},0},
- {<<"bucs">>,{pkg,<<"bucs">>,<<"1.0.4">>},0},
- {<<"doteki">>,{pkg,<<"doteki">>,<<"1.0.3">>},0},
+{"1.1.0",
+[{<<"bristow">>,{pkg,<<"bristow">>,<<"0.2.2">>},0},
+ {<<"bucs">>,{pkg,<<"bucs">>,<<"1.0.6">>},0},
+ {<<"doteki">>,{pkg,<<"doteki">>,<<"1.0.5">>},0},
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.9">>},1},
  {<<"lager">>,{pkg,<<"lager">>,<<"3.2.4">>},0},
  {<<"metrics">>,{pkg,<<"metrics">>,<<"2.2.0">>},0},
- {<<"poolgirl">>,{pkg,<<"poolgirl">>,<<"1.1.1">>},0}].
+ {<<"poolgirl">>,{pkg,<<"poolgirl">>,<<"1.1.2">>},0}]}.
+[
+{pkg_hash,[
+ {<<"bristow">>, <<"034423223B1B27EC5E39928A04476F7AEAAE9EDF9E3448C572049DB8FC595C8A">>},
+ {<<"bucs">>, <<"B0467388B5ADAABB4D8726595B7B754A961BFE80F0CCAC88F58E1AFEA32BE6D0">>},
+ {<<"doteki">>, <<"1E719DBE540F84EA87C6DC92BE4B6F706A42B08067AF519DE13B6EFC27243A49">>},
+ {<<"goldrush">>, <<"F06E5D5F1277DA5C413E84D5A2924174182FB108DABB39D5EC548B27424CD106">>},
+ {<<"lager">>, <<"A6DEB74DAE7927F46BD13255268308EF03EB206EC784A94EAF7C1C0F3B811615">>},
+ {<<"metrics">>, <<"709B45A275FDE02C9F2950CEAB38B29B46D05687DE33299E02C03A71BE336545">>},
+ {<<"poolgirl">>, <<"C36F0DBD37FF6815C9CCDE9A144AD889DBBC8640861AA1513B6BFBC2D2B2C120">>}]}
+].

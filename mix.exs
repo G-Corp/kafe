@@ -8,8 +8,8 @@ defmodule Kafe.Mixfile do
       elixir: "~> 1.2",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
-      deps: deps,
-      aliases: aliases
+      deps: deps(),
+      aliases: aliases()
     ]
   end
 
@@ -24,10 +24,10 @@ defmodule Kafe.Mixfile do
   defp deps do
     [
       {:lager, "~> 3.2.0"},
-      {:bucs, "~> 1.0.4"},
-      {:doteki, "~> 1.0.3"},
-      {:poolgirl, "~> 1.1.1"},
-      {:bristow, "~> 0.2.1"},
+      {:bucs, "~> 1.0.6"},
+      {:doteki, "~> 1.0.5"},
+      {:poolgirl, "~> 1.1.2"},
+      {:bristow, "~> 0.2.2"},
       {:metrics, "~> 2.2.0"}    
     ]
   end
