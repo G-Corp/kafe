@@ -335,7 +335,7 @@ get_partition_offset(Topic, Partition, Time) ->
     {ok, [#{name := Topic,
             partitions := [#{error_code := none,
                              id := Partition,
-                             offset := Offset}]}]} ->
+                             offset := Offset}]}]} when is_integer(Offset) ->
       {ok, Offset};
     _ ->
       error

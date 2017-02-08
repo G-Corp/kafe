@@ -154,13 +154,14 @@ terminate(_Reason, #state{group_id = GroupID, topic = Topic, partition = Partiti
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
-start_commit_timer(#state{commit_timer = TimerRef} = State, Interval) when TimerRef =/= undefined ->
+start_commit_timer(#state{commit_timer = TimerRef} = State, Interval) when TimerRef =/= undefined,
+                                                                           Interval =/= undefined ->
   erlang:cancel_timer(TimerRef),
   start_commit_timer(State#state{commit_timer = undefined}, Interval);
-start_commit_timer(State, undefined) ->
-  State#state{commit_timer = undefined};
-start_commit_timer(#state{commit_timer = undefined} = State, Interval) ->
-  State#state{commit_timer = erlang:send_after(Interval, self(), commit)}.
+start_commit_timer(#state{commit_timer = undefined} = State, Interval) when Interval =/= undefined ->
+  State#state{commit_timer = erlang:send_after(Interval, self(), commit)};
+start_commit_timer(State, _) ->
+  State#state{commit_timer = undefined}.
 
 start_commit_timer(#state{commit_timer = TimerRef} = State) when TimerRef =/= undefined ->
   erlang:cancel_timer(TimerRef),

@@ -254,7 +254,7 @@ pending_commits(GroupID, Topic, Partition) ->
 % @doc
 % Return the number of pending commits for the given consumer group
 % @end
--spec pending_commits(GroupID :: binary()) -> ok.
+-spec pending_commits(GroupID :: binary()) -> integer().
 pending_commits(GroupID) ->
   lists:sum(
     lists:flatten(

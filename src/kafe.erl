@@ -107,7 +107,7 @@
 -type topic_partition_info() :: #{name => binary(),
                                   partitions => [#{error_code => error_code(),
                                                    id => integer(),
-                                                   offsets => [integer()],
+                                                   offset => integer(),
                                                    timestamp => integer()}
                                                  | #{error_code => error_code(),
                                                      id => integer(),
@@ -144,9 +144,9 @@
                                                       offset => integer(),
                                                       metadata_info => binary(),
                                                       error_code => error_code()}]}.
--type offset_commit_set() :: [#{name => binary(),
-                                partitions => [#{partition => integer(),
-                                                 error_code => error_code()}]}].
+-type offset_commit_set() :: #{name => binary(),
+                               partitions => [#{partition => integer(),
+                                                error_code => error_code()}]}.
 -type offset_commit_topics() :: [{binary(), [{integer(), integer(), integer(), binary()}]}]
                                 | [{binary(), [{integer(), integer(), binary()}]}]
                                 | [{binary(), [{integer(), integer(), integer()}]}]

@@ -127,7 +127,8 @@ broker_by_name(BrokerName) ->
 % @doc
 % Return a broker PID for the given <tt>Host</tt> and <tt>Port</tt>.
 % @end
--spec broker_by_host_and_port(Host :: string(), Port ::integer()) -> pid() | undefined.
+-spec broker_by_host_and_port(Host :: string() | binary(),
+                              Port ::integer() | port()) -> pid() | undefined.
 broker_by_host_and_port(Host, Port) ->
   broker_by_name(kafe_utils:broker_name(Host, Port)).
 
