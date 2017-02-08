@@ -230,7 +230,7 @@ metadata() = #{brokers =&gt; [#{host =&gt; binary(), id =&gt; integer(), port =&
 
 
 <pre><code>
-offset_commit_set() = [#{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integer(), error_code =&gt; <a href="#type-error_code">error_code()</a>}]}]
+offset_commit_set() = #{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integer(), error_code =&gt; <a href="#type-error_code">error_code()</a>}]}
 </code></pre>
 
 
@@ -360,7 +360,7 @@ topic() = binary()
 
 
 <pre><code>
-topic_partition_info() = #{name =&gt; binary(), partitions =&gt; [#{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), offsets =&gt; [integer()], timestamp =&gt; integer()} | #{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), offsets =&gt; [integer()]}]}
+topic_partition_info() = #{name =&gt; binary(), partitions =&gt; [#{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), offset =&gt; integer(), timestamp =&gt; integer()} | #{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), offsets =&gt; [integer()]}]}
 </code></pre>
 
 

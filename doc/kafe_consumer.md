@@ -231,7 +231,7 @@ Return the consumer group member ID
 ### pending_commits/1 ###
 
 <pre><code>
-pending_commits(GroupID::binary()) -&gt; ok
+pending_commits(GroupID::binary()) -&gt; integer()
 </code></pre>
 <br />
 
