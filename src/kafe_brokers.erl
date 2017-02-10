@@ -190,7 +190,7 @@ size() ->
 % Return the configured API version
 % @end
 api_version() ->
-  ets_get(?ETS_TABLE, api_version, undefined).
+  ets_get(?ETS_TABLE, api_version, -1).
 
 % @doc
 % Return the API Version for the given API Key
@@ -217,9 +217,11 @@ api_version(ApiKey, auto) ->
       List ->
         List
     end,
-    undefined);
-api_version(_, Version) ->
-  Version.
+    -1);
+api_version(_, Version) when is_integer(Version) ->
+  Version;
+api_version(ApiKey, Versions) when is_list(Versions) ->
+  buclists:keyfind(ApiKey, 1, Versions, -1).
 
 % @hidden
 init(_) ->

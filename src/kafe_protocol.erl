@@ -35,21 +35,20 @@ run(ApiKey, MaxVersion, {RequestFun, RequestParams}, {ResponseFun, ResponseParam
                                                                                                 (is_function(ResponseFun) orelse ResponseFun == undefined),
                                                                                                 is_list(ResponseParams),
                                                                                                 is_map(State) ->
-  ApiVersion = check_version(case maps:get(api_version, State, undefined) of
-                               undefined ->
-                                 case ApiKey of
-                                   ?API_VERSIONS_REQUEST -> 0;
-                                   _ -> kafe:api_version(ApiKey)
-                                 end;
-                               V -> V
-                             end, MaxVersion),
-  Broker = maps:get(broker, State, first_broker),
-  do_run(Broker,
-         {call,
-          {RequestFun, RequestParams},
-          {ResponseFun, ResponseParams},
-          State#{api_key => ApiKey,
-                 api_version => ApiVersion}}).
+
+  case api_version(ApiKey, State) of
+    -1 ->
+      {error, api_not_available};
+    Version ->
+      ApiVersion = check_version(Version, MaxVersion),
+      Broker = maps:get(broker, State, first_broker),
+      do_run(Broker,
+             {call,
+              {RequestFun, RequestParams},
+              {ResponseFun, ResponseParams},
+              State#{api_key => ApiKey,
+                     api_version => ApiVersion}})
+  end.
 
 request(RequestMessage, #{api_key := ApiKey,
                           api_version := ApiVersion,
@@ -133,6 +132,16 @@ do_run({coordinator, GroupId}, Request) ->
       end;
     _ ->
       {error, no_broker_found}
+  end.
+
+api_version(ApiKey, State) ->
+  case maps:get(api_version, State, undefined) of
+    undefined ->
+      case ApiKey of
+        ?API_VERSIONS_REQUEST -> 0;
+        _ -> kafe:api_version(ApiKey)
+      end;
+    V -> V
   end.
 
 check_version(V, Max) when V > Max ->

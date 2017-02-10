@@ -39,15 +39,16 @@ You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/bots
 <tr><td>pool_size</td><td><tt>integer()</tt></td><td>Initial connection pool/brocker</td><td><tt>5</tt></td></tr>
 <tr><td>chunk_pool_size</td><td><tt>integer()</tt></td><td>Size of new connection pool/brocker</td><td><tt>10</tt></td></tr>
 <tr><td>brokers_update_frequency</td><td><tt>integer()</tt></td><td>Frequency (ms) for brokers update</td><td><tt>60000</tt></td></tr>
+<tr><td>protocol_timeout</td><td><tt>integer()</tt></td><td>API call timeout</td><td><tt>60000</tt></td></tr>
 <tr><td>client_id</td><td><tt>binary()</tt></td><td>Client ID Name</td><td><tt><<"kafe">></tt></td></tr>
-<tr><td>api_version</td><td><tt>integer() | auto</tt></td><td>API Version</td><td><tt>auto<sup>*</sup></tt></td></tr>
+<tr><td>api_version</td><td><tt>[{integer(), integer()}] | integer() | auto</tt></td><td>API Version</td><td><tt>auto<sup>*</sup></tt></td></tr>
 <tr><td>correlation_id</td><td><tt>integer()</tt></td><td>Correlation ID</td><td><tt>0</tt></td></tr>
 <tr><td>socket</td><td><tt>[{sndbuf, integer()}, {recbuf, integer()}, {buffer, integer()}]</tt></td><td>Socker configuration</td><td><tt>[{sndbuf, 4194304}, {recbuf, 4194304}, {buffer, 4194304}]</tt></td></tr>
 </table>
 
 
 <sup>*</sup>
- use `0` with Kafka >= 0.8 < 0.9 ; `1` with Kafka >= 0.9 < 0.10 ; `auto` with Kafka >= 0.10
+ use `0` with Kafka >= 0.8 < 0.9 ; `auto` with Kafka >= 0.9 < 0.10
 
 Example :
 
@@ -64,7 +65,7 @@ Example :
     {chunk_pool_size, 2},
     {brokers_update_frequency, 10000},
     {client_id, <<"kafe">>},
-    {api_version, 1},
+    {api_version, auto},
     {correlation_id, 0},
     {socket, [
       {sndbuf, 4194304},
@@ -77,6 +78,21 @@ Example :
 ```
 
 __Kafe__ use [lager](https://github.com/basho/lager) ; see also how to [configure](https://github.com/basho/lager#configuration) it.
+
+
+#### Custom API version ####
+
+If you need to, you can specify each version of the protocol APIs. To do so, use a list as value for the `api_version`'s configuration. This list must be a list of tuples where the first element is the api key and the second is the api version.
+
+Example :
+
+```
+
+...
+{api_version, [{0, 0}, {0, 1}, {0, 0}, ...]}
+...
+
+```
 
 
 ### Create a consumer ###
