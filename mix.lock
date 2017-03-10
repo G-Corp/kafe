@@ -1,5 +1,5 @@
 %{"bristow": {:hex, :bristow, "0.2.2", "034423223b1b27ec5e39928a04476f7aeaae9edf9e3448c572049db8fc595c8a", [:make, :mix, :rebar3], []},
-  "bucs": {:hex, :bucs, "1.0.6", "b0467388b5adaabb4d8726595b7b754a961bfe80f0ccac88f58e1afea32be6d0", [:make, :mix, :rebar3], []},
+  "bucs": {:hex, :bucs, "1.0.9", "18e703058ea49b981581febdadfb20fe6d433602cec9a3550e88db59a322f810", [:make, :mix, :rebar3], []},
   "doteki": {:hex, :doteki, "1.0.5", "1e719dbe540f84ea87c6dc92be4b6f706a42b08067af519de13b6efc27243a49", [:make, :mix, :rebar3], [{:bucs, "~> 1.0.6", [hex: :bucs, optional: false]}]},
   "goldrush": {:hex, :goldrush, "0.1.9", "f06e5d5f1277da5c413e84d5a2924174182fb108dabb39d5ec548b27424cd106", [:rebar3], []},
   "lager": {:hex, :lager, "3.2.4", "a6deb74dae7927f46bd13255268308ef03eb206ec784a94eaf7c1c0f3b811615", [:rebar3], [{:goldrush, "0.1.9", [hex: :goldrush, optional: false]}]},
