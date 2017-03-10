@@ -1,9 +1,8 @@
 -module(kafe_utils_tests).
-
 -include_lib("eunit/include/eunit.hrl").
 
 kafe_utils_test_() ->
-  {setup, fun setup/0, fun teardown/1, 
+  {setup, fun setup/0, fun teardown/1,
    [
     ?_test(t_broker_id()),
     ?_test(t_broker_name())

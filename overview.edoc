@@ -1,0 +1,335 @@
+@author Gregoire Lejeune <gregoire.lejeune@finexkap.com>
+@author Gregoire Lejeune <greg@g-corp.io>
+@author Gregoire Lejeune <gregoire.lejeune@botsunit.com>
+@copyright 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016, 2017 BotsUnit
+@version 2.2.0
+@title A Kafka client for Erlang and Elixir
+@doc
+
+[![Hex.pm version](https://img.shields.io/hexpm/v/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
+[![Hex.pm downloads](https://img.shields.io/hexpm/dt/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
+[![License](https://img.shields.io/hexpm/l/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
+[![Build Status](https://travis-ci.org/botsunit/kafe.svg?branch=master)](https://travis-ci.org/botsunit/kafe)
+
+
+<b>Version 2.0.0 cause changes in the following APIs :</b>
+<ul>
+<li>{@link kafe:start_consumer/3}</li>
+<li>{@link kafe:fetch/3}</li>
+</ul>
+
+<b>Kafe</b> has been tested with Kafka 0.9 and 0.10
+
+You can also use it with Kafka 0.8 but {@link kafe_consumer} is not compatible with this version.
+
+<h3>Links</h3>
+
+<ul>
+  <li><a href="http://kafka.apache.org">Apache Kafka</a></li>
+  <li><a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol">Apache Kafka Protocol</a></li>
+</ul>
+
+<h3>Configuration</h3>
+
+<table width="100%" border="0" summary="configuration">
+<tr><td>brokers</td><td><tt>[{inet:hostname(), inet:port_number()}]</tt></td><td>List of brokers</td><td><tt>[{"localhost", 9092}]</tt></td></tr>
+<tr><td>pool_size</td><td><tt>integer()</tt></td><td>Initial connection pool/brocker</td><td><tt>5</tt></td></tr>
+<tr><td>chunk_pool_size</td><td><tt>integer()</tt></td><td>Size of new connection pool/brocker</td><td><tt>10</tt></td></tr>
+<tr><td>brokers_update_frequency</td><td><tt>integer()</tt></td><td>Frequency (ms) for brokers update</td><td><tt>60000</tt></td></tr>
+<tr><td>protocol_timeout</td><td><tt>integer()</tt></td><td>API call timeout</td><td><tt>60000</tt></td></tr>
+<tr><td>client_id</td><td><tt>binary()</tt></td><td>Client ID Name</td><td><tt>&lt;&lt;"kafe"&gt;&gt;</tt></td></tr>
+<tr><td>api_version</td><td><tt>[{integer(), integer()}] | integer() | auto</tt></td><td>API Version</td><td><tt>auto<sup>*</sup></tt></td></tr>
+<tr><td>correlation_id</td><td><tt>integer()</tt></td><td>Correlation ID</td><td><tt>0</tt></td></tr>
+<tr><td>socket</td><td><tt>[{sndbuf, integer()}, {recbuf, integer()}, {buffer, integer()}]</tt></td><td>Socker configuration</td><td><tt>[{sndbuf, 4194304}, {recbuf, 4194304}, {buffer, 4194304}]</tt></td></tr>
+</table>
+
+<sup>*</sup> use <tt>0</tt> with Kafka &gt;= 0.8 &lt; 0.9 ; <tt>auto</tt> with Kafka &gt;= 0.9 &lt; 0.10
+
+Example :
+
+<pre>
+[
+  {kafe, [
+    {brokers, [
+      {"localhost", 9092},
+      {"localhost", 9093},
+      {"localhost", 9094}
+    ]},
+    {pool_size, 1},
+    {chunk_pool_size, 2},
+    {brokers_update_frequency, 10000},
+    {client_id, &lt;&lt;"kafe"&gt;&gt;},
+    {api_version, auto},
+    {correlation_id, 0},
+    {socket, [
+      {sndbuf, 4194304},
+      {recbuf, 4194304},
+      {buffer, 4194304}
+    ]},
+  ]}
+]
+</pre>
+
+<b>Kafe</b> use <a href="https://github.com/basho/lager">lager</a> ; see also how to <a href="https://github.com/basho/lager#configuration">configure</a> it.
+
+<h4>Custom API version</h4>
+
+If you need to, you can specify each version of the protocol APIs. To do so, use a list as value for the <tt>api_version</tt>'s configuration. This list must be a list of tuples where the first element is the api key and the second is the api version.
+
+Example :
+<pre>
+...
+{api_version, [{0, 0}, {0, 1}, {0, 0}, ...]}
+...
+</pre>
+
+<h3>Create a consumer</h3>
+
+<h4>Using a function</h4>
+
+To create a consumer, create a function with 6 parameters :
+
+<pre>
+-module(my_consumer).
+
+-export([consume/6]).
+
+consume(CommitID, Topic, Partition, Offset, Key, Value) ->
+  % Do something with Topic/Partition/Offset/Key/Value
+  ok.
+</pre>
+
+The <tt>consume</tt> function must return <tt>ok</tt> if the message was treated, or <tt>{error, term()}</tt> on error.
+
+Then start a new consumer :
+
+<pre>
+...
+kafe:start(),
+...
+kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
+...
+</pre>
+
+See {@link kafe:start_consumer/3} for the available <tt>Options</tt>.
+
+In the <tt>consume</tt> function, if you didn't start the consumer in autocommit mode (using <tt>before_processing | after_processing</tt> in the <tt>commit</tt> options),
+you need to commit manually when you have finished to treat the message. To do so, use {@link kafe_consumer:commit/4}.
+
+When you are done with your consumer, stop it :
+
+<pre>
+...
+kafe:stop_consumer(my_group),
+...
+</pre>
+
+<h4>Using the <tt>kafe_consumer_subscriber</tt> behaviour</h4>
+
+<pre>
+-module(my_consumer).
+-behaviour(kafe_consumer_subscriber).
+
+-export([init/4, handle_message/2]).
+-include_lib("kafe/include/kafe_consumer.hrl").
+
+-record(state, {
+               }).
+
+init(Group, Topic, Partition, Args) ->
+  % Do something with Group, Topic, Partition, Args
+  {ok, #state{}}.
+
+handle_message(Message, State) ->
+  % Do something with Message
+  % And update your State (if needed)
+  {ok, NewState}.
+</pre>
+
+Then start a new consumer :
+
+<pre>
+...
+kafe:start().
+...
+kafe:start_consumer(my_group, {my_consumer, Args}, Options).
+% Or
+kafe:start_consumer(my_group, my_consumer, Options).
+...
+</pre>
+
+To commit a message (if you need to), use {@link kafe_consumer:commit/4}.
+
+<h3>Using with Elixir</h3>
+
+Elixir' users can use <tt>Kafe</tt> and <tt>Kafe.Consumer</tt> instead of <tt>:kafe</tt> and <tt>:kafe_consumer</tt>.
+
+<pre>
+defmodule My.Consumer do
+  def consume(commit_id, topic, partition, offset, key, value) do
+    # Do something with topic/partition/offset/key/value
+    :ok
+  end
+end
+
+defmodule My.Consumer.Subscriber do
+  behaviour Kafe.Consumer.Subscriber
+
+  def init(group, topic, partition, args) do
+    % Do something with group/topic/partition/args
+    % and create the state
+    {:ok, state}
+  end
+
+  def handle_message(message, state) do
+    % Do something with message (record Kafe.Records.message or
+    % function Kafe.Consumer.Subscriber.message/2)
+    % and update (or not)the state
+    {:ok, new_state}
+  end
+end
+</pre>
+
+<pre>
+...
+Kafe.start()
+...
+Kafe.start_consumer(:my_group, &amp;My.Consumer.consume/6, options)
+# or
+Kafe.start_consumer(:my_group, {My.Consumer.Subscriber, args}, options)
+# or
+Kafe.start_consumer(:my_group, My.Consumer.Subscriber, options)
+...
+Kafe.stop_consumer(:my_group)
+...
+</pre>
+
+<h3>Metrics</h3>
+
+You can enable metrics by adding a metrics module in your configuration :
+
+<pre>
+{metrics, [
+  {metrics_mod, metrics_folsom}
+]}
+</pre>
+
+You can choose between <a href="https://github.com/folsom-project/folsom">Folsom</a> (<tt>{metrics_mod, metrics_folsom}</tt>), <a href="https://github.com/Feuerlabs/exometer">Exometer</a> (<tt>{metrics_mod, metrics_exometer}</tt>) or <a href="https://github.com/processone/grapherl">Grapherl</a> (<tt>{metrics_mod, metrics_grapherl}</tt>).
+
+Be sure that's Folsom, Exometer or Grapherl is started before starting Kafe.
+
+<pre>
+application:ensure_all_started(folsom).
+application:ensure_all_started(kafe).
+</pre>
+
+Metrics are disabled by default.
+
+Kafe offers the following metrics :
+
+<table>
+<tr><th>Name</th><th>Type</th><th>Description</th></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.messages.fetch</td><td>gauge</td><td>Number of received messages on the last fetch for the CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.messages.fetch</td><td>gauge</td><td>Number of received messages on the last fetch for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.messages</td><td>counter</td><td>Total number of received messages for the CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.messages</td><td>counter</td><td>Total number of received messages for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.duration.fetch</td><td>gauge</td><td>Fetch duration (ms) per message, for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+<tr><td>kafe_consumer.CONSUMER_GROUP.TOPIC.PARTITION.pending_commits</td><td>gauge</td><td>Number of pending commits, for the {TOPIC, PARTITION} and CONSUMER_GROUP</td></tr>
+</table>
+
+You can add a prefix to all metrics by adding a <tt>metrics_prefix</tt> in the <tt>metrics</tt> configuration :
+
+<pre>
+{metrics, [
+  {metrics_mod, metrics_folsom},
+  {metrics_prefix, my_bot}
+]}
+</pre>
+
+<h3>Build and tests</h3>
+
+<b>Kafe</b> use <a href="http://www.rebar3.org">rebar3</a> and <a href="https://github.com/botsunit/bu.mk">bu.mk</a>. So, you can use :
+
+<ul>
+<li><tt>./rebar3 compile</tt> to compile Kafe.</li>
+<li><tt>./rebar3 eunit</tt> to run tests.</li>
+<li><tt>./rebar3 ct</tt> to run (integration) tests.</li>
+<li><tt>./rebar3 edoc</tt> to build documentation.</li>
+<li><tt>./rebar3 elixir generate_mix</tt> to generate <tt>mix.exs</tt> file.</li>
+<li><tt>./rebar3 elixir generate_lib</tt> to generate Elixir bindings.</li>
+</ul>
+
+Or
+
+<ul>
+<li><tt>make release</tt> Tag and release to hex.pm</li>
+<li><tt>make integ</tt> Run integration tests</li>
+<li><tt>make docker-compose.yml</tt> Create docker-compose.yml</li>
+<li><tt>make docker-start</tt> Start docker</li>
+<li><tt>make docker-stop</tt> Stop docker</li>
+<li><tt>make elixir</tt> Generate Elixir bindings (mix.exs and libs)</li>
+<li><tt>make tests</tt> Run tests</li>
+<li><tt>make doc</tt> Generate doc</li>
+<li><tt>make dist</tt> Create a distribution</li>
+<li><tt>make clean</tt> Clean</li>
+<li><tt>make distclean</tt> Clean the distribution</li>
+<li><tt>make info</tt> Display application informations</li>
+<li><tt>make tag</tt> Create a git tag</li>
+<li><tt>make local.hex</tt> Install hexfor Mix</li>
+<li><tt>make local.rebar</tt> Install rebar for Mix</li>
+<li><tt>make bu-mk</tt> Update bu.mk</li>
+<li><tt>make help</tt> Show this help.</li>
+</ul>
+
+To run the integration tests, you must start zookeeper and a kafka cluster (3 brokers) and have the following three topics :
+
+<ul>
+<li><tt>testone</tt> : replication factor: 1, partitions: 1</li>
+<li><tt>testtwo</tt> : replication factor: 2, partitions: 2</li>
+<li><tt>testthree</tt> : replication factor: 3, partitions: 3</li>
+</ul>
+
+You can use the makefile rules <tt>docker-compose.yml</tt> and <tt>docker-start</tt> to help you to create this environment using docker (tested on Linux only).
+
+<h3>API Documentation</h3>
+
+See <a href=".">documentation</a>
+
+<h3>Contributing</h3>
+
+<ol>
+  <li>Fork it ( https://github.com/botsunit/kafe/fork )</li>
+  <li>Create your feature branch (<tt>git checkout -b my-new-feature</tt>)</li>
+  <li>Commit your changes (<tt>git commit -am 'Add some feature'</tt>)</li>
+  <li>Push to the branch (<tt>git push origin my-new-feature</tt>)</li>
+  <li>Create a new Pull Request</li>
+</ol>
+
+<h3>Licence</h3>
+
+<p>
+kafe is available for use under the following license, commonly known as the 3-clause (or "modified") BSD license:
+</p>
+
+<p>
+Copyright (c) 2014, 2015 Finexkap<br />
+Copyright (c) 2015, G-Corp<br />
+Copyright (c) 2015, 2016 BotsUnit<br />
+</p>
+
+<p>
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+</p>
+
+<p>
+<ul>
+  <li>Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.</li>
+  <li>Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.</li>
+  <li>The name of the author may not be used to endorse or promote products derived from this software without specific prior written permission.</li>
+</ul>
+</p>
+
+<p>
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+</p>
+

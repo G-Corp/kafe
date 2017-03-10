@@ -1,17 +1,35 @@
-{application, kafe,
- [
-  {description, ""},
-  {vsn, "1.0.2-pre"},
-  {registered, []},
-  {modules, []},
-  {applications, [
-                  kernel,
-                  stdlib,
-                  syntax_tools,
-                  compiler,
-                  goldrush,
-                  lager
-                 ]},
-  {mod, { kafe_app, []}},
-  {env, []}
+{application, kafe, [
+    {description, "A Kafka client for Erlang and Elixir"}
+  , {vsn, "2.2.2"}
+  , {registered, []}
+  , {modules, []}
+  , {applications, [
+                    kernel,
+                    stdlib,
+                    syntax_tools,
+                    compiler,
+                    poolgirl,
+                    goldrush,
+                    lager,
+                    bucs,
+                    doteki,
+                    metrics
+                   ]}
+  , {mod, {kafe_app, []}}
+  , {env, []}
+
+  , {maintainers, ["Gregoire Lejeune"]}
+  , {licenses, ["BSD-3"]}
+  , {links, [{"Github", "https://github.com/botsunit/kafe"}]}
+  , {files, ["src/*"
+             , "include/*"
+             , "lib/*"
+             , "Makefile"
+             , "bu.mk"
+             , "README.md"
+             , "rebar.config"
+             , "rebar.lock"
+             , "mix.exs"
+             , "mix.lock"]}
+  , {build_tools, ["rebar3", "mix", "make"]}
  ]}.

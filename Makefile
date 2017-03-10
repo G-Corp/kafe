@@ -1,22 +1,94 @@
-PROJECT = kafe
+HAS_ELIXIR=1
 
-DEPS = lager edown eutils
-dep_lager = git https://github.com/basho/lager.git master
-dep_edown = git https://github.com/uwiger/edown.git master
-dep_eutils = git https://github.com/emedia-project/eutils.git master
+include bu.mk
 
-include erlang.mk
+release: dist lint tag ## Tag and release to hex.pm
+	$(verbose) $(REBAR) hex publish
 
-ERLC_OPTS = +debug_info +'{parse_transform, lager_transform}'
+integ: ## Run integration tests
+	$(verbose) $(REBAR) ct
 
-EDOC_OPTS = {doclet, edown_doclet} \
-						, {app_default, "http://www.erlang.org/doc/man"} \
-						, {new, true} \
-						, {packages, false} \
-						, {stylesheet, ""} \
-						, {image, ""} \
-						, {top_level_readme, {"./documentation.md", "https://github.com/homeswap/kafe"}} 
+tests-all: tests integ
 
-dev: deps app
-	@erl -pa ebin include deps/*/ebin deps/*/include -config config/kafe.config
+KAFKA_ADVERTISED_HOST_NAME = $(shell ip addr list docker0 |grep "inet " |cut -d' ' -f6|cut -d/ -f1)
+
+define docker_compose_yml_v1
+version: "2"
+
+services:
+  zookeeper:
+    image: dockerkafka/zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka1:
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    links:
+      - zookeeper:zk
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zk
+      KAFKA_BROKER_ID: 1
+      KAFKA_MESSAGE_MAX_BYTES: 1000000
+      KAFKA_FETCH_MESSAGE_MAX_BYTES: 1048576
+      KAFKA_MEX_MESSAGE_BYTES: 1000000
+      KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  kafka2:
+    image: wurstmeister/kafka
+    ports:
+      - "9093:9092"
+    links:
+      - zookeeper:zk
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zk
+      KAFKA_BROKER_ID: 2
+      KAFKA_MESSAGE_MAX_BYTES: 1000000
+      KAFKA_FETCH_MESSAGE_MAX_BYTES: 1048576
+      KAFKA_MEX_MESSAGE_BYTES: 1000000
+      KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  kafka3:
+    image: wurstmeister/kafka
+    ports:
+      - "9094:9092"
+    links:
+      - zookeeper:zk
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zk
+      KAFKA_BROKER_ID: 3
+      KAFKA_MESSAGE_MAX_BYTES: 1000000
+      KAFKA_FETCH_MESSAGE_MAX_BYTES: 1048576
+      KAFKA_MEX_MESSAGE_BYTES: 1000000
+      KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  tools:
+    image: confluent/tools
+    depends_on:
+      - zookeeper
+      - kafka1
+      - kafka2
+      - kafka3
+endef
+
+docker-compose.yml: ## Create docker-compose.yml
+	$(call render_template,docker_compose_yml_v1,docker-compose.yml)
+
+docker-start: ## Start docker
+	$(verbose) docker-compose up -d
+	$(verbose) sleep 1
+	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 1 --partitions 1 --topic testone
+	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 2 --partitions 2 --topic testtwo
+	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 3 --partitions 3 --topic testthree
+
+docker-stop: ## Stop docker
+	$(verbose) docker-compose kill
+	$(verbose) docker-compose rm --all -vf
 

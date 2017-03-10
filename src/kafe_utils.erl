@@ -2,13 +2,29 @@
 -module(kafe_utils).
 
 -export([
-         broker_id/2,
-         broker_name/2
+         broker_id/2
+         , broker_name/2
+         , timestamp/0
+         , gen_server_call/2
         ]).
 
 broker_id(Host, Port) ->
-  eutils:to_atom(eutils:to_string(Host) ++ ":" ++ eutils:to_string(Port)).
+  bucs:to_atom(bucs:to_string(Host) ++ ":" ++ bucs:to_string(Port)).
 
 broker_name(Host, Port) ->
-  eutils:to_string(Host) ++ ":" ++ eutils:to_string(Port).
+  Host1 = if
+            is_tuple(Host) ->
+              bucinet:ip_to_string(Host);
+            true ->
+              bucs:to_string(Host)
+          end,
+  string:join([bucs:to_string(Host1), bucs:to_string(Port)], ":").
+
+timestamp() ->
+  {Mega, Sec, Micro} = erlang:timestamp(),
+  (Mega * 1000000 + Sec) * 1000000 + Micro.
+
+% Because meck can't mock gen_server:call/2
+gen_server_call(ServerRef, Request) ->
+  gen_server:call(ServerRef, Request).
 

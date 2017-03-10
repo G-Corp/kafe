@@ -2,11 +2,12 @@
 -module(kafe_protocol_consumer_offset_fetch).
 
 -include("../include/kafe.hrl").
+-define(MAX_VERSION, 1).
 
 -export([
          run/2,
          request/3,
-         response/1
+         response/2
         ]).
 
 run(ConsumerGroup, Options) ->
@@ -14,43 +15,74 @@ run(ConsumerGroup, Options) ->
                Options =:= [] -> maps:keys(kafe:topics());
                true -> Options
              end,
-  {ok, #{coordinator_host := BrokerName}} = kafe:consumer_metadata(ConsumerGroup),
-  gen_server:call(kafe:broker_by_name(BrokerName),
-                  {call, 
-                   fun ?MODULE:request/3, [ConsumerGroup, Options1],
-                   fun ?MODULE:response/1},
-                  infinity).
+  kafe_protocol:run(
+    ?OFFSET_FETCH_REQUEST,
+    ?MAX_VERSION,
+    {fun ?MODULE:request/3, [ConsumerGroup, Options1]},
+    fun ?MODULE:response/2,
+    #{broker => {coordinator, ConsumerGroup}}).
 
+% OffsetFetch Request (Version: 0) => group_id [topics]
+%   group_id => STRING
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition
+%       partition => INT32
+%
+% OffsetFetch Request (Version: 1) => group_id [topics]
+%   group_id => STRING
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition
+%       partition => INT32
 request(ConsumerGroup, Options, State) ->
   kafe_protocol:request(
-    ?OFFSET_FETCH_REQUEST, 
     <<(kafe_protocol:encode_string(ConsumerGroup))/binary, (topics(Options))/binary>>,
     State).
 
-response(<<NumberOfTopics:32/signed, Remainder/binary>>) ->
-  {ok, response(NumberOfTopics, Remainder)}.
+% OffsetFetch Response (Version: 0) => [responses]
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition offset metadata error_code
+%       partition => INT32
+%       offset => INT64
+%       metadata => NULLABLE_STRING
+%       error_code => INT16
+%
+% OffsetFetch Response (Version: 1) => [responses]
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition offset metadata error_code
+%       partition => INT32
+%       offset => INT64
+%       metadata => NULLABLE_STRING
+%       error_code => INT16
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, _State) ->
+  {ok, response2(NumberOfTopics, Remainder)}.
 
 % Private
 
 topics(Options) ->
-  topics(Options, <<(length(Options)):32/signed>>).
+  topics(Options, []).
 
-topics([], Result) -> Result;
-topics([{TopicName, Partitions}|Rest], Result) ->
+topics([], Acc) ->
+  kafe_protocol:encode_array(lists:reverse(Acc));
+topics([{TopicName, Partitions}|Rest], Acc) when is_list(Partitions) ->
   topics(Rest,
-         <<
-           Result/binary,
-           (kafe_protocol:encode_string(TopicName))/binary,
-           (kafe_protocol:encode_array(
-              [<<Partition:32/signed>> || Partition <- Partitions]
-             ))/binary
-         >>);
-topics([TopicName|Rest], Result) ->
-  topics([{TopicName, maps:keys(maps:get(TopicName, kafe:topics(), #{}))}|Rest], Result).
+         [<<
+            (kafe_protocol:encode_string(TopicName))/binary,
+            (kafe_protocol:encode_array(
+               [<<Partition:32/signed>> || Partition <- Partitions]
+              ))/binary
+          >> | Acc]);
+topics([{TopicName, Partition}|Rest], Acc) when is_integer(Partition) ->
+  topics([{TopicName, [Partition]}|Rest], Acc);
+topics([TopicName|Rest], Acc) ->
+  topics([{TopicName, maps:keys(maps:get(TopicName, kafe:topics(), #{}))}|Rest], Acc).
 
-response(0, <<>>) ->
+response2(0, <<>>) ->
   [];
-response(N, 
+response2(N,
          <<
            TopicNameLength:16/signed,
            TopicName:TopicNameLength/bytes,
@@ -58,7 +90,7 @@ response(N,
            PartitionsRemainder/binary
          >>) ->
   {PartitionsOffset, Remainder} = partitions_offset(NumberOfPartitions, PartitionsRemainder, []),
-  [#{name => TopicName, partitions_offset => PartitionsOffset} | response(N - 1, Remainder)].
+  [#{name => TopicName, partitions_offset => PartitionsOffset} | response2(N - 1, Remainder)].
 
 partitions_offset(0, Remainder, Acc) ->
   {Acc, Remainder};
@@ -74,8 +106,8 @@ partitions_offset(N,
                   Acc) ->
   partitions_offset(N - 1,
                     Remainder,
-                    [#{partition => Partition, 
-                       offset => Offset, 
-                       metadata => Metadata, 
+                    [#{partition => Partition,
+                       offset => Offset,
+                       metadata => Metadata,
                        error_code => kafe_error:code(ErrorCode)} | Acc]).
 
