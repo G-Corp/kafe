@@ -9,7 +9,7 @@
 [![Hex.pm version](https://img.shields.io/hexpm/v/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![Hex.pm downloads](https://img.shields.io/hexpm/dt/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![License](https://img.shields.io/hexpm/l/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
-[![Build Status](https://travis-ci.org/botsunit/kafe.svg?branch=master)](https://travis-ci.org/botsunit/kafe)
+[![Build Status](https://travis-ci.org/G-Corp/kafe.svg?branch=master)](https://travis-ci.org/G-Corp/kafe)
 
 
 <b>Version 2.0.0 cause changes in the following APIs :</b>
@@ -248,7 +248,7 @@ You can add a prefix to all metrics by adding a <tt>metrics_prefix</tt> in the <
 
 <h3>Build and tests</h3>
 
-<b>Kafe</b> use <a href="http://www.rebar3.org">rebar3</a> and <a href="https://github.com/botsunit/bu.mk">bu.mk</a>. So, you can use :
+<b>Kafe</b> use <a href="http://www.rebar3.org">rebar3</a> and <a href="https://github.com/G-Corp/bu.mk">bu.mk</a>. So, you can use :
 
 <ul>
 <li><tt>./rebar3 compile</tt> to compile Kafe.</li>
@@ -298,7 +298,7 @@ See <a href=".">documentation</a>
 <h3>Contributing</h3>
 
 <ol>
-  <li>Fork it ( https://github.com/botsunit/kafe/fork )</li>
+  <li>Fork it ( https://github.com/G-Corp/kafe/fork )</li>
   <li>Create your feature branch (<tt>git checkout -b my-new-feature</tt>)</li>
   <li>Commit your changes (<tt>git commit -am 'Add some feature'</tt>)</li>
   <li>Push to the branch (<tt>git push origin my-new-feature</tt>)</li>

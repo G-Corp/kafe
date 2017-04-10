@@ -11,7 +11,7 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 [![Hex.pm version](https://img.shields.io/hexpm/v/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![Hex.pm downloads](https://img.shields.io/hexpm/dt/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![License](https://img.shields.io/hexpm/l/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
-[![Build Status](https://travis-ci.org/botsunit/kafe.svg?branch=master)](https://travis-ci.org/botsunit/kafe)
+[![Build Status](https://travis-ci.org/G-Corp/kafe.svg?branch=master)](https://travis-ci.org/G-Corp/kafe)
 
 __Version 2.0.0 cause changes in the following APIs :__
 
@@ -287,7 +287,7 @@ You can add a prefix to all metrics by adding a `metrics_prefix` in the `metrics
 
 ### Build and tests ###
 
-__Kafe__ use [rebar3](http://www.rebar3.org) and [bu.mk](https://github.com/botsunit/bu.mk). So, you can use :
+__Kafe__ use [rebar3](http://www.rebar3.org) and [bu.mk](https://github.com/G-Corp/bu.mk). So, you can use :
 
 * `./rebar3 compile` to compile Kafe.
 
@@ -357,7 +357,7 @@ See [documentation](.)
 
 
 ### Contributing ###
-1. Fork it ( https://github.com/botsunit/kafe/fork )
+1. Fork it ( https://github.com/G-Corp/kafe/fork )
 1. Create your feature branch (`git checkout -b my-new-feature`)
 1. Commit your changes (`git commit -am 'Add some feature'`)
 1. Push to the branch (`git push origin my-new-feature`)
