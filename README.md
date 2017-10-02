@@ -15,14 +15,14 @@ __Authors:__ Gregoire Lejeune ([`gregoire.lejeune@finexkap.com`](mailto:gregoire
 
 __Version 2.0.0 cause changes in the following APIs :__
 
-* [`kafe:start_consumer/3`](https://github.com/G-Corp/kafe/blob/gen_statem/doc/kafe.md#start_consumer-3)
+* [`kafe:start_consumer/3`](https://github.com/G-Corp/kafe/blob/optional_metrics/doc/kafe.md#start_consumer-3)
 
-* [`kafe:fetch/3`](https://github.com/G-Corp/kafe/blob/gen_statem/doc/kafe.md#fetch-3)
+* [`kafe:fetch/3`](https://github.com/G-Corp/kafe/blob/optional_metrics/doc/kafe.md#fetch-3)
 
 
 __Kafe__ has been tested with Kafka 0.9 and 0.10
 
-You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/G-Corp/kafe/blob/gen_statem/doc/kafe_consumer.md) is not compatible with this version.
+You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/G-Corp/kafe/blob/optional_metrics/doc/kafe_consumer.md) is not compatible with this version.
 
 
 ### Links ###
@@ -128,10 +128,10 @@ kafe:start_consumer(my_group, fun my_consumer:consume/6, Options),
 
 ```
 
-See [`kafe:start_consumer/3`](https://github.com/G-Corp/kafe/blob/gen_statem/doc/kafe.md#start_consumer-3) for the available `Options`.
+See [`kafe:start_consumer/3`](https://github.com/G-Corp/kafe/blob/optional_metrics/doc/kafe.md#start_consumer-3) for the available `Options`.
 
 In the `consume` function, if you didn't start the consumer in autocommit mode (using `before_processing | after_processing` in the `commit` options),
-you need to commit manually when you have finished to treat the message. To do so, use [`kafe_consumer:commit/4`](https://github.com/G-Corp/kafe/blob/gen_statem/doc/kafe_consumer.md#commit-4).
+you need to commit manually when you have finished to treat the message. To do so, use [`kafe_consumer:commit/4`](https://github.com/G-Corp/kafe/blob/optional_metrics/doc/kafe_consumer.md#commit-4).
 
 When you are done with your consumer, stop it :
 
@@ -182,7 +182,7 @@ kafe:start_consumer(my_group, my_consumer, Options).
 
 ```
 
-To commit a message (if you need to), use [`kafe_consumer:commit/4`](https://github.com/G-Corp/kafe/blob/gen_statem/doc/kafe_consumer.md#commit-4).
+To commit a message (if you need to), use [`kafe_consumer:commit/4`](https://github.com/G-Corp/kafe/blob/optional_metrics/doc/kafe_consumer.md#commit-4).
 
 
 ### Using with Elixir ###
@@ -236,7 +236,23 @@ Kafe.stop_consumer(:my_group)
 
 ### Metrics ###
 
-You can enable metrics by adding a metrics module in your configuration :
+To enable metrics :
+
+1/ Add [metrics > 2.2](https://hex.pm/packages/metrics) in your dependencies.
+
+2/ Set `enable_metrics` to true in the `kafe` configuration :
+
+```
+
+{kafe, [
+  ...
+  {enable_metrics, true},
+  ...
+]}
+
+```
+
+3/ Adding a metrics module in your configuration :
 
 ```
 
@@ -248,11 +264,12 @@ You can enable metrics by adding a metrics module in your configuration :
 
 You can choose between [Folsom](https://github.com/folsom-project/folsom) (`{metrics_mod, metrics_folsom}`), [Exometer](https://github.com/Feuerlabs/exometer) (`{metrics_mod, metrics_exometer}`) or [Grapherl](https://github.com/processone/grapherl) (`{metrics_mod, metrics_grapherl}`).
 
-Be sure that's Folsom, Exometer or Grapherl is started before starting Kafe.
+Be sure that's Folsom, Exometer or Grapherl and metrics is started before starting Kafe.
 
 ```
 
 application:ensure_all_started(folsom).
+application:ensure_all_started(metrics).
 application:ensure_all_started(kafe).
 
 ```
@@ -353,7 +370,7 @@ You can use the makefile rules `docker-compose.yml` and `docker-start` to help y
 
 ### API Documentation ###
 
-See [documentation](https://github.com/G-Corp/kafe/blob/gen_statem/doc/.)
+See [documentation](https://github.com/G-Corp/kafe/blob/optional_metrics/doc/.)
 
 
 ### Contributing ###
@@ -388,7 +405,7 @@ THIS SOFTWARE IS PROVIDED BY THE AUTHOR `AS IS` AND ANY EXPRESS OR IMPLIED WARRA
 
 
 <table width="100%" border="0" summary="list of modules">
-<tr><td><a href="https://github.com/G-Corp/kafe/blob/gen_statem/doc/kafe.md" class="module">kafe</a></td></tr>
-<tr><td><a href="https://github.com/G-Corp/kafe/blob/gen_statem/doc/kafe_consumer.md" class="module">kafe_consumer</a></td></tr>
-<tr><td><a href="https://github.com/G-Corp/kafe/blob/gen_statem/doc/kafe_consumer_subscriber.md" class="module">kafe_consumer_subscriber</a></td></tr></table>
+<tr><td><a href="https://github.com/G-Corp/kafe/blob/optional_metrics/doc/kafe.md" class="module">kafe</a></td></tr>
+<tr><td><a href="https://github.com/G-Corp/kafe/blob/optional_metrics/doc/kafe_consumer.md" class="module">kafe_consumer</a></td></tr>
+<tr><td><a href="https://github.com/G-Corp/kafe/blob/optional_metrics/doc/kafe_consumer_subscriber.md" class="module">kafe_consumer_subscriber</a></td></tr></table>
 

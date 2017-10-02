@@ -236,7 +236,23 @@ Kafe.stop_consumer(:my_group)
 
 ### Metrics ###
 
-You can enable metrics by adding a metrics module in your configuration :
+To enable metrics :
+
+1/ Add [metrics > 2.2](https://hex.pm/packages/metrics) in your dependencies.
+
+2/ Set `enable_metrics` to true in the `kafe` configuration :
+
+```
+
+{kafe, [
+  ...
+  {enable_metrics, true},
+  ...
+]}
+
+```
+
+3/ Adding a metrics module in your configuration :
 
 ```
 
@@ -248,11 +264,12 @@ You can enable metrics by adding a metrics module in your configuration :
 
 You can choose between [Folsom](https://github.com/folsom-project/folsom) (`{metrics_mod, metrics_folsom}`), [Exometer](https://github.com/Feuerlabs/exometer) (`{metrics_mod, metrics_exometer}`) or [Grapherl](https://github.com/processone/grapherl) (`{metrics_mod, metrics_grapherl}`).
 
-Be sure that's Folsom, Exometer or Grapherl is started before starting Kafe.
+Be sure that's Folsom, Exometer or Grapherl and metrics is started before starting Kafe.
 
 ```
 
 application:ensure_all_started(folsom).
+application:ensure_all_started(metrics).
 application:ensure_all_started(kafe).
 
 ```

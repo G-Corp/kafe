@@ -4,7 +4,7 @@ defmodule Kafe.Mixfile do
   def project do
     [
       app: :kafe,
-      version: "2.2.2",
+      version: "3.0.0",
       elixir: "~> 1.2",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
@@ -15,7 +15,7 @@ defmodule Kafe.Mixfile do
 
   def application do
     [
-       applications: [:syntax_tools, :compiler, :poolgirl, :goldrush, :lager, :bucs, :doteki, :metrics],
+       applications: [:syntax_tools, :compiler, :poolgirl, :goldrush, :lager, :bucs, :doteki],
        env: [],
        mod: {:kafe_app, []}
     ]
@@ -27,8 +27,7 @@ defmodule Kafe.Mixfile do
       {:bucs, "~> 1.0.12"},
       {:doteki, "~> 1.0.6"},
       {:poolgirl, "~> 1.1.3"},
-      {:bristow, "~> 0.2.2"},
-      {:metrics, "~> 2.4.0"}
+      {:bristow, "~> 0.2.2"}
     ]
   end
 
