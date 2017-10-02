@@ -3,5 +3,4 @@
  {<<"doteki">>,{pkg,<<"doteki">>,<<"1.0.6">>},0},
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.9">>},1},
  {<<"lager">>,{pkg,<<"lager">>,<<"3.5.1">>},0},
- {<<"metrics">>,{pkg,<<"metrics">>,<<"2.4.0">>},0},
  {<<"poolgirl">>,{pkg,<<"poolgirl">>,<<"1.1.3">>},0}].

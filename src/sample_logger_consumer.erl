@@ -1,3 +1,4 @@
+% @hidden
 -module(sample_logger_consumer).
 -behaviour(kafe_consumer_subscriber).
 -compile([{parse_transform, lager_transform}]).
