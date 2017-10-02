@@ -229,7 +229,13 @@ partitions(Topic) ->
 max_offset(TopicName) ->
   case offset([TopicName]) of
     {ok, [#{partitions := Partitions}]} ->
-      lists:foldl(fun(#{id := P, offsets := [O|_]}, {_, Offset} = Acc) ->
+      lists:foldl(fun
+                    (#{id := P, offsets := [O|_]}, {_, Offset} = Acc) ->
+                      if
+                        O > Offset -> {P, O};
+                        true -> Acc
+                      end;
+                    (#{id := P, offset := O}, {_, Offset} = Acc) ->
                       if
                         O > Offset -> {P, O};
                         true -> Acc

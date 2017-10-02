@@ -65,6 +65,13 @@ endef
 
 # Template
 
+# define internet
+#   echo -e "GET http://google.com HTTP/1.0\n\n" | nc google.com 80 > /dev/null 2>&1
+#   echo $?
+# endef
+# 
+# INTERNET=$(shell $(call internet))
+
 define render_template
   $(verbose) printf -- '$(subst $(newline),\n,$(subst %,%%,$(subst ','\'',$(subst $(tab),$(WS),$(call $(1))))))\n' > $(2)
 endef
@@ -168,8 +175,14 @@ xref:
 XREF=xref
 endif
 
-compile-erl:
+update-packages-registry: ## Updage packages registry
 	$(verbose) $(REBAR) as $(REBAR_ENV) update
+
+ifdef NO_REGISTRY_UPDATE
+compile-erl:
+else
+compile-erl: update-packages-registry
+endif
 	$(verbose) $(REBAR) as $(REBAR_ENV) compile
 
 tests: ## Run tests
@@ -182,9 +195,9 @@ endif
 
 dist: $(DIST) ## Create a distribution
 
-clean: $(CLEAN) ## Clean
+clean:: $(CLEAN) ## Clean
 
-distclean: $(DISTCLEAN) ## Clean the distribution
+distclean:: $(DISTCLEAN) ## Clean the distribution
 
 dev: compile-erl
 ifdef ERL_CONFIG
@@ -221,7 +234,7 @@ local.rebar: ## Install rebar for Mix
 
 # Update
 
-BU_MK_REPO ?= https://github.com/botsunit/bu.mk
+BU_MK_REPO ?= https://github.com/G-Corp/bu.mk
 BU_MK_COMMIT ?=
 BU_MK_BUILD_DIR ?= .bu.mk.build
 

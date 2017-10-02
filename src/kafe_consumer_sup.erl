@@ -1,6 +1,7 @@
 % @hidden
 -module(kafe_consumer_sup).
 -behaviour(supervisor).
+-compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
 
@@ -13,6 +14,7 @@
 -export([init/1]).
 
 start_link() ->
+  lager:debug("kafe_consumer_sup started"),
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 start_child(GroupID, Options) ->

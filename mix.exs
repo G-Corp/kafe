@@ -23,12 +23,12 @@ defmodule Kafe.Mixfile do
 
   defp deps do
     [
-      {:lager, "~> 3.2.0"},
-      {:bucs, "~> 1.0.6"},
-      {:doteki, "~> 1.0.5"},
-      {:poolgirl, "~> 1.1.2"},
+      {:lager, "~> 3.5.1"},
+      {:bucs, "~> 1.0.12"},
+      {:doteki, "~> 1.0.6"},
+      {:poolgirl, "~> 1.1.3"},
       {:bristow, "~> 0.2.2"},
-      {:metrics, "~> 2.2.0"}    
+      {:metrics, "~> 2.4.0"}
     ]
   end
 
@@ -58,10 +58,18 @@ defmodule Kafe.Mixfile do
     for command <- commands, do: (fn
       ({regex, cmd}) ->
          if Regex.match?(Regex.compile!(regex), Atom.to_string(os)) do
-           Mix.Shell.cmd cmd, [], fn(x) -> Mix.Shell.IO.info(String.strip(x)) end
+           Mix.Shell.cmd cmd, [], fn(x) -> Mix.Shell.IO.info(trim(x)) end
          end
       (cmd) ->
-        Mix.Shell.cmd cmd, [], fn(x) -> Mix.Shell.IO.info(String.strip(x)) end
+        Mix.Shell.cmd cmd, [], fn(x) -> Mix.Shell.IO.info(trim(x)) end
       end).(command)
-  end    
+  end
+
+  defp trim(x) do
+    if Version.compare(System.version, "1.5.0") == :lt do
+      String.strip(x)
+    else
+      String.trim(x)
+    end
+  end
 end
