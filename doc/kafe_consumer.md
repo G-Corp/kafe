@@ -108,7 +108,7 @@ __Internal :__
 
                                                                           +--> kafe_consumer_srv +-----------------+
                   +--> kafe_consumer_sup +------so4o---> kafe_consumer +--+                                        |
-                  |                                                       +--> kafe_consumer_fsm                   |
+                  |                                                       +--> kafe_consumer_statem                |
                   +--> kafe_consumer_group_sup +--+                                                                m
  kafe_sup +--o4o--+                               |                                                                o
                   +--> kafe_rr                    s                                                                n

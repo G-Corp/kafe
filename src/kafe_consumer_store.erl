@@ -2,7 +2,7 @@
 % The store contain, for each consumer group :
 % - sup_pid : the supervisor (kafe_consumer) PID
 % - server_pid : the kafe_consumer_srv PID
-% - fsm_pid : the kafe_consumer_fsm PID
+% - statem_pid : the kafe_consumer_statem PID
 % - member_id : the kafka member ID
 % - generation_id : the Kafka generation ID
 % - can_fetch : boolean

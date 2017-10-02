@@ -1,7 +1,7 @@
 % @hidden
 -module(kafe_brokers).
 -compile([{parse_transform, lager_transform}]).
--behaviour(gen_fsm).
+-behaviour(gen_statem).
 -include("../include/kafe.hrl").
 -include_lib("kernel/include/inet.hrl").
 
@@ -26,11 +26,8 @@
 
 -export([
          init/1,
-         retrieve/2,
+         callback_mode/0,
          retrieve/3,
-         handle_event/3,
-         handle_sync_event/4,
-         handle_info/3,
          terminate/3,
          code_change/4
         ]).
@@ -46,7 +43,7 @@
 
 % @hidden
 start_link() ->
-  gen_fsm:start_link({local, ?SERVER}, ?MODULE, [], []).
+  gen_statem:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 % @equiv first_broker(true)
 -spec first_broker() -> pid() | undefined.
@@ -66,7 +63,7 @@ first_broker(Retrieve) when is_boolean(Retrieve) ->
     {error, Reason} ->
       if
         Retrieve ->
-          gen_fsm:sync_send_event(?SERVER, retrieve),
+          gen_statem:call(?SERVER, retrieve),
           first_broker(false);
         true ->
           lager:error("Get broker failed: ~p", [Reason]),
@@ -170,7 +167,7 @@ partitions(Topic) ->
 % @end
 -spec update() -> ok.
 update() ->
-  gen_fsm:sync_send_event(?SERVER, retrieve).
+  gen_statem:call(?SERVER, retrieve).
 
 % @doc
 % Return the list of availables brokers
@@ -225,6 +222,7 @@ api_version(ApiKey, Versions) when is_list(Versions) ->
 
 % @hidden
 init(_) ->
+  lager:debug("Start ~p", [?MODULE]),
   ets:new(?ETS_TABLE, [public, named_table]),
   ets:insert(?ETS_TABLE, [{api_version, doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION)}]),
   Timeout = doteki:get_env(
@@ -247,28 +245,21 @@ init(_) ->
   {ok, retrieve, State, Timeout}.
 
 % @hidden
-retrieve(timeout, #state{brokers_update_frequency = Timeout} = State) ->
-  retrieve_brokers(State),
-  {next_state, retrieve, State, Timeout}.
+callback_mode() ->
+    state_functions.
 
 % @hidden
-retrieve(retrieve, _From, #state{brokers_update_frequency = Timeout} = State) ->
+retrieve(timeout, Timeout, #state{brokers_update_frequency = Timeout} = State) ->
+  lager:debug("Try to retrieve brokers after timeout"),
+  retrieve_brokers(State),
+  {next_state, retrieve, State, Timeout};
+retrieve({call, From}, retrieve, #state{brokers_update_frequency = Timeout} = State) ->
+  lager:debug("~p ask to retrieve brokers after timeout", [From]),
   retrieve_brokers(State),
   {reply, ok, retrieve, State, Timeout};
-retrieve(_, _From, #state{brokers_update_frequency = Timeout} = State) ->
+retrieve({call, From}, Event, #state{brokers_update_frequency = Timeout} = State) ->
+  lager:debug("~p ask for ~p after timeout: invalid event", [From, Event]),
   {reply, {error, invalid_demand}, retrieve, State, Timeout}.
-
-% @hidden
-handle_event(_Event, StateName, State) ->
-  {next_state, StateName, State}.
-
-% @hidden
-handle_sync_event(_Event, _From, StateName, State) ->
-  {reply, ok, StateName, State}.
-
-% @hidden
-handle_info(_Info, StateName, State) ->
-  {next_state, StateName, State}.
 
 % @hidden
 terminate(_Reason, _StateName, _State) ->
@@ -431,16 +422,23 @@ update_state_with_metadata(PoolSize, ChunkPoolSize) ->
 
 remove_unlisted_brokers(NewBrokersList) ->
   Brokers = ets_get(?ETS_TABLE, brokers, #{}),
-  NewBrokers = [{BrokerName, maps:get(BrokerName, Brokers)} || BrokerName <- NewBrokersList],
+  NewBrokers = lists:foldr(fun(BrokerName, Acc) ->
+                               case maps:get(BrokerName, Brokers, undefined) of
+                                 undefined -> Acc;
+                                 Broker -> maps:put(BrokerName, Broker, Acc)
+                               end
+                           end, #{}, NewBrokersList),
+  lager:debug("old brokers = ~p, new brokers = ~p", [Brokers, NewBrokers]),
   [begin
-     case lists:keyfind(BrokerID, 2, NewBrokers) of
+     case lists:member(BrokerID, maps:values(NewBrokers)) of
        false ->
+         lager:debug("remove broker ~p", [BrokerID]),
          poolgirl:remove_pool(BrokerID);
        _ ->
          ok
      end
    end || BrokerID <- lists:usort(maps:values(Brokers))],
-  ets:insert(?ETS_TABLE, [{brokers, maps:from_list(NewBrokers)},
+  ets:insert(?ETS_TABLE, [{brokers, NewBrokers},
                           {brokers_list, NewBrokersList}]).
 
 update_topics(Topics, Brokers1) ->
