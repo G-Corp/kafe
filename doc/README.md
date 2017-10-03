@@ -199,7 +199,8 @@ defmodule My.Consumer do
 end
 
 defmodule My.Consumer.Subscriber do
-  behaviour Kafe.Consumer.Subscriber
+  @behaviour Kafe.Consumer.Subscriber
+  require Kafe.Records
 
   def init(group, topic, partition, args) do
     % Do something with group/topic/partition/args
@@ -208,9 +209,8 @@ defmodule My.Consumer.Subscriber do
   end
 
   def handle_message(message, state) do
-    % Do something with message (record Kafe.Records.message or
-    % function Kafe.Consumer.Subscriber.message/2)
-    % and update (or not)the state
+    msg = Kafe.Records.message(message)
+    % Do something with msg and update (or not) the state
     {:ok, new_state}
   end
 end
