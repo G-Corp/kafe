@@ -11,85 +11,55 @@ integ: ## Run integration tests
 
 tests-all: tests integ
 
-KAFKA_ADVERTISED_HOST_NAME = $(shell ip addr list docker0 |grep "inet " |cut -d' ' -f6|cut -d/ -f1)
+check-etchosts:
+	@grep kafka1 /etc/hosts >/dev/null || \
+	printf 'Please add the following line to your /etc/hosts:\n\
+	  127.0.0.1 kafka1 kafka2 kafka3\n\
+	'
+
+define one_kafka
+  kafka$(1):
+    image: confluentinc/cp-kafka:3.3.0-1
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: $(1)
+      KAFKA_ADVERTISED_LISTENERS: plaintext://kafka$(1):919$(1)
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper
+      KAFKA_MESSAGE_MAX_BYTES: 1000000
+    ports:
+      - "919$(1):919$(1)"
+
+endef
 
 define docker_compose_yml_v1
 version: "2"
 
 services:
   zookeeper:
-    image: dockerkafka/zookeeper
-    ports:
-      - "2181:2181"
-
-  kafka1:
-    image: wurstmeister/kafka
-    ports:
-      - "9092:9092"
-    links:
-      - zookeeper:zk
+    image: confluentinc/cp-zookeeper:3.3.0-1
     environment:
-      KAFKA_ZOOKEEPER_CONNECT: zk
-      KAFKA_BROKER_ID: 1
-      KAFKA_MESSAGE_MAX_BYTES: 1000000
-      KAFKA_FETCH_MESSAGE_MAX_BYTES: 1048576
-      KAFKA_MEX_MESSAGE_BYTES: 1000000
-      KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      ZOOKEEPER_CLIENT_PORT: 2181
 
-  kafka2:
-    image: wurstmeister/kafka
-    ports:
-      - "9093:9092"
-    links:
-      - zookeeper:zk
-    environment:
-      KAFKA_ZOOKEEPER_CONNECT: zk
-      KAFKA_BROKER_ID: 2
-      KAFKA_MESSAGE_MAX_BYTES: 1000000
-      KAFKA_FETCH_MESSAGE_MAX_BYTES: 1048576
-      KAFKA_MEX_MESSAGE_BYTES: 1000000
-      KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-
-  kafka3:
-    image: wurstmeister/kafka
-    ports:
-      - "9094:9092"
-    links:
-      - zookeeper:zk
-    environment:
-      KAFKA_ZOOKEEPER_CONNECT: zk
-      KAFKA_BROKER_ID: 3
-      KAFKA_MESSAGE_MAX_BYTES: 1000000
-      KAFKA_FETCH_MESSAGE_MAX_BYTES: 1048576
-      KAFKA_MEX_MESSAGE_BYTES: 1000000
-      KAFKA_ADVERTISED_HOST_NAME: $(KAFKA_ADVERTISED_HOST_NAME)
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-
-  tools:
-    image: confluent/tools
-    depends_on:
-      - zookeeper
-      - kafka1
-      - kafka2
-      - kafka3
+$(call one_kafka,1)
+$(call one_kafka,2)
+$(call one_kafka,3)
 endef
 
-docker-compose.yml: ## Create docker-compose.yml
+docker-compose.yml: Makefile ## Create docker-compose.yml
 	$(call render_template,docker_compose_yml_v1,docker-compose.yml)
 
-docker-start: ## Start docker
+define topic_commands
+  kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 1 --partitions 1 --topic testone
+  kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 2 --partitions 2 --topic testtwo
+  kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 3 --partitions 3 --topic testthree
+endef
+
+docker-start: docker-compose.yml docker-stop check-etchosts ## (Re)Start docker
 	$(verbose) docker-compose up -d
-	$(verbose) sleep 1
-	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 1 --partitions 1 --topic testone
-	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 2 --partitions 2 --topic testtwo
-	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 3 --partitions 3 --topic testthree
+	$(verbose) sleep 5 # give cluster time to startup
+	$(verbose) docker-compose exec kafka1 bash -ec '$(subst $(newline),&&,$(topic_commands))'
 
-docker-stop: ## Stop docker
+docker-stop: docker-compose.yml ## Stop docker
 	$(verbose) docker-compose kill
-	$(verbose) docker-compose rm --all -vf
-
+	$(verbose) docker-compose rm -svf

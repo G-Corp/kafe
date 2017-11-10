@@ -20,6 +20,6 @@ script:
   - mix local.rebar --force
   - mix local.hex --force
   - make dist
-  - make docker-compose.yml
+  - echo 127.0.0.1 kafka1 kafka2 kafka3 | sudo tee -a /etc/hosts
   - make docker-start
   - make integ
