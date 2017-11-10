@@ -78,17 +78,21 @@ services:
       - kafka3
 endef
 
-docker-compose.yml: ## Create docker-compose.yml
+docker-compose.yml: Makefile ## Create docker-compose.yml
 	$(call render_template,docker_compose_yml_v1,docker-compose.yml)
 
-docker-start: ## Start docker
+define topic_commands
+  kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 1 --partitions 1 --topic testone
+  kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 2 --partitions 2 --topic testtwo
+  kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 3 --partitions 3 --topic testthree
+endef
+
+docker-start: docker-compose.yml docker-stop ## (Re)Start docker
 	$(verbose) docker-compose up -d
 	$(verbose) sleep 1
-	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 1 --partitions 1 --topic testone
-	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 2 --partitions 2 --topic testtwo
-	$(verbose) docker-compose run --rm tools kafka-topics --create --zookeeper zookeeper:2181 --replication-factor 3 --partitions 3 --topic testthree
+	$(verbose) docker-compose run --rm tools sh -c '$(subst $(newline),;,$(topic_commands))'
 
-docker-stop: ## Stop docker
+docker-stop: docker-compose.yml ## Stop docker
 	$(verbose) docker-compose kill
-	$(verbose) docker-compose rm --all -vf
+	$(verbose) docker-compose rm -svf
 
