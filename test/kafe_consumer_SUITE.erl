@@ -24,6 +24,7 @@ init_per_suite(Config) ->
 
 end_per_suite(_Config) ->
   application:stop(kafe),
+  application:stop(poolgirl),
   ok.
 
 init_per_testcase(_Case, Config) ->
