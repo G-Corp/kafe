@@ -19,7 +19,9 @@ suite() ->
    [{timetrap, {seconds, 30}}].
 
 init_per_suite(Config) ->
-  application:ensure_all_started(kafe),
+  {ok, _} = application:ensure_all_started(lager),
+  kafe_test_cluster:up(),
+  {ok, _} = application:ensure_all_started(kafe),
   Config.
 
 end_per_suite(_Config) ->
