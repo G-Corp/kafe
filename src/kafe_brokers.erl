@@ -223,6 +223,7 @@ api_version(ApiKey, Versions) when is_list(Versions) ->
 % @hidden
 init(_) ->
   lager:debug("Start ~p", [?MODULE]),
+  process_flag(trap_exit, true),
   ets:new(?ETS_TABLE, [public, named_table]),
   ets:insert(?ETS_TABLE, [{api_version, doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION)}]),
   Timeout = doteki:get_env(
@@ -263,6 +264,7 @@ retrieve({call, From}, Event, #state{brokers_update_frequency = Timeout} = State
 
 % @hidden
 terminate(_Reason, _StateName, _State) ->
+  remove_all_pools(),
   ets:delete(?ETS_TABLE),
   ok.
 
@@ -368,6 +370,12 @@ get_host([Addr|Rest], Hostname, AddrType) ->
       end;
     _ -> get_host(Rest, Hostname, AddrType)
   end.
+
+remove_all_pools() ->
+  Brokers = ets_get(?ETS_TABLE, brokers, #{}),
+  lager:debug("Removing all pools: ~p", [Brokers]),
+  lists:foreach(fun poolgirl:remove_pool/1, maps:values(Brokers)).
+
 
 % Remove dead brokers
 remove_dead_brokers() ->
