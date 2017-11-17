@@ -13,7 +13,8 @@
         ]).
 
 -export([
-         t_brokers_going_up_and_down/1
+         t_brokers_going_up_and_down/1,
+         t_broker_going_down_while_consuming/1
         ]).
 
 suite() ->
@@ -47,19 +48,17 @@ start_kafe(Brokers) ->
   ok = application:set_env(kafe, brokers, Brokers),
   {ok, _} = application:ensure_all_started(kafe).
 
-wait_until(F, Timeout) ->
+wait_until(F, Code, Timeout) ->
   try
     F()
   catch
     _:_ when Timeout > 0 ->
+      lager:debug("Evaluation of '~s' failed, waiting before retrying...", [Code]),
       timer:sleep(1000),
-      wait_until(F, Timeout-1000)
+      wait_until(F, Code, Timeout-1000)
   end.
 
--define(RETRY(Expr),
-  begin
-    wait_until(fun () -> Expr end, 10000)
-  end).
+-define(RETRY(Expr), wait_until(fun () -> Expr end, ??Expr, 10000)).
 
 t_brokers_going_up_and_down(_Config) ->
   kafe_test_cluster:up(["kafka2", "kafka3"]),
@@ -74,3 +73,40 @@ t_brokers_going_up_and_down(_Config) ->
   ?RETRY(["kafka2:9192"] = kafe:brokers()),
   kafe_test_cluster:up(["kafka1"]),
   ?RETRY(["kafka1:9191", "kafka2:9192"] = kafe:brokers()).
+
+consume(GroupID, Topic, Partition, Offset, Key, Value) ->
+  lager:info("[~p] ~p/~p (~p): ~p ~p", [GroupID, Topic, Partition, Offset, Key, Value]),
+  ok.
+
+make_group_name() ->
+  {Meg, Sec, Mic} = erlang:timestamp(),
+  lists:flatten(io_lib:format("~6..0B_~6..0B_~6..0B", [Meg, Sec, Mic])).
+
+t_broker_going_down_while_consuming(_Config) ->
+  kafe_test_cluster:up(["kafka1"]),
+  kafe_test_cluster:down(["kafka2", "kafka3"]),
+  start_kafe([{"localhost", 9191}]),
+  ?RETRY(["kafka1:9191"] = kafe:brokers()),
+  Table = ets:new(consumer_state, [public]),
+  {ok, _Pid} = kafe:start_consumer(make_group_name(),
+                      fun consume/6,
+                      #{
+                       topics => [{<<"testone">>, [0]}],
+                       fetch_interval => 1000,
+                       on_start_fetching => fun (GroupId) ->
+                                              lager:info("start fetching ~p", [GroupId]),
+                                              ets:insert(Table, {fetching, true}),
+                                              ok
+                                            end,
+                       on_stop_fetching => fun (GroupId) ->
+                                              lager:info("stop fetching ~p", [GroupId]),
+                                              ets:insert(Table, {fetching, false}),
+                                              ok
+                                            end
+                      }),
+  ?RETRY(true = ets:lookup_element(Table, fetching, 2)),
+  kafe_test_cluster:down(["kafka1"]),
+  ?RETRY(false = ets:lookup_element(Table, fetching, 2)),
+  kafe_test_cluster:up(["kafka1"]),
+  ?RETRY(true = ets:lookup_element(Table, fetching, 2)),
+  ok.
