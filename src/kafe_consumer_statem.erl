@@ -39,7 +39,7 @@
          }).
 
 -define(MIN_TIMEOUT, 10).
--define(DEAD_TIMEOUT(_), ?MIN_TIMEOUT).
+-define(DEAD_TIMEOUT(_), 1000).
 -define(PREPARING_REBALANCE(_), ?MIN_TIMEOUT).
 -define(AWAITING_SYNC_TIMEOUT(_), ?MIN_TIMEOUT).
 -define(STABLE_TIMEOUT(State),
@@ -302,7 +302,7 @@ kafe_consumer_statem_init_default_test_() ->
                group_id = <<"group">>,
                member_id = <<>>,
                topics = [{<<"topic">>, [0, 1, 2]}],
-               session_timeout = 30000}, 10},
+               session_timeout = 30000}, 1000},
            init([<<"group">>, #{}]))
     end
    ]}.
@@ -332,7 +332,7 @@ kafe_consumer_statem_init_custom_test_() ->
                member_id = <<"member">>,
                topics = [{<<"test1">>, [0, 1, 2]},
                          {<<"test2">>, [0, 3]}],
-               session_timeout = 1000}, 10},
+               session_timeout = 1000}, 1000},
            init([<<"group">>, #{session_timeout => 1000,
                                 member_id => <<"member">>,
                                 topics => [<<"test1">>, {<<"test2">>, [0, 3]}]}]))
@@ -439,7 +439,7 @@ kafe_consumer_statem_dead_stable_join_group_unknown_member_id_test_() ->
                session_timeout = 100,
                members = [],
                protocol_group = undefined},
-            10},
+            1000},
            dead(timeout, 100, #state{group_id = <<"group">>,
                                      member_id = <<"member">>,
                                      topics = [{<<"topic">>, [0, 1, 2]}],
@@ -489,7 +489,7 @@ kafe_consumer_statem_dead_stable_join_group_kafka_error_test_() ->
                session_timeout = 100,
                members = [],
                protocol_group = undefined},
-            10},
+            1000},
            dead(timeout, 100, #state{group_id = <<"group">>,
                                      member_id = <<"member">>,
                                      topics = [{<<"topic">>, [0, 1, 2]}],
@@ -659,7 +659,7 @@ kafe_consumer_statem_dead_dead_test_() ->
                                 topic => <<"topic">>}],
                               version => 1}}],
                protocol_group = protocol_group},
-            10},
+            1000},
            dead(timeout, 100, #state{group_id = <<"group">>,
                                      member_id = <<"member">>,
                                      topics = [{<<"topic">>, [0, 1, 2]}],
@@ -988,7 +988,7 @@ kafe_consumer_statem_stable_kafka_error_test_() ->
                                       version => 1},
                                     member_id => <<"member">>}]},
         ?assertEqual(
-           {next_state, dead, State, 10},
+           {next_state, dead, State, 1000},
            stable(timeout, 100, State))
     end
    ]}.
