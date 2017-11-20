@@ -18,7 +18,8 @@
          t_single_broker/1,
          t_bootstrap_to_cluster/1,
          t_brokers_going_up_and_down/1,
-         t_broker_going_down_while_consuming/1
+         t_broker_going_down_while_consuming/1,
+         t_broker_not_yet_available_when_starting_consumer/1
         ]).
 
 suite() ->
@@ -119,4 +120,31 @@ t_broker_going_down_while_consuming(_Config) ->
   ?RETRY(false = ets:lookup_element(Table, fetching, 2)),
   kafe_test_cluster:up(["kafka1"]),
   ?RETRY(true = ets:lookup_element(Table, fetching, 2)),
+  ok.
+
+t_broker_not_yet_available_when_starting_consumer(_Config) ->
+  kafe_test_cluster:up(["kafka1"]),
+  kafe_test_cluster:down(["kafka2", "kafka3"]),
+  Table = ets:new(consumer_state, [public]),
+  ets:insert(Table, {fetching, false}),
+  start_kafe([{"localhost", 9191}]),
+  %?RETRY(["kafka1:9191"] = kafe:brokers()),
+  ExpectedValue = list_to_binary(make_group_name()),
+  ?RETRY({ok, _Pid} = kafe:start_consumer(make_group_name(),
+                      fun (_GroupID, _Topic, _Partition, _Offset, _Key, Value)->
+                          ets:insert(Table, {fetched, Value}),
+                          ok
+                      end,
+                      #{
+                       topics => [<<"testone">>],
+                       fetch_interval => 100,
+                       on_start_fetching => fun (GroupId) ->
+                                              lager:info("start fetching ~p", [GroupId]),
+                                              ets:insert(Table, {fetching, true}),
+                                              ok
+                                            end
+                      })),
+  ?RETRY({ok, _} = kafe:produce([{<<"testone">>, [{ExpectedValue, 0}]}])),
+  ?RETRY(true = ets:lookup_element(Table, fetching, 2)),
+  ?RETRY(ExpectedValue = ets:lookup_element(Table, fetched, 2)),
   ok.
