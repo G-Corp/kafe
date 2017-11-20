@@ -108,6 +108,7 @@ t_broker_going_down_while_consuming(_Config) ->
   start_kafe([{"localhost", 9191}]),
   ?RETRY(["kafka1:9191"] = kafe:brokers()),
   Table = ets:new(consumer_state, [public]),
+  ets:insert(Table, {fetching, false}),
   {ok, _Pid} = kafe:start_consumer(make_group_name(),
                       fun consume/6,
                       #{
