@@ -13,6 +13,9 @@
         ]).
 
 -export([
+         t_bootstrap_fail/1,
+         t_single_broker/1,
+         t_bootstrap_to_cluster/1,
          t_brokers_going_up_and_down/1,
          t_broker_going_down_while_consuming/1
         ]).
@@ -59,6 +62,23 @@ wait_until(F, Code, Timeout) ->
   end.
 
 -define(RETRY(Expr), wait_until(fun () -> Expr end, ??Expr, 10000)).
+
+t_bootstrap_fail(_Config) ->
+  kafe_test_cluster:up(["kafka2", "kafka3"]),
+  kafe_test_cluster:down(["kafka1"]),
+  start_kafe([{"localhost", 9191}]),
+  ?RETRY([] = kafe:brokers()).
+
+t_single_broker(_Config) ->
+  kafe_test_cluster:up(["kafka1"]),
+  kafe_test_cluster:down(["kafka2", "kafka3"]),
+  start_kafe([{"localhost", 9191}]),
+  ?RETRY(["kafka1:9191"] = kafe:brokers()).
+
+t_bootstrap_to_cluster(_Config) ->
+  kafe_test_cluster:up(["kafka1", "kafka2", "kafka3"]),
+  start_kafe([{"localhost", 9191}]),
+  ?RETRY(["kafka1:9191", "kafka2:9192", "kafka3:9193"] = kafe:brokers()).
 
 t_brokers_going_up_and_down(_Config) ->
   kafe_test_cluster:up(["kafka2", "kafka3"]),
