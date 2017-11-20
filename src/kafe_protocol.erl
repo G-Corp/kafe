@@ -72,23 +72,6 @@ do_run(first_broker, Request) ->
     BrokerPID ->
       do_run(BrokerPID, Request)
   end;
-do_run(BrokerPID, Request) when is_pid(BrokerPID) ->
-  case erlang:is_process_alive(BrokerPID) of
-    true ->
-      try
-        Response = gen_server:call(BrokerPID, Request, ?TIMEOUT),
-        _ = kafe_brokers:release_broker(BrokerPID),
-        Response
-      catch
-        Type:Error ->
-          _ = kafe_brokers:release_broker(BrokerPID),
-          lager:error("Request error: ~p:~p", [Type, Error]),
-          {error, Error}
-      end;
-    false ->
-      _ = kafe_brokers:release_broker(BrokerPID),
-      {error, broker_not_available}
-  end;
 do_run(BrokerName, Request) when is_list(BrokerName) ->
   case kafe_brokers:broker_by_name(BrokerName) of
     undefined ->
@@ -125,6 +108,23 @@ do_run({coordinator, GroupId}, Request) ->
       end;
     _ ->
       {error, no_broker_found}
+  end;
+do_run(BrokerPID, Request) when is_pid(BrokerPID) ->
+  case erlang:is_process_alive(BrokerPID) of
+    true ->
+      try
+        Response = gen_server:call(BrokerPID, Request, ?TIMEOUT),
+        _ = kafe_brokers:release_broker(BrokerPID),
+        Response
+      catch
+        Type:Error ->
+          _ = kafe_brokers:release_broker(BrokerPID),
+          lager:error("Request error: ~p:~p", [Type, Error]),
+          {error, Error}
+      end;
+    false ->
+      _ = kafe_brokers:release_broker(BrokerPID),
+      {error, broker_not_available}
   end.
 
 api_version(ApiKey, State) ->
