@@ -46,23 +46,21 @@ all() ->
       end].
 
 t_topics(_Config) ->
-  ?assertMatch(
-     #{<<"testone">> := #{0 := _},
-       <<"testthree">> := #{0 := _,
-                            1 := _,
-                            2 := _},
-       <<"testtwo">> := #{0 := _,
-                          1 := _}},
-     kafe:topics()).
+  ?RETRY(#{<<"testone">> := #{0 := _},
+           <<"testthree">> := #{0 := _,
+                                1 := _,
+                                2 := _},
+           <<"testtwo">> := #{0 := _,
+                              1 := _}} = kafe:topics()).
 
 t_number_of_brokers(_Config) ->
-  ?assertEqual(3, kafe:number_of_brokers()).
+  ?RETRY(3 = kafe:number_of_brokers()).
 
 t_partitions(_Config) ->
-  ?assertEqual([0], kafe:partitions(<<"testone">>)),
-  ?assertEqual([0, 1], kafe:partitions(<<"testtwo">>)),
-  ?assertEqual([0, 1, 2], kafe:partitions(<<"testthree">>)).
+  ?RETRY([0] = kafe:partitions(<<"testone">>)),
+  ?RETRY([0, 1] = kafe:partitions(<<"testtwo">>)),
+  ?RETRY([0, 1, 2] = kafe:partitions(<<"testthree">>)).
 
 t_api_version(_Config) ->
-  ?assertEqual(auto, kafe:api_version()).
+  ?RETRY(auto = kafe:api_version()).
 

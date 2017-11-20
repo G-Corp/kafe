@@ -1,6 +1,8 @@
 -module(kafe_producer_SUITE).
+-compile([{parse_transform, lager_transform}]).
 -include_lib("common_test/include/ct.hrl").
 -include_lib("eunit/include/eunit.hrl").
+-include("kafe_ct_common.hrl").
 
 -export([
          init_per_suite/1
@@ -31,13 +33,16 @@ end_per_suite(_Config) ->
   ok.
 
 init_per_testcase(_Case, Config) ->
-  {ok, #{throttle_time := 0,
+  ?RETRY(
+   begin
+     {ok, #{
          topics := [#{name := <<"testone">>,
                       partitions := [#{error_code := none,
                                        high_watermark_offset := HWO,
                                        partition := 0}]}]}} =
-  kafe:fetch(-1, [{<<"testone">>, 0}], #{}),
-  [{offset, HWO}|Config].
+       kafe:fetch(-1, [{<<"testone">>, 0}], #{}),
+     [{offset, HWO}|Config]
+   end).
 
 end_per_testcase(_Case, Config) ->
   lists:keydelete(offset, 1, Config).
