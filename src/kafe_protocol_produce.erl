@@ -267,7 +267,7 @@ dispatch([{Key, Value, Partition}|Rest], Topic, KeyToPartition, Result) when is_
                                                                              is_integer(Partition) ->
   case kafe_brokers:broker_id_by_topic_and_partition(Topic, Partition) of
     undefined ->
-      {error, {Topic, Partition}};
+      {error, {leader_not_available, {Topic, Partition}}};
     BrokerID ->
       TopicsForBroker = buclists:keyfind(BrokerID, 1, Result, []),
       PartitionsForTopic = buclists:keyfind(Topic, 1, TopicsForBroker, []),

@@ -331,7 +331,7 @@ dispatch(_, [], _, Result) ->
 dispatch(Topic, [{Partition, _, _} = P|Rest], Options, Result) ->
   case kafe_brokers:broker_id_by_topic_and_partition(Topic, Partition) of
     undefined ->
-      {error, {Topic, Partition}};
+      {error, {leader_not_available, {Topic, Partition}}};
     BrokerID ->
       TopicsForBroker = buclists:keyfind(BrokerID, 1, Result, []),
       PartitionsForTopic = buclists:keyfind(Topic, 1, TopicsForBroker, []),
@@ -444,10 +444,10 @@ kafe_protocol_fetch_test_() ->
                      {<<"topic2">>, [0, 1, {2, 202}]},
                      <<"topic3">>], #{})),
         ?assertEqual(
-           {error, {<<"topic4">>, 0}},
+           {error, {leader_not_available, {<<"topic4">>, 0}}},
            dispatch([<<"topic4">>], #{})),
         ?assertEqual(
-           {error, {<<"topic4">>, 0}},
+           {error, {leader_not_available, {<<"topic4">>, 0}}},
            dispatch([{<<"topic1">>, [0, {1, 101}, {2, 102}]},
                      {<<"topic2">>, [0, 1, {2, 202}]},
                      <<"topic3">>,
