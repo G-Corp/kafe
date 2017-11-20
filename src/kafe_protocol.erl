@@ -110,13 +110,6 @@ do_run({host_and_port, Host, Port}, Request) ->
     BrokerPID ->
       do_run(BrokerPID, Request)
   end;
-do_run({topic_and_partition, Topic, Partition}, Request) ->
-  case kafe_brokers:broker_by_topic_and_partition(Topic, Partition) of
-    undefined ->
-      {error, no_broker_found};
-    BrokerPID ->
-      do_run(BrokerPID, Request)
-  end;
 do_run({coordinator, GroupId}, Request) ->
   case kafe:group_coordinator(bucs:to_binary(GroupId)) of
     {ok, #{coordinator_host := Host,
