@@ -149,7 +149,10 @@ topics() ->
 % @end
 -spec partitions(Topic :: binary()) -> [integer()].
 partitions(Topic) ->
-  maps:keys(maps:get(Topic, ets_get(?ETS_TABLE, topics, #{}), #{})).
+  case maps:get(Topic, topics(), undefined) of
+    undefined -> error(unknown_topic, [Topic]);
+    Partitions -> maps:keys(Partitions)
+  end.
 
 % @doc
 % Update brokers
