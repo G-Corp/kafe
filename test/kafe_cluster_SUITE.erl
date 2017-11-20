@@ -2,6 +2,7 @@
 -compile([{parse_transform, lager_transform}]).
 -include_lib("common_test/include/ct.hrl").
 -include_lib("eunit/include/eunit.hrl").
+-include("kafe_ct_common.hrl").
 
 -export([
          init_per_suite/1
@@ -50,18 +51,6 @@ start_kafe(Brokers) ->
   ok = application:load(kafe),
   ok = application:set_env(kafe, brokers, Brokers),
   {ok, _} = application:ensure_all_started(kafe).
-
-wait_until(F, Code, Timeout) ->
-  try
-    F()
-  catch
-    _:_ when Timeout > 0 ->
-      lager:debug("Evaluation of '~s' failed, waiting before retrying...", [Code]),
-      timer:sleep(1000),
-      wait_until(F, Code, Timeout-1000)
-  end.
-
--define(RETRY(Expr), wait_until(fun () -> Expr end, ??Expr, 10000)).
 
 t_bootstrap_fail(_Config) ->
   kafe_test_cluster:up(["kafka2", "kafka3"]),

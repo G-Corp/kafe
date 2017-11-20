@@ -1,6 +1,8 @@
 -module(kafe_consumer_SUITE).
+-compile([{parse_transform, lager_transform}]).
 -include_lib("common_test/include/ct.hrl").
 -include_lib("eunit/include/eunit.hrl").
+-include("kafe_ct_common.hrl").
 
 -export([
          init_per_suite/1
@@ -43,7 +45,9 @@ all() ->
       end].
 
 t_consumer(_Config) ->
-  get_coordinator(),
+  ?RETRY(
+     {ok, #{coordinator_id := _}} = kafe:group_coordinator(<<"kafe_test_consumer_group">>)
+  ),
 
   {ok, #{error_code := none,
          generation_id := GenerationId,
@@ -51,7 +55,7 @@ t_consumer(_Config) ->
          member_id := MemberId,
          members := _,
          protocol_group := <<"default_protocol">>}} =
-  kafe:join_group(<<"kafe_test_consumer_group">>, #{session_timeout => 6000}),
+    kafe:join_group(<<"kafe_test_consumer_group">>, #{session_timeout => 6000}),
 
   {ok, [#{error_code := none,
          group_id := <<"kafe_test_consumer_group">>,
@@ -65,15 +69,16 @@ t_consumer(_Config) ->
          protocol := <<>>,
          protocol_type := <<"consumer">>,
          state := <<"AwaitingSync">>}]} =
-  kafe:describe_group(<<"kafe_test_consumer_group">>),
+    kafe:describe_group(<<"kafe_test_consumer_group">>),
 
   {ok, #{error_code := none,
          partition_assignment := PartitionAssignment,
          user_data := <<>>,
          version := 0}} =
-  kafe:sync_group(<<"kafe_test_consumer_group">>, GenerationId, MemberId,
-                  [#{member_id => MemberId,
-                     member_assignment => #{}}]),
+    kafe:sync_group(<<"kafe_test_consumer_group">>, GenerationId, MemberId,
+                    [#{member_id => MemberId,
+                       member_assignment => #{}}]),
+
   check_partition_assignment(PartitionAssignment),
 
   ok = heartbeat(3, GenerationId, MemberId, ClientHost),
@@ -113,16 +118,3 @@ check_partition_assignment(PartitionAssignment) ->
                         topic => <<"testthree">>}, PartitionAssignment),
   true = lists:member(#{partitions => [1, 0],
                         topic => <<"testtwo">>}, PartitionAssignment).
-
-get_coordinator() ->
-  case kafe:group_coordinator(<<"kafe_test_consumer_group">>) of
-    {ok, #{error_code := group_coordinator_not_available}} ->
-      timer:sleep(100),
-      get_coordinator();
-    {error, E} ->
-      ?debugFmt("==> ERROR : ~p", [E]),
-      erlang:exit(1);
-    _ ->
-      ok
-  end.
-
