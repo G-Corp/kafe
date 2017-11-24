@@ -115,11 +115,11 @@ t_broker_going_down_while_consuming(_Config) ->
                                               ok
                                             end
                       }),
-  ?RETRY(true = ets:lookup_element(Table, fetching, 2)),
+  ?RETRY([{fetching, true}] = ets:lookup(Table, fetching)),
   kafe_test_cluster:down(["kafka1"]),
-  ?RETRY(false = ets:lookup_element(Table, fetching, 2)),
+  ?RETRY([{fetching, false}] = ets:lookup(Table, fetching)),
   kafe_test_cluster:up(["kafka1"]),
-  ?RETRY(true = ets:lookup_element(Table, fetching, 2)),
+  ?RETRY([{fetching, true}] = ets:lookup(Table, fetching)),
   ok.
 
 t_broker_not_yet_available_when_starting_consumer(_Config) ->
@@ -145,6 +145,6 @@ t_broker_not_yet_available_when_starting_consumer(_Config) ->
                                             end
                       })),
   ?RETRY({ok, _} = kafe:produce([{<<"testone">>, [{ExpectedValue, 0}]}])),
-  ?RETRY(true = ets:lookup_element(Table, fetching, 2)),
-  ?RETRY(ExpectedValue = ets:lookup_element(Table, fetched, 2)),
+  ?RETRY([{fetching, true}] = ets:lookup(Table, fetching)),
+  ?RETRY([{fetched, ExpectedValue}] = ets:lookup(Table, fetched)),
   ok.
