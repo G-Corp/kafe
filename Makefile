@@ -28,6 +28,7 @@ define one_kafka
       KAFKA_ZOOKEEPER_CONNECT: zookeeper
       KAFKA_MESSAGE_MAX_BYTES: 1000000
       KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 6
+      KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE: "true"
     stop_grace_period: 30s
     ports:
       - "919$(1):919$(1)"
