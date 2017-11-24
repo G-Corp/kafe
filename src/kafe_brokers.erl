@@ -481,7 +481,7 @@ checkout_broker(BrokerID) ->
           Broker;
         false ->
           _ = poolgirl:checkin(Broker),
-          lager:warning("Broker ~s is not alive", [Broker]),
+          lager:warning("Broker ~p (~s) is not alive", [Broker, BrokerID]),
           undefined
       end;
     {error, Reason} ->
