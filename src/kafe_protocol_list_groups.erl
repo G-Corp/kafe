@@ -10,13 +10,13 @@
          response/2
         ]).
 
-run(BrokerID) ->
+run(BrokerIDOrName) ->
   kafe_protocol:run(
     ?LIST_GROUPS_REQUEST,
     ?MAX_VERSION,
     fun ?MODULE:request/1,
     fun ?MODULE:response/2,
-    #{broker => BrokerID}).
+    #{broker => BrokerIDOrName}).
 
 request(State) ->
   kafe_protocol:request(<<>>, State).

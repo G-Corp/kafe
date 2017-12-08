@@ -71,6 +71,14 @@ t_consumer(_Config) ->
          state := <<"AwaitingSync">>}]} =
     kafe:describe_group(<<"kafe_test_consumer_group">>),
 
+  {ok, GroupsByBroker} = kafe:list_groups(),
+
+  ?assertMatch({_, [found]},
+               {GroupsByBroker,
+                [found ||
+                 #{broker := _, groups := #{ groups := Groups }} <- GroupsByBroker,
+                 #{group_id := <<"kafe_test_consumer_group">>} <- Groups]}),
+
   {ok, #{error_code := none,
          partition_assignment := PartitionAssignment,
          user_data := <<>>,
