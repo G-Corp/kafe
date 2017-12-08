@@ -14,7 +14,8 @@
         ]).
 
 -export([
-         t_consumer/1
+         t_consumer/1,
+         t_coordinator_going_down/1
         ]).
 
 suite() ->
@@ -22,7 +23,6 @@ suite() ->
 
 init_per_suite(Config) ->
   {ok, _} = application:ensure_all_started(lager),
-  kafe_test_cluster:up(),
   {ok, _} = application:ensure_all_started(kafe),
   Config.
 
@@ -32,6 +32,7 @@ end_per_suite(_Config) ->
   ok.
 
 init_per_testcase(_Case, Config) ->
+  kafe_test_cluster:up(),
   Config.
 
 end_per_testcase(_Case, Config) ->
@@ -120,9 +121,28 @@ heartbeat(N, GenerationId, MemberId, ClientHost) ->
   heartbeat(N - 1, GenerationId, MemberId, ClientHost).
 
 check_partition_assignment(PartitionAssignment) ->
-  true = lists:member(#{partitions => [0],
-                        topic => <<"testone">>}, PartitionAssignment),
-  true = lists:member(#{partitions => [2, 1, 0],
-                        topic => <<"testthree">>}, PartitionAssignment),
-  true = lists:member(#{partitions => [1, 0],
-                        topic => <<"testtwo">>}, PartitionAssignment).
+  Sorted = lists:sort(fun
+                        (#{topic := TopicA}, #{topic := TopicB}) -> TopicA =< TopicB
+                      end, PartitionAssignment),
+
+  ?assertMatch([#{partitions := [0], topic := <<"testone">>},
+                #{partitions := [2, 1, 0], topic := <<"testthree">>},
+                #{partitions := [1, 0], topic := <<"testtwo">>}], Sorted).
+
+t_coordinator_going_down(_Config) ->
+  % get a coordinator for a new group
+  ?RETRY({ok, _} = kafe:group_coordinator(<<"kafe_coordinator_going_down_group">>)),
+  {ok, #{coordinator_id := CoordinatorNodeId}} =
+    kafe:group_coordinator(<<"kafe_coordinator_going_down_group">>),
+
+  % take it down
+  kafe_test_cluster:down(["kafka" ++ integer_to_list(CoordinatorNodeId)]),
+
+  % attempting to contact coordinator should force refreshing the cache
+  ?RETRY({ok, #{error_code := none}} =
+         kafe:join_group(<<"kafe_coordinator_going_down_group">>)),
+
+  {ok, #{coordinator_id := NewCoordinatorNodeId}} =
+    kafe:group_coordinator(<<"kafe_coordinator_going_down_group">>),
+
+  ?assertNotEqual(CoordinatorNodeId, NewCoordinatorNodeId).
