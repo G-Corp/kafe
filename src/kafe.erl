@@ -153,10 +153,11 @@
                                 | [{binary(), [{integer(), integer()}]}].
 -type offset_commit_topics_v1() :: [{binary(), [{integer(), integer(), integer(), binary()}]}].
 -type broker_id() :: atom().
+-type broker_name() :: string().
 -type group() :: #{group_id => binary(), protocol_type => binary()}.
 -type groups() :: #{error_code => error_code(),
                     groups => [group()]}.
--type groups_list() :: [#{broker => broker_id(),
+-type groups_list() :: [#{broker => broker_name(),
                           groups => groups()}].
 -type group_member() :: #{member_id => binary(),
                           member_metadata => binary()}.
@@ -294,6 +295,7 @@ start() ->
 % @doc
 % Return the list of availables brokers
 % @end
+-spec brokers() -> [broker_name()].
 brokers() ->
   kafe_brokers:list().
 
@@ -508,14 +510,14 @@ fetch(ReplicatID, Topics, Options) when is_integer(ReplicatID), is_list(Topics),
 % @end
 -spec list_groups() -> {ok, groups_list()} | {error, term()}.
 list_groups() ->
-  {ok, lists:map(fun(Broker) ->
-                     case list_groups(Broker) of
+  {ok, lists:map(fun(BrokerName) ->
+                     case list_groups(BrokerName) of
                        {ok, Groups} ->
-                         #{broker => Broker,
+                         #{broker => BrokerName,
                            groups => Groups};
                        _ ->
-                         #{broker => Broker,
-                           groups => #{error_code => kafe_error:code(8),
+                         #{broker => BrokerName,
+                           groups => #{error_code => broker_not_available,
                                        groups => []}}
                      end
                  end, brokers())}.
@@ -526,9 +528,10 @@ list_groups() ->
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-ListGroupsRequest">Kafka protocol documentation</a>
 % @end
--spec list_groups(Broker :: broker_id()) -> {ok, groups()} | {error, term()}.
-list_groups(Broker) when is_atom(Broker) ->
-  kafe_protocol_list_groups:run(Broker).
+-spec list_groups(BrokerIDOrName :: broker_id() | broker_name()) -> {ok, groups()} | {error, term()}.
+list_groups(BrokerIDOrName) ->
+  kafe_protocol_list_groups:run(BrokerIDOrName).
+
 
 % @doc
 % Group coordinator Request
