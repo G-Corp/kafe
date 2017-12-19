@@ -108,7 +108,8 @@ down(Brokers) ->
 brokers() ->
   Children = supervisor:which_children(?MODULE),
   lists:map(fun ({_, Pid, _, _}) ->
-                case sys:get_state(Pid) of
+                % HACK
+                case (catch sys:get_state(Pid)) of
                   #{name := BrokerName} -> { BrokerName, Pid };
                   _ -> false
                 end
@@ -123,14 +124,21 @@ find_child(BrokerName) ->
 up1(BrokerName) ->
   case find_child(BrokerName) of
     undefined ->
+      lager:info("Starting broker ~s", [BrokerName]),
       {ok, Pid} = supervisor:start_child(?MODULE, [BrokerName]),
       ok = kafe_test_cluster_broker:wait_for_start(Pid),
       {ok, Pid};
-    Pid -> {ok, Pid}
+    Pid ->
+      lager:info("Broker ~s is already up", [BrokerName]),
+      {ok, Pid}
   end.
 
 down1(BrokerName) ->
   case find_child(BrokerName) of
-    undefined -> ok;
-    Pid -> kafe_test_cluster_broker:down(Pid)
+    undefined ->
+      lager:info("Broker ~s is already down", [BrokerName]),
+      ok;
+    Pid ->
+      lager:info("Stopping broker ~s", [BrokerName]),
+      kafe_test_cluster_broker:down(Pid)
   end.
