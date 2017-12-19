@@ -1,7 +1,4 @@
 -module(kafe_cluster_SUITE).
--compile([{parse_transform, lager_transform}]).
--include_lib("common_test/include/ct.hrl").
--include_lib("eunit/include/eunit.hrl").
 -include("kafe_ct_common.hrl").
 
 -export([

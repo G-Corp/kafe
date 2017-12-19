@@ -2,22 +2,17 @@
 -compile([{parse_transform, lager_transform}]).
 -behavior(supervisor).
 
--export([
-         up/0,
-         up/1,
-         up1/1,
-         down/1,
-         down1/1,
-         brokers/0
-        ]).
-
-% CTH exports
+% CTH callbacks
 -export([
          id/1,
-         init/2
+         init/2,
+         pre_init_per_suite/3,
+         post_end_per_suite/4,
+         pre_init_per_testcase/3,
+         post_end_per_testcase/4
         ]).
 
-% supervisor exports
+% Supervisor API and callbacks
 -export([
          start_link/0,
          init/1
@@ -29,30 +24,53 @@
          stop/1
         ]).
 
+% API
+-export([
+         up/0,
+         up/1,
+         up1/1,
+         down/1,
+         down1/1,
+         brokers/0
+        ]).
+
 -define(BROKERS, ["kafka1", "kafka2", "kafka3"]).
+
+% CTH callbacks
 
 id(_Opts) ->
   ?MODULE.
 
 init(_Id, _Opts) ->
-  lager:info("Starting kafe_test_cluster"),
-  io:format("Starting kafe_test_cluster~n", []),
+  {ok, _} = application:ensure_all_started(lager),
+  lager:info("Starting kafe_test_cluster CTH"),
   {ok, _Apps} = application:ensure_all_started(?MODULE),
-  io:format("Started kafe_test_cluster~n", []),
   {ok, #{}}.
+
+pre_init_per_suite(Suite, Config, State) ->
+  lager:info("pre_init_per_suite ~p", [Suite]),
+  {Config, State}.
+
+post_end_per_suite(Suite, _Config, Return, State) ->
+  lager:info("post_end_per_suite ~p: ~p", [Suite, Return]),
+  {Return, State}.
+
+pre_init_per_testcase(TC, Config, State) ->
+  lager:info("pre_init_per_testcase ~p", [TC]),
+  {Config, State}.
+
+post_end_per_testcase(TC, _Config, Error, State) ->
+  lager:info("post_end_per_testcase ~p: ~p", [TC, Error]),
+  {Error, State}.
+
+% Supervisor API and callbacks
 
 start_link() ->
   supervisor:start_link({local, ?MODULE}, ?MODULE, [#{}]).
 
-start(_StartType, _StartArgs) ->
-  io:format("Starting kafe_test_cluster app~n", []),
-  ?MODULE:start_link().
-
-stop(_State) ->
-  ok.
-
 init([#{}]) ->
   % Start from known state
+  lager:info("Starting kafe_test_cluster supervisor"),
   exec:run("docker-compose stop", [sync]),
   {ok, {
      #{strategy => simple_one_for_one},
@@ -64,6 +82,17 @@ init([#{}]) ->
         type => worker}
      ]
     }}.
+
+% Application callbacks
+
+start(_StartType, _StartArgs) ->
+  lager:info("Starting kafe_test_cluster app"),
+  ?MODULE:start_link().
+
+stop(_State) ->
+  ok.
+
+% API
 
 up() ->
   up(?BROKERS).

@@ -1,3 +1,7 @@
+-include_lib("common_test/include/ct.hrl").
+-include_lib("eunit/include/eunit.hrl").
+-compile([{parse_transform, lager_transform}]).
+
 -define(RETRY(Expr), ?RETRY(Expr, 10000)).
 
 -define(RETRY(Expr, Timeout),

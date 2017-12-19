@@ -1,6 +1,5 @@
 -module(kafe_internal_api_SUITE).
--include_lib("common_test/include/ct.hrl").
--include_lib("eunit/include/eunit.hrl").
+-include("kafe_ct_common.hrl").
 
 -export([
          init_per_suite/1
@@ -22,7 +21,6 @@ suite() ->
    [{timetrap, {seconds, 30}}].
 
 init_per_suite(Config) ->
-  {ok, _} = application:ensure_all_started(lager),
   kafe_test_cluster:up(),
   {ok, _} = application:ensure_all_started(kafe),
   Config.
