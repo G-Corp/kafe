@@ -26,7 +26,7 @@ handle_cast(_Cast, State) ->
 
 handle_call(wait_for_start, _From, #{waiting_for_start := _} = State) ->
   {reply, {error, already_starting}, State};
-handle_call(wait_for_start, From, #{os_pid := _OsPid, name := BrokerName} = State) ->
+handle_call(wait_for_start, From, #{os_pid := _OsPid, name := _BrokerName} = State) ->
   {noreply, State#{waiting_for_start => From}};
 
 handle_call(stop, _From, #{waiting_for_stop := _} = State) ->
