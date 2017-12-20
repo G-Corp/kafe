@@ -241,7 +241,7 @@ callback_mode() ->
     state_functions.
 
 % @hidden
-retrieve(timeout, Timeout, #state{brokers_update_frequency = Timeout} = State) ->
+retrieve(timeout, _, #state{brokers_update_frequency = Timeout} = State) ->
   lager:debug("Try to retrieve brokers after timeout"),
   retrieve_brokers(State),
   {next_state, retrieve, State, Timeout};
