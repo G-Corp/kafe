@@ -9,7 +9,7 @@
 [![Hex.pm version](https://img.shields.io/hexpm/v/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![Hex.pm downloads](https://img.shields.io/hexpm/dt/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
 [![License](https://img.shields.io/hexpm/l/kafe.svg?style=flat-square)](https://hex.pm/packages/kafe)
-[![Build Status](https://travis-ci.org/botsunit/kafe.svg?branch=master)](https://travis-ci.org/botsunit/kafe)
+[![Build Status](https://travis-ci.org/G-Corp/kafe.svg?branch=master)](https://travis-ci.org/G-Corp/kafe)
 
 
 <b>Version 2.0.0 cause changes in the following APIs :</b>
@@ -173,7 +173,8 @@ defmodule My.Consumer do
 end
 
 defmodule My.Consumer.Subscriber do
-  behaviour Kafe.Consumer.Subscriber
+  &#64;behaviour Kafe.Consumer.Subscriber
+  require Kafe.Records
 
   def init(group, topic, partition, args) do
     % Do something with group/topic/partition/args
@@ -182,9 +183,8 @@ defmodule My.Consumer.Subscriber do
   end
 
   def handle_message(message, state) do
-    % Do something with message (record Kafe.Records.message or
-    % function Kafe.Consumer.Subscriber.message/2)
-    % and update (or not)the state
+    msg = Kafe.Records.message(message)
+    % Do something with msg and update (or not) the state
     {:ok, new_state}
   end
 end
@@ -206,7 +206,21 @@ Kafe.stop_consumer(:my_group)
 
 <h3>Metrics</h3>
 
-You can enable metrics by adding a metrics module in your configuration :
+To enable metrics :
+
+1/ Add <a href="https://hex.pm/packages/metrics">metrics > 2.2</a> in your dependencies.
+
+2/ Set <tt>enable_metrics</tt> to true in the <tt>kafe</tt> configuration :
+
+<pre>
+{kafe, [
+  ...
+  {enable_metrics, true},
+  ...
+]}
+</pre>
+
+3/ Adding a metrics module in your configuration :
 
 <pre>
 {metrics, [
@@ -216,10 +230,11 @@ You can enable metrics by adding a metrics module in your configuration :
 
 You can choose between <a href="https://github.com/folsom-project/folsom">Folsom</a> (<tt>{metrics_mod, metrics_folsom}</tt>), <a href="https://github.com/Feuerlabs/exometer">Exometer</a> (<tt>{metrics_mod, metrics_exometer}</tt>) or <a href="https://github.com/processone/grapherl">Grapherl</a> (<tt>{metrics_mod, metrics_grapherl}</tt>).
 
-Be sure that's Folsom, Exometer or Grapherl is started before starting Kafe.
+Be sure that's Folsom, Exometer or Grapherl and metrics is started before starting Kafe.
 
 <pre>
 application:ensure_all_started(folsom).
+application:ensure_all_started(metrics).
 application:ensure_all_started(kafe).
 </pre>
 
@@ -248,7 +263,7 @@ You can add a prefix to all metrics by adding a <tt>metrics_prefix</tt> in the <
 
 <h3>Build and tests</h3>
 
-<b>Kafe</b> use <a href="http://www.rebar3.org">rebar3</a> and <a href="https://github.com/botsunit/bu.mk">bu.mk</a>. So, you can use :
+<b>Kafe</b> use <a href="http://www.rebar3.org">rebar3</a> and <a href="https://github.com/G-Corp/bu.mk">bu.mk</a>. So, you can use :
 
 <ul>
 <li><tt>./rebar3 compile</tt> to compile Kafe.</li>
@@ -298,7 +313,7 @@ See <a href=".">documentation</a>
 <h3>Contributing</h3>
 
 <ol>
-  <li>Fork it ( https://github.com/botsunit/kafe/fork )</li>
+  <li>Fork it ( https://github.com/G-Corp/kafe/fork )</li>
   <li>Create your feature branch (<tt>git checkout -b my-new-feature</tt>)</li>
   <li>Commit your changes (<tt>git commit -am 'Add some feature'</tt>)</li>
   <li>Push to the branch (<tt>git push origin my-new-feature</tt>)</li>

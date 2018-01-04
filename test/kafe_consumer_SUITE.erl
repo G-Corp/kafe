@@ -1,6 +1,5 @@
 -module(kafe_consumer_SUITE).
--include_lib("common_test/include/ct.hrl").
--include_lib("eunit/include/eunit.hrl").
+-include("kafe_ct_common.hrl").
 
 -export([
          init_per_suite/1
@@ -12,21 +11,25 @@
         ]).
 
 -export([
-         t_consumer/1
+         t_consumer/1,
+         t_coordinator_going_down/1
         ]).
 
 suite() ->
    [{timetrap, {seconds, 30}}].
 
 init_per_suite(Config) ->
-  application:ensure_all_started(kafe),
+  {ok, _} = application:ensure_all_started(lager),
+  {ok, _} = application:ensure_all_started(kafe),
   Config.
 
 end_per_suite(_Config) ->
   application:stop(kafe),
+  application:stop(poolgirl),
   ok.
 
 init_per_testcase(_Case, Config) ->
+  kafe_test_cluster:up(),
   Config.
 
 end_per_testcase(_Case, Config) ->
@@ -40,7 +43,9 @@ all() ->
       end].
 
 t_consumer(_Config) ->
-  get_coordinator(),
+  ?RETRY(
+     {ok, #{coordinator_id := _}} = kafe:group_coordinator(<<"kafe_test_consumer_group">>)
+  ),
 
   {ok, #{error_code := none,
          generation_id := GenerationId,
@@ -48,7 +53,7 @@ t_consumer(_Config) ->
          member_id := MemberId,
          members := _,
          protocol_group := <<"default_protocol">>}} =
-  kafe:join_group(<<"kafe_test_consumer_group">>, #{session_timeout => 6000}),
+    kafe:join_group(<<"kafe_test_consumer_group">>, #{session_timeout => 6000}),
 
   {ok, [#{error_code := none,
          group_id := <<"kafe_test_consumer_group">>,
@@ -62,15 +67,24 @@ t_consumer(_Config) ->
          protocol := <<>>,
          protocol_type := <<"consumer">>,
          state := <<"AwaitingSync">>}]} =
-  kafe:describe_group(<<"kafe_test_consumer_group">>),
+    kafe:describe_group(<<"kafe_test_consumer_group">>),
+
+  {ok, GroupsByBroker} = kafe:list_groups(),
+
+  ?assertMatch({_, [found]},
+               {GroupsByBroker,
+                [found ||
+                 #{broker := _, groups := #{ groups := Groups }} <- GroupsByBroker,
+                 #{group_id := <<"kafe_test_consumer_group">>} <- Groups]}),
 
   {ok, #{error_code := none,
          partition_assignment := PartitionAssignment,
          user_data := <<>>,
          version := 0}} =
-  kafe:sync_group(<<"kafe_test_consumer_group">>, GenerationId, MemberId,
-                  [#{member_id => MemberId,
-                     member_assignment => #{}}]),
+    kafe:sync_group(<<"kafe_test_consumer_group">>, GenerationId, MemberId,
+                    [#{member_id => MemberId,
+                       member_assignment => #{}}]),
+
   check_partition_assignment(PartitionAssignment),
 
   ok = heartbeat(3, GenerationId, MemberId, ClientHost),
@@ -104,22 +118,28 @@ heartbeat(N, GenerationId, MemberId, ClientHost) ->
   heartbeat(N - 1, GenerationId, MemberId, ClientHost).
 
 check_partition_assignment(PartitionAssignment) ->
-  true = lists:member(#{partitions => [0],
-                        topic => <<"testone">>}, PartitionAssignment),
-  true = lists:member(#{partitions => [2, 1, 0],
-                        topic => <<"testthree">>}, PartitionAssignment),
-  true = lists:member(#{partitions => [1, 0],
-                        topic => <<"testtwo">>}, PartitionAssignment).
+  Sorted = lists:sort(fun
+                        (#{topic := TopicA}, #{topic := TopicB}) -> TopicA =< TopicB
+                      end, PartitionAssignment),
 
-get_coordinator() ->
-  case kafe:group_coordinator(<<"kafe_test_consumer_group">>) of
-    {ok, #{error_code := group_coordinator_not_available}} ->
-      timer:sleep(100),
-      get_coordinator();
-    {error, E} ->
-      ?debugFmt("==> ERROR : ~p", [E]),
-      erlang:exit(1);
-    _ ->
-      ok
-  end.
+  ?assertMatch([#{partitions := [0], topic := <<"testone">>},
+                #{partitions := [2, 1, 0], topic := <<"testthree">>},
+                #{partitions := [1, 0], topic := <<"testtwo">>}], Sorted).
 
+t_coordinator_going_down(_Config) ->
+  % get a coordinator for a new group
+  ?RETRY({ok, _} = kafe:group_coordinator(<<"kafe_coordinator_going_down_group">>)),
+  {ok, #{coordinator_id := CoordinatorNodeId}} =
+    kafe:group_coordinator(<<"kafe_coordinator_going_down_group">>),
+
+  % take it down
+  kafe_test_cluster:down(["kafka" ++ integer_to_list(CoordinatorNodeId)]),
+
+  % attempting to contact coordinator should force refreshing the cache
+  ?RETRY({ok, #{error_code := none}} =
+         kafe:join_group(<<"kafe_coordinator_going_down_group">>)),
+
+  {ok, #{coordinator_id := NewCoordinatorNodeId}} =
+    kafe:group_coordinator(<<"kafe_coordinator_going_down_group">>),
+
+  ?assertNotEqual(CoordinatorNodeId, NewCoordinatorNodeId).

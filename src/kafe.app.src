@@ -1,6 +1,6 @@
 {application, kafe, [
     {description, "A Kafka client for Erlang and Elixir"}
-  , {vsn, "2.2.2"}
+  , {vsn, "3.0.0"}
   , {registered, []}
   , {modules, []}
   , {applications, [
@@ -12,15 +12,14 @@
                     goldrush,
                     lager,
                     bucs,
-                    doteki,
-                    metrics
+                    doteki
                    ]}
   , {mod, {kafe_app, []}}
   , {env, []}
 
   , {maintainers, ["Gregoire Lejeune"]}
   , {licenses, ["BSD-3"]}
-  , {links, [{"Github", "https://github.com/botsunit/kafe"}]}
+  , {links, [{"Github", "https://github.com/G-Corp/kafe"}]}
   , {files, ["src/*"
              , "include/*"
              , "lib/*"

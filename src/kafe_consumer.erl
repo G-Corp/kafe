@@ -86,7 +86,7 @@
 %
 %                                                                          +--&gt; kafe_consumer_srv +-----------------+
 %                  +--&gt; kafe_consumer_sup +------so4o---&gt; kafe_consumer +--+                                        |
-%                  |                                                       +--&gt; kafe_consumer_fsm                   |
+%                  |                                                       +--&gt; kafe_consumer_statem                |
 %                  +--&gt; kafe_consumer_group_sup +--+                                                                m
 % kafe_sup +--o4o--+                               |                                                                o
 %                  +--&gt; kafe_rr                    s                                                                n
@@ -281,12 +281,12 @@ init([GroupID, Options]) ->
         shutdown => 5000,
         type => worker,
         modules => [kafe_consumer_srv]},
-      #{id => kafe_consumer_fsm,
-        start => {kafe_consumer_fsm, start_link, [GroupID, Options]},
+      #{id => kafe_consumer_statem,
+        start => {kafe_consumer_statem, start_link, [GroupID, Options]},
         restart => permanent,
         shutdown => 5000,
         type => worker,
-        modules => [kafe_consumer_fsm]}
+        modules => [kafe_consumer_statem]}
      ]
     }}.
 

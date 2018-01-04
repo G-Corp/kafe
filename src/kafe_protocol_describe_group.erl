@@ -104,6 +104,8 @@ member_assignment(<<>>) ->
 partition_assignment(0, <<UserDataSize:32/signed,
                           UserData:UserDataSize/binary>>, Acc) ->
   {Acc, UserData};
+partition_assignment(0, _, Acc) ->
+  {Acc, <<>>};
 partition_assignment(N, <<TopicSize:16/signed,
                           Topic:TopicSize/binary,
                           NbPartitions:32/signed,

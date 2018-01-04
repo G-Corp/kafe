@@ -19,34 +19,8 @@ start_link(Addr, Port) ->
 
 init({Addr, Port}) ->
   erlang:process_flag(trap_exit, true),
-  SndBuf = doteki:get_env([kafe, socket, sndbuf], ?DEFAULT_SOCKET_SNDBUF),
-  RecBuf = doteki:get_env([kafe, socker, recbuf], ?DEFAULT_SOCKET_RECBUF),
-  Buffer = lists:max([SndBuf, RecBuf, doteki:get_env([kafe, socket, buffer], max(SndBuf, RecBuf))]),
-  case gen_tcp:connect(Addr, Port, [{mode, binary},
-                                    {active, true},
-                                    {packet, 4},
-                                    {sndbuf, SndBuf},
-                                    {recbuf, RecBuf},
-                                    {buffer, Buffer}]) of
-    {ok, Socket} ->
-      {ok, {LocalAddr, LocalPort}} = inet:sockname(Socket),
-      lager:debug("Connected to broker ~s:~p from ~s:~p", [bucinet:ip_to_string(Addr), Port, bucinet:ip_to_string(LocalAddr), LocalPort]),
-      ApiVersion = doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION),
-      CorrelationID = doteki:get_env([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
-      ClientID = doteki:get_env([kafe, client_id], ?DEFAULT_CLIENT_ID),
-      {ok, #{
-         ip => Addr,
-         port => Port,
-         socket => Socket,
-         api_version => ApiVersion,
-         correlation_id => CorrelationID,
-         client_id => ClientID,
-         requests => orddict:new()
-        }};
-    {error, Reason} ->
-      lager:debug("Connection failed to ~s:~p : ~p", [bucinet:ip_to_string(Addr), Port, Reason]),
-      {stop, Reason}
-  end.
+  gen_server:cast(self(), connect),
+  {ok, #{ ip => Addr, port => Port }}.
 
 handle_call({call, {Request, RequestParams}, {Response, ResponseParams}, RequestState}, From, State) ->
   UpdatedRequestState = maps:merge(State, RequestState),
@@ -70,6 +44,34 @@ handle_call(alive, _From, #{socket := Socket} = State) ->
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
+handle_cast(connect, #{ip := Addr, port := Port} = State) ->
+  lager:debug("Connecting to broker ~s:~p", [bucinet:ip_to_string(Addr), Port]),
+  SndBuf = doteki:get_env([kafe, socket, sndbuf], ?DEFAULT_SOCKET_SNDBUF),
+  RecBuf = doteki:get_env([kafe, socker, recbuf], ?DEFAULT_SOCKET_RECBUF),
+  Buffer = lists:max([SndBuf, RecBuf, doteki:get_env([kafe, socket, buffer], max(SndBuf, RecBuf))]),
+  case gen_tcp:connect(Addr, Port, [{mode, binary},
+                                    {active, true},
+                                    {packet, 4},
+                                    {sndbuf, SndBuf},
+                                    {recbuf, RecBuf},
+                                    {buffer, Buffer}]) of
+    {ok, Socket} ->
+      {ok, {LocalAddr, LocalPort}} = inet:sockname(Socket),
+      lager:debug("Connected to broker ~s:~p from ~s:~p", [bucinet:ip_to_string(Addr), Port, bucinet:ip_to_string(LocalAddr), LocalPort]),
+      ApiVersion = doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION),
+      CorrelationID = doteki:get_env([kafe, correlation_id], ?DEFAULT_CORRELATION_ID),
+      ClientID = doteki:get_env([kafe, client_id], ?DEFAULT_CLIENT_ID),
+      {noreply, State#{
+         socket => Socket,
+         api_version => ApiVersion,
+         correlation_id => CorrelationID,
+         client_id => ClientID,
+         requests => orddict:new()
+        }};
+    {error, Reason} ->
+      lager:debug("Connection failed to ~s:~p : ~p", [bucinet:ip_to_string(Addr), Port, Reason]),
+      {stop, Reason, State}
+  end;
 handle_cast(_Msg, State) ->
   {noreply, State}.
 
@@ -91,6 +93,8 @@ handle_info(Info, State) ->
 terminate(_Reason, #{ip := IP, port := Port, socket := Socket}) ->
   lager:debug("Close connection to broker ~p:~p", [IP, Port]),
   _ = gen_tcp:close(Socket),
+  ok;
+terminate(_Reason, _State) ->
   ok.
 
 code_change(_OldVsn, State, _Extra) ->

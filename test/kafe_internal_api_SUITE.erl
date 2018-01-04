@@ -1,6 +1,5 @@
 -module(kafe_internal_api_SUITE).
--include_lib("common_test/include/ct.hrl").
--include_lib("eunit/include/eunit.hrl").
+-include("kafe_ct_common.hrl").
 
 -export([
          init_per_suite/1
@@ -22,11 +21,13 @@ suite() ->
    [{timetrap, {seconds, 30}}].
 
 init_per_suite(Config) ->
-  application:ensure_all_started(kafe),
+  kafe_test_cluster:up(),
+  {ok, _} = application:ensure_all_started(kafe),
   Config.
 
 end_per_suite(_Config) ->
   application:stop(kafe),
+  application:stop(poolgirl),
   ok.
 
 init_per_testcase(_Case, Config) ->
@@ -43,23 +44,21 @@ all() ->
       end].
 
 t_topics(_Config) ->
-  ?assertMatch(
-     #{<<"testone">> := #{0 := _},
-       <<"testthree">> := #{0 := _,
-                            1 := _,
-                            2 := _},
-       <<"testtwo">> := #{0 := _,
-                          1 := _}},
-     kafe:topics()).
+  ?RETRY(#{<<"testone">> := #{0 := _},
+           <<"testthree">> := #{0 := _,
+                                1 := _,
+                                2 := _},
+           <<"testtwo">> := #{0 := _,
+                              1 := _}} = kafe:topics()).
 
 t_number_of_brokers(_Config) ->
-  ?assertEqual(3, kafe:number_of_brokers()).
+  ?RETRY(3 = kafe:number_of_brokers()).
 
 t_partitions(_Config) ->
-  ?assertEqual([0], kafe:partitions(<<"testone">>)),
-  ?assertEqual([0, 1], kafe:partitions(<<"testtwo">>)),
-  ?assertEqual([0, 1, 2], kafe:partitions(<<"testthree">>)).
+  ?RETRY([0] = kafe:partitions(<<"testone">>)),
+  ?RETRY([0, 1] = kafe:partitions(<<"testtwo">>)),
+  ?RETRY([0, 1, 2] = kafe:partitions(<<"testthree">>)).
 
 t_api_version(_Config) ->
-  ?assertEqual(auto, kafe:api_version()).
+  ?RETRY(auto = kafe:api_version()).
 

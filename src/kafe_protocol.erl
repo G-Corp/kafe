@@ -72,23 +72,6 @@ do_run(first_broker, Request) ->
     BrokerPID ->
       do_run(BrokerPID, Request)
   end;
-do_run(BrokerPID, Request) when is_pid(BrokerPID) ->
-  case erlang:is_process_alive(BrokerPID) of
-    true ->
-      try
-        Response = gen_server:call(BrokerPID, Request, ?TIMEOUT),
-        _ = kafe_brokers:release_broker(BrokerPID),
-        Response
-      catch
-        Type:Error ->
-          _ = kafe_brokers:release_broker(BrokerPID),
-          lager:error("Request error: ~p:~p", [Type, Error]),
-          {error, Error}
-      end;
-    false ->
-      _ = kafe_brokers:release_broker(BrokerPID),
-      {error, broker_not_available}
-  end;
 do_run(BrokerName, Request) when is_list(BrokerName) ->
   case kafe_brokers:broker_by_name(BrokerName) of
     undefined ->
@@ -110,13 +93,6 @@ do_run({host_and_port, Host, Port}, Request) ->
     BrokerPID ->
       do_run(BrokerPID, Request)
   end;
-do_run({topic_and_partition, Topic, Partition}, Request) ->
-  case kafe_brokers:broker_by_topic_and_partition(Topic, Partition) of
-    undefined ->
-      {error, no_broker_found};
-    BrokerPID ->
-      do_run(BrokerPID, Request)
-  end;
 do_run({coordinator, GroupId}, Request) ->
   case kafe:group_coordinator(bucs:to_binary(GroupId)) of
     {ok, #{coordinator_host := Host,
@@ -127,11 +103,30 @@ do_run({coordinator, GroupId}, Request) ->
           retry_with_coordinator(GroupId, Request);
         {ok, [#{error_code := not_coordinator_for_group}]} ->
           retry_with_coordinator(GroupId, Request);
+        {error, no_broker_found} ->
+          retry_with_coordinator(GroupId, Request);
         Other ->
           Other
       end;
     _ ->
       {error, no_broker_found}
+  end;
+do_run(BrokerPID, Request) when is_pid(BrokerPID) ->
+  case erlang:is_process_alive(BrokerPID) of
+    true ->
+      try
+        Response = gen_server:call(BrokerPID, Request, ?TIMEOUT),
+        _ = kafe_brokers:release_broker(BrokerPID),
+        Response
+      catch
+        Type:Error ->
+          _ = kafe_brokers:release_broker(BrokerPID),
+          lager:error("Request error: ~p:~p", [Type, Error]),
+          {error, Error}
+      end;
+    false ->
+      _ = kafe_brokers:release_broker(BrokerPID),
+      {error, broker_not_available}
   end.
 
 api_version(ApiKey, State) ->
@@ -150,8 +145,10 @@ check_version(V, _) -> V.
 
 retry_with_coordinator(GroupId, Request) ->
   case kafe_protocol_group_coordinator:run(GroupId, force) of
-    {ok, #{error_code := none}} ->
-      do_run({coordinator, GroupId}, Request);
+    {ok, #{coordinator_host := Host,
+           coordinator_port := Port,
+           error_code := none}} ->
+      do_run({host_and_port, Host, Port}, Request);
     _ ->
       {error, no_broker_found}
   end.

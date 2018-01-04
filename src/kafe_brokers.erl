@@ -1,7 +1,7 @@
 % @hidden
 -module(kafe_brokers).
 -compile([{parse_transform, lager_transform}]).
--behaviour(gen_fsm).
+-behaviour(gen_statem).
 -include("../include/kafe.hrl").
 -include_lib("kernel/include/inet.hrl").
 
@@ -9,7 +9,6 @@
          start_link/0,
          first_broker/0,
          first_broker/1,
-         broker_by_topic_and_partition/2,
          broker_id_by_topic_and_partition/2,
          broker_by_name/1,
          broker_by_host_and_port/2,
@@ -26,11 +25,8 @@
 
 -export([
          init/1,
-         retrieve/2,
+         callback_mode/0,
          retrieve/3,
-         handle_event/3,
-         handle_sync_event/4,
-         handle_info/3,
          terminate/3,
          code_change/4
         ]).
@@ -46,7 +42,7 @@
 
 % @hidden
 start_link() ->
-  gen_fsm:start_link({local, ?SERVER}, ?MODULE, [], []).
+  gen_statem:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 % @equiv first_broker(true)
 -spec first_broker() -> pid() | undefined.
@@ -66,22 +62,12 @@ first_broker(Retrieve) when is_boolean(Retrieve) ->
     {error, Reason} ->
       if
         Retrieve ->
-          gen_fsm:sync_send_event(?SERVER, retrieve),
+          gen_statem:call(?SERVER, retrieve),
           first_broker(false);
         true ->
           lager:error("Get broker failed: ~p", [Reason]),
           undefined
       end
-  end.
-
-% @doc
-% Return a broker PID for the given <tt>Topic</tt> and <tt>Partition</tt>.
-% @end
--spec broker_by_topic_and_partition(Topic :: binary(), Partition :: integer()) -> pid() | undefined.
-broker_by_topic_and_partition(Topic, Partition) ->
-  case broker_id_by_topic_and_partition(Topic, Partition) of
-    undefined -> undefined;
-    BrokerID -> checkout_broker(BrokerID)
   end.
 
 % @doc
@@ -163,14 +149,17 @@ topics() ->
 % @end
 -spec partitions(Topic :: binary()) -> [integer()].
 partitions(Topic) ->
-  maps:keys(maps:get(Topic, ets_get(?ETS_TABLE, topics, #{}), #{})).
+  case maps:get(Topic, topics(), undefined) of
+    undefined -> error(unknown_topic, [Topic]);
+    Partitions -> maps:keys(Partitions)
+  end.
 
 % @doc
 % Update brokers
 % @end
 -spec update() -> ok.
 update() ->
-  gen_fsm:sync_send_event(?SERVER, retrieve).
+  gen_statem:call(?SERVER, retrieve).
 
 % @doc
 % Return the list of availables brokers
@@ -225,6 +214,8 @@ api_version(ApiKey, Versions) when is_list(Versions) ->
 
 % @hidden
 init(_) ->
+  lager:debug("Start ~p", [?MODULE]),
+  process_flag(trap_exit, true),
   ets:new(?ETS_TABLE, [public, named_table]),
   ets:insert(?ETS_TABLE, [{api_version, doteki:get_env([kafe, api_version], ?DEFAULT_API_VERSION)}]),
   Timeout = doteki:get_env(
@@ -243,35 +234,28 @@ init(_) ->
                                  [kafe, chunk_pool_size],
                                  ?DEFAULT_CHUNK_POOL_SIZE)
             },
-  retrieve_brokers(State),
-  {ok, retrieve, State, Timeout}.
+  {ok, retrieve, State, 0}.
 
 % @hidden
-retrieve(timeout, #state{brokers_update_frequency = Timeout} = State) ->
-  retrieve_brokers(State),
-  {next_state, retrieve, State, Timeout}.
+callback_mode() ->
+    state_functions.
 
 % @hidden
-retrieve(retrieve, _From, #state{brokers_update_frequency = Timeout} = State) ->
+retrieve(timeout, _, #state{brokers_update_frequency = Timeout} = State) ->
+  lager:debug("Try to retrieve brokers after timeout"),
+  retrieve_brokers(State),
+  {next_state, retrieve, State, Timeout};
+retrieve({call, From}, retrieve, #state{brokers_update_frequency = Timeout} = State) ->
+  lager:debug("~p ask to retrieve brokers after timeout", [From]),
   retrieve_brokers(State),
   {reply, ok, retrieve, State, Timeout};
-retrieve(_, _From, #state{brokers_update_frequency = Timeout} = State) ->
+retrieve({call, From}, Event, #state{brokers_update_frequency = Timeout} = State) ->
+  lager:debug("~p ask for ~p after timeout: invalid event", [From, Event]),
   {reply, {error, invalid_demand}, retrieve, State, Timeout}.
 
 % @hidden
-handle_event(_Event, StateName, State) ->
-  {next_state, StateName, State}.
-
-% @hidden
-handle_sync_event(_Event, _From, StateName, State) ->
-  {reply, ok, StateName, State}.
-
-% @hidden
-handle_info(_Info, StateName, State) ->
-  {next_state, StateName, State}.
-
-% @hidden
 terminate(_Reason, _StateName, _State) ->
+  remove_all_pools(),
   ets:delete(?ETS_TABLE),
   ok.
 
@@ -378,6 +362,12 @@ get_host([Addr|Rest], Hostname, AddrType) ->
     _ -> get_host(Rest, Hostname, AddrType)
   end.
 
+remove_all_pools() ->
+  Brokers = ets_get(?ETS_TABLE, brokers, #{}),
+  lager:debug("Removing all pools: ~p", [Brokers]),
+  lists:foreach(fun poolgirl:remove_pool/1, maps:values(Brokers)).
+
+
 % Remove dead brokers
 remove_dead_brokers() ->
   BrokersList = ets_get(?ETS_TABLE, brokers_list, []),
@@ -413,57 +403,56 @@ update_state_with_metadata(PoolSize, ChunkPoolSize) ->
   case kafe:metadata() of
     {ok, #{brokers := Brokers,
            topics := Topics}} ->
-      Brokers1 = lists:foldl(fun(#{host := Host, id := ID, port := Port}, Acc) ->
-                                 get_connections([{bucs:to_string(Host), Port}], PoolSize, ChunkPoolSize),
-                                 maps:put(ID, kafe_utils:broker_name(Host, Port), Acc)
-                             end, #{}, Brokers),
-      remove_unlisted_brokers(maps:values(Brokers1)),
-      case update_topics(Topics, Brokers1) of
-        leader_election ->
-          timer:sleep(1000),
-          update_state_with_metadata(PoolSize, ChunkPoolSize);
-        Topics1 ->
-          ets:insert(?ETS_TABLE, [{topics, Topics1}])
-      end;
+      BrokersByID = maps:from_list(
+                   [ begin
+                       get_connections([{bucs:to_string(Host), Port}], PoolSize, ChunkPoolSize),
+                       {ID, kafe_utils:broker_name(Host, Port)}
+                     end ||
+                     #{id := ID, host := Host, port := Port} <- Brokers ]),
+      remove_unlisted_brokers(maps:values(BrokersByID)),
+      TopicsWithLeaders = leaders_for_topics(Topics, BrokersByID),
+      ets:insert(?ETS_TABLE, [{topics, TopicsWithLeaders}]);
     {error, Reason} ->
       lager:warning("Get kafka metadata failed: ~p", [Reason])
   end.
 
 remove_unlisted_brokers(NewBrokersList) ->
   Brokers = ets_get(?ETS_TABLE, brokers, #{}),
-  NewBrokers = [{BrokerName, maps:get(BrokerName, Brokers)} || BrokerName <- NewBrokersList],
+  NewBrokers = lists:foldr(fun(BrokerName, Acc) ->
+                               case maps:get(BrokerName, Brokers, undefined) of
+                                 undefined -> Acc;
+                                 Broker -> maps:put(BrokerName, Broker, Acc)
+                               end
+                           end, #{}, NewBrokersList),
+  lager:debug("old brokers = ~p, new brokers = ~p", [Brokers, NewBrokers]),
   [begin
-     case lists:keyfind(BrokerID, 2, NewBrokers) of
+     case lists:member(BrokerID, maps:values(NewBrokers)) of
        false ->
+         lager:debug("remove broker ~p", [BrokerID]),
          poolgirl:remove_pool(BrokerID);
        _ ->
          ok
      end
    end || BrokerID <- lists:usort(maps:values(Brokers))],
-  ets:insert(?ETS_TABLE, [{brokers, maps:from_list(NewBrokers)},
+  ets:insert(?ETS_TABLE, [{brokers, NewBrokers},
                           {brokers_list, NewBrokersList}]).
 
-update_topics(Topics, Brokers1) ->
-  update_topics(Topics, Brokers1, #{}).
-update_topics([], _, Acc) ->
-  Acc;
-update_topics([#{name := Topic, partitions := Partitions}|Rest], Brokers1, Acc) ->
-  case brokers_for_partitions(Partitions, Brokers1, Topic, #{}) of
-    leader_election ->
-      leader_election;
-    BrokersForPartitions ->
-      AccUpdate = maps:put(Topic, BrokersForPartitions, Acc),
-      update_topics(Rest, Brokers1, AccUpdate)
-  end.
+leaders_for_topics(Topics, BrokersByID) ->
+  maps:from_list(
+    [ {Topic, leaders_for_partitions(Topic, Partitions, BrokersByID)} ||
+      #{name := Topic, partitions := Partitions} <- Topics ]).
 
-brokers_for_partitions([], _, _, Acc) ->
-  Acc;
-brokers_for_partitions([#{id := ID, leader := -1}|_], _, Topic, _) ->
-  lager:debug("Leader election in progress for topic ~s, partition ~p", [Topic, ID]),
-  leader_election;
-brokers_for_partitions([#{id := ID, leader := Leader}|Rest], Brokers1, Topic, Acc) ->
-  brokers_for_partitions(Rest, Brokers1, Topic,
-                         maps:put(ID, maps:get(Leader, Brokers1), Acc)).
+leaders_for_partitions(Topic, Partitions, BrokersByID) ->
+  maps:from_list(
+    [ {PartitionID,
+       case Leader of
+         -1 ->
+           lager:warning("Leader not available for topic ~s, partition ~p", [Topic, PartitionID]),
+           leader_not_available;
+         _ ->
+           maps:get(Leader, BrokersByID)
+       end}
+       || #{id := PartitionID, leader := Leader} <- Partitions ]).
 
 % Return the first available (alive) broker or undefined
 -spec get_first_broker() -> {ok, pid()} | {error, term()}.
@@ -492,7 +481,7 @@ checkout_broker(BrokerID) ->
           Broker;
         false ->
           _ = poolgirl:checkin(Broker),
-          lager:warning("Broker ~s is not alive", [Broker]),
+          lager:warning("Broker ~p (~s) is not alive", [Broker, BrokerID]),
           undefined
       end;
     {error, Reason} ->

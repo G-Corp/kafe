@@ -1,6 +1,5 @@
 -module(kafe_producer_SUITE).
--include_lib("common_test/include/ct.hrl").
--include_lib("eunit/include/eunit.hrl").
+-include("kafe_ct_common.hrl").
 
 -export([
          init_per_suite/1
@@ -20,21 +19,27 @@ suite() ->
    [{timetrap, {seconds, 30}}].
 
 init_per_suite(Config) ->
-  application:ensure_all_started(kafe),
+  {ok, _} = application:ensure_all_started(lager),
+  kafe_test_cluster:up(),
+  {ok, _} = application:ensure_all_started(kafe),
   Config.
 
 end_per_suite(_Config) ->
   application:stop(kafe),
+  application:stop(poolgirl),
   ok.
 
 init_per_testcase(_Case, Config) ->
-  {ok, #{throttle_time := 0,
+  ?RETRY(
+   begin
+     {ok, #{
          topics := [#{name := <<"testone">>,
                       partitions := [#{error_code := none,
                                        high_watermark_offset := HWO,
                                        partition := 0}]}]}} =
-  kafe:fetch(-1, [{<<"testone">>, 0}], #{}),
-  [{offset, HWO}|Config].
+       kafe:fetch(-1, [{<<"testone">>, 0}], #{}),
+     [{offset, HWO}|Config]
+   end).
 
 end_per_testcase(_Case, Config) ->
   lists:keydelete(offset, 1, Config).
