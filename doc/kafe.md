@@ -36,6 +36,16 @@ broker_id() = atom()
 
 
 
+### <a name="type-broker_name">broker_name()</a> ###
+
+
+<pre><code>
+broker_name() = string()
+</code></pre>
+
+
+
+
 ### <a name="type-commit">commit()</a> ###
 
 
@@ -170,7 +180,7 @@ groups() = #{error_code =&gt; <a href="#type-error_code">error_code()</a>, group
 
 
 <pre><code>
-groups_list() = [#{broker =&gt; <a href="#type-broker_id">broker_id()</a>, groups =&gt; <a href="#type-groups">groups()</a>}]
+groups_list() = [#{broker =&gt; <a href="#type-broker_name">broker_name()</a>, groups =&gt; <a href="#type-groups">groups()</a>}]
 </code></pre>
 
 
@@ -433,7 +443,10 @@ Return the list of API versions for each api key
 
 ### brokers/0 ###
 
-`brokers() -> any()`
+<pre><code>
+brokers() -&gt; [<a href="#type-broker_name">broker_name()</a>]
+</code></pre>
+<br />
 
 Return the list of availables brokers
 
@@ -663,7 +676,7 @@ Find groups managed by all brokers.
 ### list_groups/1 ###
 
 <pre><code>
-list_groups(Broker::<a href="#type-broker_id">broker_id()</a>) -&gt; {ok, <a href="#type-groups">groups()</a>} | {error, term()}
+list_groups(BrokerIDOrName::<a href="#type-broker_id">broker_id()</a> | <a href="#type-broker_name">broker_name()</a>) -&gt; {ok, <a href="#type-groups">groups()</a>} | {error, term()}
 </code></pre>
 <br />
 
