@@ -52,8 +52,43 @@
          {invalid_config, 40, false, "Configuration is invalid."},
          {not_controller, 41, true, "This is not the correct controller for this cluster."},
          {invalid_request, 42, false, "This most likely occurs because of a request being malformed by the client library or the message was sent to an incompatible broker. " ++
-          "See the broker logs for more details."},
-         {unsupported_for_message_format, 43, false, "The message format version on the broker does not support the request."}
+                                      "See the broker logs for more details."},
+         {unsupported_for_message_format, 43, false, "The message format version on the broker does not support the request."},
+         {policy_violation, 44, false, "Request parameters do not satisfy the configured policy."},
+         {out_of_order_sequence_number, 45, false, "The broker received an out of order sequence number"},
+         {duplicate_sequence_number, 46, false, "The broker received a duplicate sequence number"},
+         {invalid_producer_epoch, 47, false, "Producer attempted an operation with an old epoch. Either there is a newer producer with the same transactionalId, " ++
+                                             "or the producer's transaction has been expired by the broker."},
+         {invalid_txn_state, 48, false, "The producer attempted a transactional operation in an invalid state"},
+         {invalid_producer_id_mapping, 49, false, "The producer attempted to use a producer id which is not currently assigned to its transactional id"},
+         {invalid_transaction_timeout, 50, false, "The transaction timeout is larger than the maximum value allowed by the broker (as configured by transaction.max.timeout.ms)."},
+         {concurrent_transactions, 51, false, "The producer attempted to update a transaction while another concurrent operation on the same transaction was ongoing"},
+         {transaction_coordinator_fenced, 52, false, "Indicates that the transaction coordinator sending a WriteTxnMarker is no longer the current coordinator for a given " ++
+                                                     "producer"},
+         {transactional_id_authorization_failed, 53, false, "Transactional Id authorization failed"},
+         {security_disabled, 54, false, "Security features are disabled."},
+         {operation_not_attempted, 55, false, "The broker did not attempt to execute this operation. This may happen for batched RPCs where some operations in the batch " ++
+                                              "failed, causing the broker to respond without trying the rest."},
+         {kafka_storage_error, 56, true, "Disk error when trying to access log file on the disk."},
+         {log_dir_not_found, 57, false, "The user-specified log directory is not found in the broker config."},
+         {sasl_authentication_failed, 58, false, "SASL Authentication failed."},
+         {unknown_producer_id, 59, false, "This exception is raised by the broker if it could not locate the producer metadata associated with the producerId in question. " ++
+                                          "This could happen if, for instance, the producer's records were deleted because their retention time had elapsed. Once the last " ++
+                                          "records of the producerId are removed, the producer's metadata is removed from the broker, and future appends by the producer " ++
+                                          "will return this exception."},
+         {reassignment_in_progress, 60, false, "A partition reassignment is in progress"},
+         {delegation_token_auth_disabled, 61, false, "Delegation Token feature is not enabled."},
+         {delegation_token_not_found, 62, false, "Delegation Token is not found on server."},
+         {delegation_token_owner_mismatch, 63, false, "Specified Principal is not valid Owner/Renewer."},
+         {delegation_token_request_not_allowed, 64, false, "Delegation Token requests are not allowed on PLAINTEXT/1-way SSL channels and on delegation token " ++
+                                                           "authenticated channels."},
+         {delegation_token_authorization_failed, 65, false, "Delegation Token authorization failed."},
+         {delegation_token_expired, 66, false, "Delegation Token is expired."},
+         {invalid_principal_type, 67, false, "Supplied principalType is not supported"},
+         {non_empty_group, 68, false, "The group The group is not empty is not empty"},
+         {group_id_not_found, 69, false, "The group id The group id does not exist was not found"},
+         {fetch_session_id_not_found, 70, true, "The fetch session ID was not found"},
+         {invalid_fetch_session_epoch, 71, true, "The fetch session epoch is invalid"}
         ]).
 
 code(N) when is_integer(N) ->
@@ -70,4 +105,3 @@ message(N) when is_integer(N) ->
   buclists:keyfind(N, 2, ?ERRORS, 4, ?UNKNOW_ERROR);
 message(N) when is_atom(N) ->
   buclists:keyfind(N, 1, ?ERRORS, 4, ?UNKNOW_ERROR).
-

@@ -17,6 +17,10 @@
 -define(V1, 1).
 -define(V2, 2).
 -define(V3, 3).
+-define(V4, 4).
+-define(V5, 5).
+-define(V6, 6).
+-define(V7, 7).
 
 -define(PRODUCE_REQUEST, 0).
 -define(FETCH_REQUEST, 1).
@@ -39,6 +43,28 @@
 -define(API_VERSIONS_REQUEST, 18).
 -define(CREATE_TOPICS_REQUEST, 19).
 -define(DELETE_TOPICS_REQUEST, 20).
+-define(DELETE_RECORDS, 21).
+-define(INIT_PRODUCER_ID, 22).
+-define(OFFSET_FOR_LEADER_EPOCH, 23).
+-define(ADD_PARTITIONS_TO_TXN, 24).
+-define(ADD_OFFSETS_TO_TXN, 25).
+-define(END_TXN, 26).
+-define(WRITE_TXN_MARKERS, 27).
+-define(TXN_OFFSET_COMMIT, 28).
+-define(DESCRIBE_ACLS, 29).
+-define(CREATE_ACLS, 30).
+-define(DELETE_ACLS, 31).
+-define(DESCRIBE_CONFIGS, 32).
+-define(ALTER_CONFIGS, 33).
+-define(ALTER_REPLICA_LOG_DIRS, 34).
+-define(DESCRIBE_LOG_DIRS, 35).
+-define(SASL_AUTHENTICATE, 36).
+-define(CREATE_PARTITIONS, 37).
+-define(CREATE_DELEGATION_TOKEN, 38).
+-define(RENEW_DELEGATION_TOKEN, 39).
+-define(EXPIRE_DELEGATION_TOKEN, 40).
+-define(DESCRIBE_DELEGATION_TOKEN, 41).
+-define(DELETE_GROUPS, 42).
 
 -define(DEFAULT_OFFSET_PARTITION, 0).
 -define(DEFAULT_OFFSET_TIMESTAMP, -1).
@@ -99,4 +125,3 @@
             error_logger:error_msg("Error while calling ~p:~p(~p): ~p:~p", [M, F, A, C, E]),
             D
         end).
-

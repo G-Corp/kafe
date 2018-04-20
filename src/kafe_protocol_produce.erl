@@ -72,7 +72,39 @@ run(Messages, Options) ->
 %     data => partition record_set
 %       partition => INT32
 %       record_set => BYTES
-request(Messages, Options, #{api_version := ApiVersion} = State) ->
+%
+% Produce Request (Version: 3) => transactional_id acks timeout [topic_data]
+%   transactional_id => NULLABLE_STRING
+%   acks => INT16
+%   timeout => INT32
+%   topic_data => topic [data]
+%     topic => STRING
+%     data => partition record_set
+%       partition => INT32
+%       record_set => RECORDS
+%
+% Produce Request (Version: 4) => transactional_id acks timeout [topic_data]
+%   transactional_id => NULLABLE_STRING
+%   acks => INT16
+%   timeout => INT32
+%   topic_data => topic [data]
+%     topic => STRING
+%     data => partition record_set
+%       partition => INT32
+%       record_set => RECORDS
+%
+% Produce Request (Version: 5) => transactional_id acks timeout [topic_data]
+%   transactional_id => NULLABLE_STRING
+%   acks => INT16
+%   timeout => INT32
+%   topic_data => topic [data]
+%     topic => STRING
+%     data => partition record_set
+%       partition => INT32
+%       record_set => RECORDS
+request(Messages, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V0;
+                                                                      ApiVersion == ?V1;
+                                                                      ApiVersion == ?V2 ->
   Timeout = maps:get(timeout, Options, ?DEFAULT_PRODUCE_SYNC_TIMEOUT),
   RequiredAcks = maps:get(required_acks,
                           Options,
@@ -80,6 +112,19 @@ request(Messages, Options, #{api_version := ApiVersion} = State) ->
   Encoded = encode_messages_topics(Messages, Options, ApiVersion, []),
   kafe_protocol:request(
     <<RequiredAcks:16, Timeout:32, Encoded/binary>>,
+    State);
+
+request(Messages, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V3;
+                                                                      ApiVersion == ?V4;
+                                                                      ApiVersion == ?V5 ->
+  Timeout = maps:get(timeout, Options, ?DEFAULT_PRODUCE_SYNC_TIMEOUT),
+  RequiredAcks = maps:get(required_acks,
+                          Options,
+                          ?DEFAULT_PRODUCE_REQUIRED_ACKS),
+  TransactionalID = maps:get(transactional_id, Options, undefined),
+  Encoded = encode_messages_topics(Messages, Options, ApiVersion, []),
+  kafe_protocol:request(
+    <<(kafe_protocol:encode_string(TransactionalID))/binary, RequiredAcks:16, Timeout:32, Encoded/binary>>,
     State).
 
 encode_messages_topics([], _, _, Acc) ->
@@ -175,6 +220,37 @@ message_set([{Key, Value}|Rest], Options, ApiVersion, Acc) ->
 %       base_offset => INT64
 %       timestamp => INT64
 %   throttle_time_ms => INT32
+%
+% Produce Response (Version: 3) => [responses] throttle_time_ms
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code base_offset log_append_time
+%       partition => INT32
+%       error_code => INT16
+%       base_offset => INT64
+%       log_append_time => INT64
+%   throttle_time_ms => INT32
+%
+% Produce Response (Version: 4) => [responses] throttle_time_ms
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code base_offset log_append_time
+%       partition => INT32
+%       error_code => INT16
+%       base_offset => INT64
+%       log_append_time => INT64
+%   throttle_time_ms => INT32
+%
+% Produce Response (Version: 5) => [responses] throttle_time_ms
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code base_offset log_append_time log_start_offset
+%       partition => INT32
+%       error_code => INT16
+%       base_offset => INT64
+%       log_append_time => INT64
+%       log_start_offset => INT64
+%   throttle_time_ms => INT32
 response(<<NumberOfTopics:32/signed,
            Remainder/binary>>,
          #{api_version := ApiVersion}) when ApiVersion == ?V0 ->
@@ -184,7 +260,10 @@ response(<<NumberOfTopics:32/signed,
 response(<<NumberOfTopics:32/signed,
            Remainder/binary>>,
          #{api_version := ApiVersion}) when ApiVersion == ?V1;
-                                            ApiVersion == ?V2 ->
+                                            ApiVersion == ?V2;
+                                            ApiVersion == ?V3;
+                                            ApiVersion == ?V4;
+                                            ApiVersion == ?V5 ->
   {Topics,
    <<ThrottleTime:32/signed,
      _/binary>>} = topics(NumberOfTopics, [], Remainder, ApiVersion),
@@ -241,14 +320,36 @@ partitions(
     Timestamp:64/signed,
     Remainder/binary
   >>,
-  ApiVersion) when ApiVersion == ?V2 ->
+  ApiVersion) when ApiVersion == ?V2;
+                   ApiVersion == ?V3;
+                   ApiVersion == ?V4 ->
   partitions(N - 1,
              [#{partition => Partition,
                 error_code => kafe_error:code(ErrorCode),
                 offset => Offset,
                 timestamp => Timestamp} | Acc],
              Remainder,
-             ApiVersion).
+             ApiVersion);
+partitions(
+  N,
+  Acc,
+  <<
+    Partition:32/signed,
+    ErrorCode:16/signed,
+    Offset:64/signed,
+    Timestamp:64/signed,
+    StartOffset:64/signed,
+    Remainder/binary
+  >>,
+  ApiVersion) when ApiVersion == ?V5 ->
+  partitions(N - 1,
+            [#{partition => Partition,
+               error_code => kafe_error:code(ErrorCode),
+               offset => Offset,
+               timestamp => Timestamp,
+               start_offset => StartOffset} | Acc],
+            Remainder,
+            ApiVersion).
 
 % Message dispatch per brocker
 dispatch([], _, Result) ->
@@ -328,4 +429,3 @@ add_partition([#{name := Topic, partitions := CurrentPartitions}|Rest], Topic, P
   add_partition(Rest, Topic, [], [#{name => Topic, partitions => CurrentPartitions ++ Partitions}|Acc]);
 add_partition([Current|Rest], Topic, Partitions, Acc) ->
   add_partition(Rest, Topic, Partitions, [Current|Acc]).
-

@@ -8,6 +8,7 @@ kafe_protocol_produce_test_() ->
     ?_test(t_request_v0()),
     ?_test(t_request_v1()),
     ?_test(t_request_v2_explicit_timestamp()),
+    ?_test(t_request_v5_explicit_timestamp()),
     ?_test(t_request_v2_automatic_timestamp()),
     ?_test(t_response())
    ]
@@ -117,6 +118,68 @@ t_request_v2_explicit_timestamp() ->
                                      correlation_id => 0,
                                      client_id => <<"test">>})).
 
+t_request_v5_explicit_timestamp() ->
+  ?assertEqual(
+     #{packet => << ?PRODUCE_REQUEST:16 % API key
+                  , 5:16                % API version
+                  , 0:32                % correlation id
+                  , 4:16, "test"        % client id
+                    , 5:16, "trans"       % transactional id
+                    , -1:16               % required acks
+                    , 5000:32             % timeout
+                    , 1:32                % message count
+                      , 5:16, "topic"       % topic name
+                      , 1:32                % partition count
+                        , 0:32                    % partition index
+                        , (8+4+4+1+1+8+4+4+11):32 % message set size
+                          % offset
+                          , 0:64
+                          % message size
+                          , (4+1+1+8+4+4+11):32
+                          % crc,                magic, attributes, timestamp,        key,   value
+                          , 240, 221, 239, 209, 1,     0,          1000000000000:64, 0:32,  11:32, "hello world"
+                 >>,
+       state => #{api_key => ?PRODUCE_REQUEST,
+                  api_version => 5,
+                  client_id => <<"test">>,
+                  correlation_id => 1}},
+     kafe_protocol_produce:request([{<<"topic">>, [{0, [{<<>>, <<"hello world">>}]}]}],
+                                   #{timestamp => 1000000000000, transactional_id => <<"trans">>},
+                                   #{api_key => ?PRODUCE_REQUEST,
+                                     api_version => 5,
+                                     correlation_id => 0,
+                                     client_id => <<"test">>})),
+  ?assertEqual(
+     #{packet => << ?PRODUCE_REQUEST:16 % API key
+                  , 5:16                % API version
+                  , 0:32                % correlation id
+                  , 4:16, "test"        % client id
+                    , -1:16               % transactional id
+                    , -1:16               % required acks
+                    , 5000:32             % timeout
+                    , 1:32                % message count
+                      , 5:16, "topic"       % topic name
+                      , 1:32                % partition count
+                        , 0:32                    % partition index
+                        , (8+4+4+1+1+8+4+4+11):32 % message set size
+                          % offset
+                          , 0:64
+                          % message size
+                          , (4+1+1+8+4+4+11):32
+                          % crc,                magic, attributes, timestamp,        key,   value
+                          , 240, 221, 239, 209, 1,     0,          1000000000000:64, 0:32,  11:32, "hello world"
+                 >>,
+       state => #{api_key => ?PRODUCE_REQUEST,
+                  api_version => 5,
+                  client_id => <<"test">>,
+                  correlation_id => 1}},
+     kafe_protocol_produce:request([{<<"topic">>, [{0, [{<<>>, <<"hello world">>}]}]}],
+                                   #{timestamp => 1000000000000},
+                                   #{api_key => ?PRODUCE_REQUEST,
+                                     api_version => 5,
+                                     correlation_id => 0,
+                                     client_id => <<"test">>})).
+
 t_request_v2_automatic_timestamp() ->
   Now = erlang:system_time(millisecond),
 
@@ -153,7 +216,59 @@ t_response() ->
   ?assertEqual({ok, [#{name => <<"topic">>,
                        partitions => [#{error_code => none, offset => 5, partition => 0}]}]},
                kafe_protocol_produce:response(
-                 <<0, 0, 0, 1, 0, 5, 116, 111, 112, 105, 99, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                   0, 0, 5>>,
-                 #{api_version => 0})).
-
+                 <<1:32 % Number of topics
+                   , 5:16, "topic" % topic name
+                   , 1:32          % number of partitions
+                     , 0:32        % partition number
+                     , 0:16        % error code
+                     , 5:64        % base offset
+                 >>,
+                 #{api_version => 0})),
+  ?assertEqual({ok, #{topics => [
+                                 #{name => <<"topic">>,
+                                   partitions => [#{error_code => none, offset => 5, partition => 0}]}
+                                ],
+                      throttle_time => 1000}},
+               kafe_protocol_produce:response(
+                 <<1:32 % Number of topics
+                   , 5:16, "topic" % topic name
+                   , 1:32          % number of partitions
+                     , 0:32        % partition number
+                     , 0:16        % error code
+                     , 5:64        % base offset
+                   , 1000: 32      % throttle_time
+                 >>,
+                 #{api_version => 1})),
+  ?assertEqual({ok, #{topics => [
+                                 #{name => <<"topic">>,
+                                   partitions => [#{error_code => none, offset => 5, partition => 0, timestamp => 123456}]}
+                                ],
+                       throttle_time => 1000}},
+               kafe_protocol_produce:response(
+                 <<1:32 % Number of topics
+                   , 5:16, "topic" % topic name
+                   , 1:32          % number of partitions
+                     , 0:32        % partition number
+                     , 0:16        % error code
+                     , 5:64        % base offset
+                     , 123456:64   % timestamp
+                   , 1000: 32      % throttle_time
+                 >>,
+                 #{api_version => 4})),
+  ?assertEqual({ok, #{topics => [
+                                 #{name => <<"topic">>,
+                                   partitions => [#{error_code => none, offset => 5, partition => 0, timestamp => 123456, start_offset => 10}]}
+                                ],
+                      throttle_time => 1000}},
+               kafe_protocol_produce:response(
+                 <<1:32 % Number of topics
+                   , 5:16, "topic" % topic name
+                   , 1:32          % number of partitions
+                     , 0:32        % partition number
+                     , 0:16        % error code
+                     , 5:64        % base offset
+                     , 123456:64   % timestamp
+                     , 10:64       % start_offset
+                   , 1000: 32      % throttle_time
+                 >>,
+                 #{api_version => 5})).

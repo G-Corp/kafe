@@ -369,6 +369,7 @@ produce(Messages) ->
 % If it is 1, the server will wait the data is written to the local log before sending a response. If it is -1 the server will block until the message is committed
 % by all in sync replicas before sending a response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server
 % will never wait for more acknowledgements than there are in-sync replicas). (default: -1)</li>
+% <li><tt>transactional_id :: binary()</tt> : The transactional id, if the producer is transactional.</li>
 % <li><tt>partition :: integer()</tt> : The partition that data is being published to.
 % <i>This option exist for compatibility but it will be removed in the next major release.</i></li>
 % <li><tt>key_to_partition :: fun((binary(), term()) -&gt; integer())</tt> : Hash function to do partition assignment from the message key. (default:

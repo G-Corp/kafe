@@ -103,6 +103,66 @@ consolidate([Topics|Rest], Acc) ->
 %       partition => INT32
 %       fetch_offset => INT64
 %       max_bytes => INT32
+%
+% Fetch Request (Version: 4) => replica_id max_wait_time min_bytes max_bytes isolation_level [topics]
+%   replica_id => INT32
+%   max_wait_time => INT32
+%   min_bytes => INT32
+%   max_bytes => INT32
+%   isolation_level => INT8
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition fetch_offset max_bytes
+%       partition => INT32
+%       fetch_offset => INT64
+%       max_bytes => INT32
+%
+% Fetch Request (Version: 5) => replica_id max_wait_time min_bytes max_bytes isolation_level [topics]
+%   replica_id => INT32
+%   max_wait_time => INT32
+%   min_bytes => INT32
+%   max_bytes => INT32
+%   isolation_level => INT8
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition fetch_offset log_start_offset max_bytes
+%       partition => INT32
+%       fetch_offset => INT64
+%       log_start_offset => INT64
+%       max_bytes => INT32
+%
+% Fetch Request (Version: 6) => replica_id max_wait_time min_bytes max_bytes isolation_level [topics]
+%   replica_id => INT32
+%   max_wait_time => INT32
+%   min_bytes => INT32
+%   max_bytes => INT32
+%   isolation_level => INT8
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition fetch_offset log_start_offset max_bytes
+%       partition => INT32
+%       fetch_offset => INT64
+%       log_start_offset => INT64
+%       max_bytes => INT32
+%
+% Fetch Request (Version: 7) => replica_id max_wait_time min_bytes max_bytes isolation_level session_id epoch [topics] [forgetten_topics_data]
+%   replica_id => INT32
+%   max_wait_time => INT32
+%   min_bytes => INT32
+%   max_bytes => INT32
+%   isolation_level => INT8
+%   session_id => INT32
+%   epoch => INT32
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition fetch_offset log_start_offset max_bytes
+%       partition => INT32
+%       fetch_offset => INT64
+%       log_start_offset => INT64
+%       max_bytes => INT32
+%   forgetten_topics_data => topic [partitions]
+%     topic => STRING
+%     partitions => INT32
 request(ReplicaID, Topics, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V0;
                                                                                   ApiVersion == ?V1;
                                                                                   ApiVersion == ?V2 ->
@@ -187,6 +247,71 @@ partitions([{Partition, Offset, MaxBytes}|Rest], Acc) ->
 %       error_code => INT16
 %       high_watermark => INT64
 %       record_set => BYTES
+%
+% Fetch Response (Version: 4) => throttle_time_ms [responses]
+%   throttle_time_ms => INT32
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition_header record_set
+%       partition_header => partition error_code high_watermark last_stable_offset [aborted_transactions]
+%         partition => INT32
+%         error_code => INT16
+%         high_watermark => INT64
+%         last_stable_offset => INT64
+%         aborted_transactions => producer_id first_offset
+%           producer_id => INT64
+%           first_offset => INT64
+%       record_set => RECORDS
+%
+% Fetch Response (Version: 5) => throttle_time_ms [responses]
+%   throttle_time_ms => INT32
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition_header record_set
+%       partition_header => partition error_code high_watermark last_stable_offset log_start_offset [aborted_transactions]
+%         partition => INT32
+%         error_code => INT16
+%         high_watermark => INT64
+%         last_stable_offset => INT64
+%         log_start_offset => INT64
+%         aborted_transactions => producer_id first_offset
+%           producer_id => INT64
+%           first_offset => INT64
+%       record_set => RECORDS
+%
+% Fetch Response (Version: 6) => throttle_time_ms [responses]
+%   throttle_time_ms => INT32
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition_header record_set
+%       partition_header => partition error_code high_watermark last_stable_offset log_start_offset [aborted_transactions]
+%         partition => INT32
+%         error_code => INT16
+%         high_watermark => INT64
+%         last_stable_offset => INT64
+%         log_start_offset => INT64
+%         aborted_transactions => producer_id first_offset
+%           producer_id => INT64
+%           first_offset => INT64
+%       record_set => RECORDS
+%
+% Fetch Response (Version: 7) => throttle_time_ms error_code session_id [responses]
+%   throttle_time_ms => INT32
+%   error_code => INT16
+%   session_id => INT32
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition_header record_set
+%       partition_header => partition error_code high_watermark last_stable_offset log_start_offset [aborted_transactions]
+%         partition => INT32
+%         error_code => INT16
+%         high_watermark => INT64
+%         last_stable_offset => INT64
+%         log_start_offset => INT64
+%         aborted_transactions => producer_id first_offset
+%           producer_id => INT64
+%           first_offset => INT64
+%       record_set => RECORDS
 response(<<NumberOfTopics:32/signed,
            Remainder/binary>>,
          #{api_version := ApiVersion}) when ApiVersion == ?V0 ->
