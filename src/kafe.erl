@@ -131,6 +131,7 @@
                            epoch => integer(),
                            forgetten_topics => [{binary(), [integer()]}],
                            retrieve => first | all}.
+-type metadata_options() :: #{allow_auto_topic_creation => true | false}.
 -type message_set() :: #{name => binary(),
                          partitions => [#{partition => integer(),
                                           error_code => error_code(),
@@ -313,12 +314,22 @@ brokers() ->
 api_versions() ->
   kafe_protocol_api_versions:run().
 
-% @equiv metadata([])
+% @equiv metadata([], #{})
 metadata() ->
   metadata([]).
 
+% @equiv metadata(Topics, #{})
+metadata(Topics) when is_list(Topics) ->
+  metadata(Topics, #{}).
+
 % @doc
 % Return metadata for the given topics
+%
+% Options:
+% <ul>
+% <li><tt>allow_auto_topic_creation :: true | false</tt> : If this and the broker config 'auto.create.topics.enable' are true, topics that don't exist will be created by
+% the broker. Otherwise, no topics will be created by the broker (default: false).</li>
+% </ul>
 %
 % Example:
 % <pre>
@@ -330,9 +341,9 @@ metadata() ->
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest">Kafka protocol documentation</a>.
 % @end
--spec metadata([binary()|string()|atom()]) -> {ok, metadata()} | {error, term()}.
-metadata(Topics) when is_list(Topics) ->
-  kafe_protocol_metadata:run(Topics).
+-spec metadata([binary()|string()|atom()], metadata_options()) -> {ok, metadata()} | {error, term()}.
+metadata(Topics, Options) when is_list(Topics), is_map(Options) ->
+  kafe_protocol_metadata:run(Topics, Options).
 
 % @equiv offset(-1, [])
 offset() ->

@@ -226,16 +226,6 @@ message_set() = #{name =&gt; binary(), partitions =&gt; [#{partition =&gt; integ
 
 
 
-### <a name="type-metadata">metadata()</a> ###
-
-
-<pre><code>
-metadata() = #{brokers =&gt; [#{host =&gt; binary(), id =&gt; integer(), port =&gt; port()}], topics =&gt; [#{error_code =&gt; <a href="#type-error_code">error_code()</a>, name =&gt; binary(), partitions =&gt; [#{error_code =&gt; <a href="#type-error_code">error_code()</a>, id =&gt; integer(), isr =&gt; [integer()], leader =&gt; integer(), replicas =&gt; [integer()]}]}]}
-</code></pre>
-
-
-
-
 ### <a name="type-offset_commit_set">offset_commit_set()</a> ###
 
 
@@ -422,8 +412,7 @@ Once a member has joined and synced, it will begin sending periodic heartbeats t
 Join Group.</td></tr><tr><td valign="top"><a href="#leave_group-2">leave_group/2</a></td><td> 
 To explicitly leave a group, the client can send a leave group request.</td></tr><tr><td valign="top"><a href="#list_groups-0">list_groups/0</a></td><td>
 Find groups managed by all brokers.</td></tr><tr><td valign="top"><a href="#list_groups-1">list_groups/1</a></td><td> 
-Find groups managed by a broker.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td>Equivalent to <a href="#metadata-1"><tt>metadata([])</tt></a>.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td> 
-Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#offset-0">offset/0</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-1">offset/1</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, Topics)</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td>Equivalent to <a href="#offset-3"><tt>offset(ReplicatID, Topics, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-3">offset/3</a></td><td> 
+Find groups managed by a broker.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td>Equivalent to <a href="#metadata-2"><tt>metadata([], #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td>Equivalent to <a href="#metadata-2"><tt>metadata(Topics, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-0">offset/0</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-1">offset/1</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, Topics)</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td>Equivalent to <a href="#offset-3"><tt>offset(ReplicatID, Topics, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-3">offset/3</a></td><td> 
 Get offet for the given topics and replicat.</td></tr><tr><td valign="top"><a href="#offset_commit-2">offset_commit/2</a></td><td> 
 Offset commit v0.</td></tr><tr><td valign="top"><a href="#offset_commit-4">offset_commit/4</a></td><td> 
 Offset commit v1.</td></tr><tr><td valign="top"><a href="#offset_commit-5">offset_commit/5</a></td><td> 
@@ -725,31 +714,15 @@ For more informations, see the
 
 `metadata() -> any()`
 
-Equivalent to [`metadata([])`](#metadata-1).
+Equivalent to [`metadata([], #{})`](#metadata-2).
 
 <a name="metadata-1"></a>
 
 ### metadata/1 ###
 
-<pre><code>
-metadata(Topics::[binary() | string() | atom()]) -&gt; {ok, <a href="#type-metadata">metadata()</a>} | {error, term()}
-</code></pre>
-<br />
+`metadata(Topics) -> any()`
 
-
-Return metadata for the given topics
-
-Example:
-
-```
-
- Metadata = kafe:metadata([<<"topic1">>, <<"topic2">>]).
-```
-
-This example return all metadata for `topic1` and `topic2`
-
-For more informations, see the
-[Kafka protocol documentation](https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-TopicMetadataRequest).
+Equivalent to [`metadata(Topics, #{})`](#metadata-2).
 
 <a name="offset-0"></a>
 

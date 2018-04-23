@@ -11,7 +11,8 @@
          response/2,
          encode_string/1,
          encode_bytes/1,
-         encode_array/1
+         encode_array/1,
+         encode_boolean/1
         ]).
 
 run(ApiKey, MaxVersion, RequestFun, ResponseFun) when is_integer(ApiKey),
@@ -169,6 +170,9 @@ encode_array(List) ->
   Len = length(List),
   Payload = << <<B/binary>> || B <- List>>,
   <<Len:32/signed, Payload/binary>>.
+
+encode_boolean(true) -> <<1>>;
+encode_boolean(_) -> <<0>>.
 
 response(<<CorrelationId:32/signed, Remainder/bytes>>, #{requests := Requests} = State) ->
   case orddict:find(CorrelationId, Requests) of

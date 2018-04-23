@@ -3,31 +3,62 @@
 -compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
--define(MAX_VERSION, 2).
+-define(MAX_VERSION, 5).
 
 -export([
-         run/1,
-         request/2,
+         run/2,
+         request/3,
          response/2
         ]).
 
-run(Topics) ->
+run(Topics, Options) ->
   kafe_protocol:run(
     ?METADATA_REQUEST,
     ?MAX_VERSION,
-    {fun ?MODULE:request/2, [Topics]},
+    {fun ?MODULE:request/3, [Topics, Options]},
     fun ?MODULE:response/2).
 
 % Metadata Request (Version: 0) => [topics]
+%   topics => STRING
+%
 % Metadata Request (Version: 1) => [topics]
+%   topics => STRING
+%
 % Metadata Request (Version: 2) => [topics]
-request(TopicNames, #{api_version := ApiVersion} = State) ->
+%   topics => STRING
+%
+% Metadata Request (Version: 3) => [topics]
+%   topics => STRING
+%
+% Metadata Request (Version: 4) => [topics] allow_auto_topic_creation
+%   topics => STRING
+%   allow_auto_topic_creation => BOOLEAN
+%
+% Metadata Request (Version: 5) => [topics] allow_auto_topic_creation
+%   topics => STRING
+%   allow_auto_topic_creation => BOOLEAN
+request(TopicNames, _Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V0;
+                                                                         ApiVersion == ?V1;
+                                                                         ApiVersion == ?V2;
+                                                                         ApiVersion == ?V3 ->
   kafe_protocol:request(
     encode_array_or_null(TopicNames, ApiVersion),
+    State);
+request(TopicNames, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V4;
+                                                                        ApiVersion == ?V5 ->
+  AllowAutoTopicCreation = maps:get(allow_auto_topic_creation, Options, false),
+  kafe_protocol:request(
+    <<
+      (encode_array_or_null(TopicNames, ApiVersion))/binary,
+      (kafe_protocol:encode_boolean(AllowAutoTopicCreation))/binary
+    >>,
     State).
 
 encode_array_or_null([], ApiVersion) when ApiVersion == ?V1;
-                                          ApiVersion == ?V2 ->
+                                          ApiVersion == ?V2;
+                                          ApiVersion == ?V3;
+                                          ApiVersion == ?V4;
+                                          ApiVersion == ?V5 ->
   <<-1:32/signed>>;
 encode_array_or_null(Array, _) ->
   <<(kafe_protocol:encode_array(
@@ -84,6 +115,67 @@ encode_array_or_null(Array, _) ->
 %       leader => INT32
 %       replicas => INT32
 %       isr => INT32
+%
+% Metadata Response (Version: 3) => throttle_time_ms [brokers] cluster_id controller_id [topic_metadata]
+%   throttle_time_ms => INT32
+%   brokers => node_id host port rack
+%     node_id => INT32
+%     host => STRING
+%     port => INT32
+%     rack => NULLABLE_STRING
+%   cluster_id => NULLABLE_STRING
+%   controller_id => INT32
+%   topic_metadata => error_code topic is_internal [partition_metadata]
+%     error_code => INT16
+%     topic => STRING
+%     is_internal => BOOLEAN
+%     partition_metadata => error_code partition leader [replicas] [isr]
+%       error_code => INT16
+%       partition => INT32
+%       leader => INT32
+%       replicas => INT32
+%       isr => INT32
+%
+% Metadata Response (Version: 4) => throttle_time_ms [brokers] cluster_id controller_id [topic_metadata]
+%   throttle_time_ms => INT32
+%   brokers => node_id host port rack
+%     node_id => INT32
+%     host => STRING
+%     port => INT32
+%     rack => NULLABLE_STRING
+%   cluster_id => NULLABLE_STRING
+%   controller_id => INT32
+%   topic_metadata => error_code topic is_internal [partition_metadata]
+%     error_code => INT16
+%     topic => STRING
+%     is_internal => BOOLEAN
+%     partition_metadata => error_code partition leader [replicas] [isr]
+%       error_code => INT16
+%       partition => INT32
+%       leader => INT32
+%       replicas => INT32
+%       isr => INT32
+%
+% Metadata Response (Version: 5) => throttle_time_ms [brokers] cluster_id controller_id [topic_metadata]
+%   throttle_time_ms => INT32
+%   brokers => node_id host port rack
+%     node_id => INT32
+%     host => STRING
+%     port => INT32
+%     rack => NULLABLE_STRING
+%   cluster_id => NULLABLE_STRING
+%   controller_id => INT32
+%   topic_metadata => error_code topic is_internal [partition_metadata]
+%     error_code => INT16
+%     topic => STRING
+%     is_internal => BOOLEAN
+%     partition_metadata => error_code partition leader [replicas] [isr] [offline_replicas]
+%       error_code => INT16
+%       partition => INT32
+%       leader => INT32
+%       replicas => INT32
+%       isr => INT32
+%       offline_replicas => INT32
 response(<<NumberOfBrokers:32/signed,
            BrokerRemainder/binary>>,
          #{api_version := ApiVersion}) when ApiVersion == ?V0 ->
@@ -151,6 +243,51 @@ response(<<NumberOfBrokers:32/signed,
   {ok, #{brokers => Brokers,
          cluster_id => ClusterID0,
          controller_id => ControllerID0,
+         topics => Topics}};
+response(<<ThrottleTimeMs:32/signed,
+           NumberOfBrokers:32/signed,
+           BrokerRemainder/binary>>,
+         #{api_version := ApiVersion}) when ApiVersion == ?V3;
+                                            ApiVersion == ?V4;
+                                            ApiVersion == ?V5 ->
+  {
+   Brokers,
+   <<
+     ClusterIDLength:16/signed,
+     Remainder/binary
+   >>
+  } = brokers(NumberOfBrokers, BrokerRemainder, [], ApiVersion),
+  {ClusterID0,
+   ControllerID0,
+   NumberOfTopics0,
+   TopicMetadataRemainder0} = if
+                                ClusterIDLength == -1 ->
+                                  <<
+                                    ControllerID:32/signed,
+                                    NumberOfTopics:32/signed,
+                                    TopicMetadataRemainder/binary
+                                  >> = Remainder,
+                                  {<<>>,
+                                   ControllerID,
+                                   NumberOfTopics,
+                                   TopicMetadataRemainder};
+                                true ->
+                                  <<
+                                    ClusterID:ClusterIDLength/bytes,
+                                    ControllerID:32/signed,
+                                    NumberOfTopics:32/signed,
+                                    TopicMetadataRemainder/binary
+                                  >> = Remainder,
+                                  {ClusterID,
+                                   ControllerID,
+                                   NumberOfTopics,
+                                   TopicMetadataRemainder}
+                              end,
+  {Topics, _} = topics(NumberOfTopics0, TopicMetadataRemainder0, [], ApiVersion),
+  {ok, #{throttle_time => ThrottleTimeMs,
+         brokers => Brokers,
+         cluster_id => ClusterID0,
+         controller_id => ControllerID0,
          topics => Topics}}.
 
 % Private
@@ -169,7 +306,10 @@ brokers(
   >>,
   Acc,
   ApiVersion) when ApiVersion == ?V1;
-                   ApiVersion == ?V2->
+                   ApiVersion == ?V2;
+                   ApiVersion == ?V3;
+                   ApiVersion == ?V4;
+                   ApiVersion == ?V5 ->
   {Rack0, Remainder0} = if
                           RackLength == -1 ->
                             {<<>>, Remainder};
@@ -198,7 +338,7 @@ brokers(
           ApiVersion).
 
 topics(0, <<Remainder/binary>>, Acc, _) ->
-  {Acc, Remainder};
+  {lists:reverse(Acc), Remainder};
 topics(
   N,
   <<
@@ -229,7 +369,10 @@ topics(
   >>,
   Acc,
   ApiVersion) when ApiVersion == ?V1;
-                   ApiVersion == ?V2 ->
+                   ApiVersion == ?V2;
+                   ApiVersion == ?V3;
+                   ApiVersion == ?V4;
+                   ApiVersion == ?V5 ->
   {Partitions, Remainder} = partitions(PartitionLength, PartitionsRemainder, [], ApiVersion),
   topics(N-1,
          Remainder,
@@ -240,7 +383,7 @@ topics(
          ApiVersion).
 
 partitions(0, <<Remainder/binary>>, Acc, _) ->
-  {Acc, Remainder};
+  {lists:reverse(Acc), Remainder};
 partitions(
   N,
   <<
@@ -253,7 +396,9 @@ partitions(
   Acc,
   ApiVersion) when ApiVersion == ?V0;
                    ApiVersion == ?V1;
-                   ApiVersion == ?V2 ->
+                   ApiVersion == ?V2;
+                   ApiVersion == ?V3;
+                   ApiVersion == ?V4 ->
   {
    Replicas,
    <<NumberOfISR:32/signed, ISRRemainder/binary>>
@@ -266,15 +411,43 @@ partitions(
                 leader => Leader,
                 replicas => Replicas,
                 isr => ISR} | Acc],
+             ApiVersion);
+partitions(
+  N,
+  <<
+    ErrorCode:16/signed,
+    Id:32/signed,
+    Leader:32/signed,
+    NumberOfReplicas:32/signed,
+    ReplicasRemainder/binary
+  >>,
+  Acc,
+  ApiVersion) when ApiVersion == ?V5 ->
+  {
+   Replicas,
+   <<NumberOfISR:32/signed, ISRRemainder/binary>>
+  } = replicas(NumberOfReplicas, ReplicasRemainder, []),
+  {
+   ISR,
+   <<NumberOfOfflineReplicats:32/signed, ORRemainder/binary>>
+  } = isrs(NumberOfISR, ISRRemainder, []),
+  {OfflineReplicats, Remainder} = replicas(NumberOfOfflineReplicats, ORRemainder, []),
+  partitions(N-1,
+             Remainder,
+             [#{error_code => kafe_error:code(ErrorCode),
+                id => Id,
+                leader => Leader,
+                replicas => Replicas,
+                isr => ISR,
+                offline_replicas => OfflineReplicats} | Acc],
              ApiVersion).
 
 isrs(0, Remainder, Acc) ->
-  {Acc, Remainder};
+  {lists:reverse(Acc), Remainder};
 isrs(N, <<InSyncReplica:32/signed, Remainder/binary>>, Acc) ->
   isrs(N-1, Remainder, [InSyncReplica | Acc]).
 
 replicas(0, Remainder, Acc) ->
-  {Acc, Remainder};
+  {lists:reverse(Acc), Remainder};
 replicas(N, <<Replica:32/signed, Remainder/binary>>, Acc) ->
   replicas(N-1, Remainder, [Replica | Acc]).
-
