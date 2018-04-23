@@ -20,10 +20,20 @@ teardown(_) ->
 
 t_request() ->
   ?assertEqual(
-     #{packet => <<0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116,
-                   255, 255, 255, 255, 0, 0, 0, 100, 0, 0, 0, 1, 0,
-                   0, 0, 1, 0, 5, 116, 111, 112, 105, 99, 0, 0, 0, 1,
-                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 16, 0, 0>>,
+     #{packet => << ?FETCH_REQUEST:16                 % API Key
+                    , 0:16                            % API version
+                    , 0:32                            % correlation ID
+                    , 4:16, "test"                    % client ID
+                      , -1:32                           % replica ID
+                      , ?DEFAULT_FETCH_MAX_WAIT_TIME:32 % max wait time
+                      , ?DEFAULT_FETCH_MIN_BYTES:32     % min bytes
+                      , 1:32                            % topics count
+                        , 5:16, "topic"                   % topic name
+                        , 1:32                            % partition count
+                          , 0:32                            % partition index
+                          , 1:64                            % fetch offset
+                          , (?DEFAULT_FETCH_MAX_BYTES):32     % max bytes
+                 >>,
        state => #{api_key => ?FETCH_REQUEST,
                   api_version => 0,
                   client_id => <<"test">>,
@@ -37,10 +47,20 @@ t_request() ->
                                    client_id => <<"test">>})),
 
   ?assertEqual(
-     #{packet => <<0, 1, 0, 1, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116,
-                   255, 255, 255, 255, 0, 0, 0, 100, 0, 0, 0, 1, 0,
-                   0, 0, 1, 0, 5, 116, 111, 112, 105, 99, 0, 0, 0, 1,
-                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 16, 0, 0>>,
+     #{packet => << ?FETCH_REQUEST:16                 % API Key
+                    , 1:16                            % API version
+                    , 0:32                            % correlation ID
+                    , 4:16, "test"                    % client ID
+                      , -1:32                           % replica ID
+                      , ?DEFAULT_FETCH_MAX_WAIT_TIME:32 % max wait time
+                      , ?DEFAULT_FETCH_MIN_BYTES:32     % min bytes
+                      , 1:32                            % topics count
+                        , 5:16, "topic"                   % topic name
+                        , 1:32                            % partition count
+                          , 0:32                            % partition index
+                          , 1:64                            % fetch offset
+                          , (?DEFAULT_FETCH_MAX_BYTES):32     % max bytes
+                 >>,
        state => #{api_key => ?FETCH_REQUEST,
                   api_version => 1,
                   client_id => <<"test">>,
@@ -54,10 +74,20 @@ t_request() ->
                                    client_id => <<"test">>})),
 
   ?assertEqual(
-     #{packet => <<0, 1, 0, 2, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116,
-                   255, 255, 255, 255, 0, 0, 0, 100, 0, 0, 0, 1, 0,
-                   0, 0, 1, 0, 5, 116, 111, 112, 105, 99, 0, 0, 0, 1,
-                   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 16, 0, 0>>,
+     #{packet => << ?FETCH_REQUEST:16                 % API Key
+                    , 2:16                            % API version
+                    , 0:32                            % correlation ID
+                    , 4:16, "test"                    % client ID
+                      , -1:32                           % replica ID
+                      , ?DEFAULT_FETCH_MAX_WAIT_TIME:32 % max wait time
+                      , ?DEFAULT_FETCH_MIN_BYTES:32     % min bytes
+                      , 1:32                            % topics count
+                        , 5:16, "topic"                   % topic name
+                        , 1:32                            % partition count
+                          , 0:32                            % partition index
+                          , 1:64                            % fetch offset
+                          , (?DEFAULT_FETCH_MAX_BYTES):32     % max bytes
+                 >>,
        state => #{api_key => ?FETCH_REQUEST,
                   api_version => 2,
                   client_id => <<"test">>,
@@ -71,11 +101,21 @@ t_request() ->
                                    client_id => <<"test">>})),
 
   ?assertEqual(
-     #{packet => <<0, 1, 0, 3, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116,
-                   255, 255, 255, 255, 0, 0, 0, 100, 0, 0, 0, 1, 0,
-                   16, 0, 0, 0, 0, 0, 1, 0, 5, 116, 111, 112, 105,
-                   99, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                   1, 0, 16, 0, 0>>,
+     #{packet => << ?FETCH_REQUEST:16                 % API Key
+                    , 3:16                            % API version
+                    , 0:32                            % correlation ID
+                    , 4:16, "test"                    % client ID
+                      , -1:32                           % replica ID
+                      , ?DEFAULT_FETCH_MAX_WAIT_TIME:32 % max wait time
+                      , ?DEFAULT_FETCH_MIN_BYTES:32     % min bytes
+                      , (?DEFAULT_FETCH_MAX_BYTES):32   % max bytes
+                      , 1:32                            % topics count
+                        , 5:16, "topic"                   % topic name
+                        , 1:32                            % partition count
+                          , 0:32                            % partition index
+                          , 1:64                            % fetch offset
+                          , (?DEFAULT_FETCH_MAX_BYTES):32     % max bytes
+                 >>,
        state => #{api_key => ?FETCH_REQUEST,
                   api_version => 3,
                   client_id => <<"test">>,
@@ -198,7 +238,407 @@ t_response() ->
                , 3:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
                , 4:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
        >>,
-       #{api_version => 1})).
+       #{api_version => 1})),
+
+  ?assertEqual(
+     {ok, #{throttle_time => 0,
+            topics =>[#{name => <<"topic">>,
+                        partitions => [#{error_code => none,
+                                         high_watermark_offset => 5,
+                                         messages => [#{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 0,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 1,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 2,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 3,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 4,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>}],
+                                         partition => 0}]}]}},
+     kafe_protocol_fetch:response(
+       <<0:32                       % throttle time ms
+         , 1:32                     % topic count
+           , 5:16, "topic"          % topic name
+           , 1:32                   % partition count
+             , 0:32                 % partition index
+             , 0:16                 % error code
+             , 5:64                 % highwater mark
+             , ((8+4+33)*5):32      % message set size
+               % offset, size, crc, magic, attributes, timestamp, key, value
+               , 0:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 1:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 2:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 3:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 4:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+       >>,
+       #{api_version => 2})),
+
+  ?assertEqual(
+     {ok, #{throttle_time => 0,
+            topics =>[#{name => <<"topic">>,
+                        partitions => [#{error_code => none,
+                                         high_watermark_offset => 5,
+                                         messages => [#{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 0,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 1,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 2,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 3,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 4,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>}],
+                                         partition => 0}]}]}},
+     kafe_protocol_fetch:response(
+       <<0:32                       % throttle time ms
+         , 1:32                     % topic count
+           , 5:16, "topic"          % topic name
+           , 1:32                   % partition count
+             , 0:32                 % partition index
+             , 0:16                 % error code
+             , 5:64                 % highwater mark
+             , ((8+4+33)*5):32      % message set size
+               % offset, size, crc, magic, attributes, timestamp, key, value
+               , 0:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 1:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 2:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 3:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 4:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+       >>,
+       #{api_version => 3})),
+
+  ?assertEqual(
+     {ok, #{throttle_time => 0,
+            topics => [#{name => <<"topic">>,
+                        partitions => [#{error_code => none,
+                                         high_watermark_offset => 5,
+                                         last_stable_offset => 5,
+                                         aborted_transactions => [#{producer_id => 1,
+                                                                    first_offset => 100},
+                                                                  #{producer_id => 2,
+                                                                    first_offset => 200}],
+                                         messages => [#{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 0,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 1,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 2,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 3,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 4,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>}],
+                                         partition => 0}]}]}},
+     kafe_protocol_fetch:response(
+       <<0:32                       % throttle time ms
+         , 1:32                     % topic count
+           , 5:16, "topic"          % topic name
+           , 1:32                   % partition count
+             , 0:32                 % partition index
+             , 0:16                 % error code
+             , 5:64                 % highwater mark
+             , 5:64                 % last stable offset
+             , 2:32                 % aborted transactions count
+               % producer ID, first offet
+               , 1:64       , 100:64
+               , 2:64       , 200:64
+             , ((8+4+33)*5):32      % message set size
+               % offset, size, crc, magic, attributes, timestamp, key, value
+               , 0:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 1:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 2:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 3:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 4:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+       >>,
+       #{api_version => 4})),
+
+  ?assertEqual(
+     {ok, #{throttle_time => 0,
+            topics => [#{name => <<"topic">>,
+                        partitions => [#{error_code => none,
+                                         high_watermark_offset => 5,
+                                         last_stable_offset => 5,
+                                         log_start_offset => 0,
+                                         aborted_transactions => [#{producer_id => 1,
+                                                                    first_offset => 100},
+                                                                  #{producer_id => 2,
+                                                                    first_offset => 200}],
+                                         messages => [#{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 0,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 1,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 2,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 3,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 4,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>}],
+                                         partition => 0}]}]}},
+     kafe_protocol_fetch:response(
+       <<0:32                       % throttle time ms
+         , 1:32                     % topic count
+           , 5:16, "topic"          % topic name
+           , 1:32                   % partition count
+             , 0:32                 % partition index
+             , 0:16                 % error code
+             , 5:64                 % highwater mark
+             , 5:64                 % last stable offset
+             , 0:64                 % log start offset
+             , 2:32                 % aborted transactions count
+               % producer ID, first offet
+               , 1:64       , 100:64
+               , 2:64       , 200:64
+             , ((8+4+33)*5):32      % message set size
+               % offset, size, crc, magic, attributes, timestamp, key, value
+               , 0:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 1:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 2:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 3:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 4:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+       >>,
+       #{api_version => 5})),
+
+  ?assertEqual(
+     {ok, #{throttle_time => 0,
+            topics => [#{name => <<"topic">>,
+                        partitions => [#{error_code => none,
+                                         high_watermark_offset => 5,
+                                         last_stable_offset => 5,
+                                         log_start_offset => 0,
+                                         aborted_transactions => [#{producer_id => 1,
+                                                                    first_offset => 100},
+                                                                  #{producer_id => 2,
+                                                                    first_offset => 200}],
+                                         messages => [#{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 0,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 1,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 2,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 3,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 4,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>}],
+                                         partition => 0}]}]}},
+     kafe_protocol_fetch:response(
+       <<0:32                       % throttle time ms
+         , 1:32                     % topic count
+           , 5:16, "topic"          % topic name
+           , 1:32                   % partition count
+             , 0:32                 % partition index
+             , 0:16                 % error code
+             , 5:64                 % highwater mark
+             , 5:64                 % last stable offset
+             , 0:64                 % log start offset
+             , 2:32                 % aborted transactions count
+               % producer ID, first offet
+               , 1:64       , 100:64
+               , 2:64       , 200:64
+             , ((8+4+33)*5):32      % message set size
+               % offset, size, crc, magic, attributes, timestamp, key, value
+               , 0:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 1:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 2:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 3:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 4:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+       >>,
+       #{api_version => 6})),
+
+  ?assertEqual(
+     {ok, #{throttle_time => 0,
+            topics => [#{name => <<"topic">>,
+                        partitions => [#{error_code => none,
+                                         high_watermark_offset => 5,
+                                         last_stable_offset => 5,
+                                         log_start_offset => 0,
+                                         aborted_transactions => [#{producer_id => 1,
+                                                                    first_offset => 100},
+                                                                  #{producer_id => 2,
+                                                                    first_offset => 200}],
+                                         messages => [#{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 0,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 1,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 2,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 3,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>},
+                                                      #{attributes => 0,
+                                                        crc => 1940715388,
+                                                        key => <<>>,
+                                                        magic_byte => 1,
+                                                        offset => 4,
+                                                        timestamp => -1,
+                                                        value => <<"hello world">>}],
+                                         partition => 0}]}]}},
+     kafe_protocol_fetch:response(
+       <<0:32                       % throttle time ms
+         , 1:32                     % topic count
+           , 5:16, "topic"          % topic name
+           , 1:32                   % partition count
+             , 0:32                 % partition index
+             , 0:16                 % error code
+             , 5:64                 % highwater mark
+             , 5:64                 % last stable offset
+             , 0:64                 % log start offset
+             , 2:32                 % aborted transactions count
+               % producer ID, first offet
+               , 1:64       , 100:64
+               , 2:64       , 200:64
+             , ((8+4+33)*5):32      % message set size
+               % offset, size, crc, magic, attributes, timestamp, key, value
+               , 0:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 1:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 2:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 3:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+               , 4:64, 33:32, 1940715388:32, 1, 0, -1:64, -1:32, 11:32, "hello world"
+       >>,
+       #{api_version => 7})).
 
 t_incomplete_response() ->
   ?assertEqual({error, incomplete_data},
@@ -290,4 +730,3 @@ t_response_incomplete_final_message_is_ignored() ->
                , 0 % message truncated after 1 byte
        >>,
        #{api_version => 1})).
-

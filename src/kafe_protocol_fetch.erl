@@ -164,15 +164,15 @@ consolidate([Topics|Rest], Acc) ->
 %     topic => STRING
 %     partitions => INT32
 request(ReplicaID, Topics, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V0;
-                                                                                  ApiVersion == ?V1;
-                                                                                  ApiVersion == ?V2 ->
+                                                                               ApiVersion == ?V1;
+                                                                               ApiVersion == ?V2 ->
   MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
   MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
   kafe_protocol:request(
     <<ReplicaID:32/signed,
       MaxWaitTime:32/signed,
       MinBytes:32/signed,
-      (topics(Topics))/binary>>,
+      (topics(Topics, ApiVersion))/binary>>,
     State);
 request(ReplicaID, Topics, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V3 ->
   MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
@@ -183,31 +183,101 @@ request(ReplicaID, Topics, Options, #{api_version := ApiVersion} = State) when A
       MaxWaitTime:32/signed,
       MinBytes:32/signed,
       ResponseMaxBytes:32/signed,
-      (topics(Topics))/binary>>,
+      (topics(Topics, ApiVersion))/binary>>,
+    State);
+request(ReplicaID, Topics, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V4;
+                                                                               ApiVersion == ?V5;
+                                                                               ApiVersion == ?V6 ->
+  MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
+  ResponseMaxBytes = maps:get(response_max_bytes, Options, response_max_bytes(Topics)),
+  MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
+  IsolationLevel = maps:get(isolation_level, Options, ?DEFAULT_FETCH_ISOLATION_LEVEL),
+  kafe_protocol:request(
+    <<ReplicaID:32/signed,
+      MaxWaitTime:32/signed,
+      MinBytes:32/signed,
+      ResponseMaxBytes:32/signed,
+      IsolationLevel:8/signed,
+      (topics(Topics, ApiVersion))/binary>>,
+    State);
+request(ReplicaID, Topics, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V7 ->
+  MinBytes = maps:get(min_bytes, Options, ?DEFAULT_FETCH_MIN_BYTES),
+  ResponseMaxBytes = maps:get(response_max_bytes, Options, response_max_bytes(Topics)),
+  MaxWaitTime = maps:get(max_wait_time, Options, ?DEFAULT_FETCH_MAX_WAIT_TIME),
+  IsolationLevel = maps:get(isolation_level, Options, ?DEFAULT_FETCH_ISOLATION_LEVEL),
+  SessionId = maps:get(session_id, Options, ?DEFAULT_FETCH_SESSION_ID),
+  Epoch = maps:get(epoch, Options, ?DEFAULT_FETCH_EPOCH),
+  ForgottenTopics = maps:get(forgotten_topics, Options, ?DEFAULT_FETCH_FORGOTTEN_TOPICS),
+  kafe_protocol:request(
+    <<ReplicaID:32/signed,
+      MaxWaitTime:32/signed,
+      MinBytes:32/signed,
+      ResponseMaxBytes:32/signed,
+      IsolationLevel:8/signed,
+      SessionId:32/signed,
+      Epoch:32/signed,
+      (topics(Topics, ApiVersion))/binary,
+      (forgetten_topics(ForgottenTopics, ApiVersion))/binary>>,
     State).
 
-topics(Topics) ->
-  topics(Topics, []).
+topics(Topics, ApiVersion) ->
+  topics(Topics, ApiVersion, []).
 
-topics([], Acc) ->
+topics([], _ApiVersion, Acc) ->
   kafe_protocol:encode_array(Acc);
-topics([{Topic, Partitions}|Rest], Acc) ->
-  topics(Rest, [<<
-                  (kafe_protocol:encode_string(Topic))/binary,
-                  (partitions(Partitions))/binary
-                >>|Acc]).
+topics([{Topic, Partitions}|Rest], ApiVersion, Acc) ->
+  topics(Rest, ApiVersion, [<<
+                              (kafe_protocol:encode_string(Topic))/binary,
+                              (partitions(Partitions, ApiVersion))/binary
+                            >>|Acc]).
 
-partitions(Partitions) ->
-  partitions(Partitions, []).
+partitions(Partitions, ApiVersion) ->
+  partitions(Partitions, ApiVersion, []).
 
-partitions([], Acc) ->
+partitions([], _ApiVersion, Acc) ->
   kafe_protocol:encode_array(Acc);
-partitions([{Partition, Offset, MaxBytes}|Rest], Acc) ->
-  partitions(Rest, [<<
-                      Partition:32/signed,
-                      Offset:64/signed,
-                      MaxBytes:32/signed
-                    >>|Acc]).
+partitions([{Partition, Offset, MaxBytes}|Rest], ApiVersion, Acc) when ApiVersion == ?V0;
+                                                                       ApiVersion == ?V1;
+                                                                       ApiVersion == ?V2;
+                                                                       ApiVersion == ?V3;
+                                                                       ApiVersion == ?V4 ->
+  partitions(Rest, ApiVersion, [<<
+                                  Partition:32/signed,
+                                  Offset:64/signed,
+                                  MaxBytes:32/signed
+                                >>|Acc]);
+partitions([{Partition, Offset, MaxBytes}|Rest], ApiVersion, Acc) when ApiVersion == ?V5;
+                                                                       ApiVersion == ?V6;
+                                                                       ApiVersion == ?V7 ->
+  partitions(Rest, ApiVersion, [<<
+                                  Partition:32/signed,
+                                  Offset:64/signed,
+                                  0:64/signed,
+                                  MaxBytes:32/signed
+                                >>|Acc]);
+partitions([{Partition, Offset, LogStartOffset, MaxBytes}|Rest], ApiVersion, Acc) when ApiVersion == ?V5;
+                                                                                       ApiVersion == ?V6;
+                                                                                       ApiVersion == ?V7 ->
+  partitions(Rest, ApiVersion, [<<
+                                  Partition:32/signed,
+                                  Offset:64/signed,
+                                  LogStartOffset:64/signed,
+                                  MaxBytes:32/signed
+                                >>|Acc]).
+
+forgetten_topics(Topics, ApiVersion) ->
+  forgetten_topics(Topics, ApiVersion, []).
+
+forgetten_topics([], _ApiVersion, Acc) ->
+  kafe_protocol:encode_array(Acc);
+forgetten_topics([{Topic, Partitions}|Rest], ApiVersion, Acc) when ApiVersion == ?V7 ->
+  forgetten_topics(
+    Rest,
+    ApiVersion,
+    [<<
+       (kafe_protocol:encode_string(Topic))/binary,
+       (kafe_protocol:encode_array([<<P:32>> || P <- Partitions]))/binary
+     >>|Acc]).
 
 % Fetch Response (Version: 0) => [responses]
 %   responses => topic [partition_responses]
@@ -248,7 +318,7 @@ partitions([{Partition, Offset, MaxBytes}|Rest], Acc) ->
 %       high_watermark => INT64
 %       record_set => BYTES
 %
-% Fetch Response (Version: 4) => throttle_time_ms [responses]
+% Fetch Response (Version: 4) => trottle_time_ms [responses]
 %   throttle_time_ms => INT32
 %   responses => topic [partition_responses]
 %     topic => STRING
@@ -315,14 +385,18 @@ partitions([{Partition, Offset, MaxBytes}|Rest], Acc) ->
 response(<<NumberOfTopics:32/signed,
            Remainder/binary>>,
          #{api_version := ApiVersion}) when ApiVersion == ?V0 ->
-  topics(NumberOfTopics, Remainder, []);
+  topics(NumberOfTopics, Remainder, ApiVersion, []);
 response(<<ThrottleTime:32/signed,
            NumberOfTopics:32/signed,
            Remainder/binary>>,
          #{api_version := ApiVersion}) when ApiVersion == ?V1;
                                             ApiVersion == ?V2;
-                                            ApiVersion == ?V3 ->
-  case topics(NumberOfTopics, Remainder, []) of
+                                            ApiVersion == ?V3;
+                                            ApiVersion == ?V4;
+                                            ApiVersion == ?V5;
+                                            ApiVersion == ?V6;
+                                            ApiVersion == ?V7 ->
+  case topics(NumberOfTopics, Remainder, ApiVersion, []) of
     {ok, Response} ->
       {ok, #{topics => Response,
              throttle_time => ThrottleTime}};
@@ -334,7 +408,7 @@ response(_, _) ->
 
 % Private
 
-topics(0, _, Result) ->
+topics(0, _Remainder, _ApiVersion, Result) ->
   {ok, Result};
 topics(
   N,
@@ -342,18 +416,19 @@ topics(
     TopicName:TopicNameLength/bytes,
     NumberOfPartitions:32/signed,
     PartitionRemainder/binary>>,
+  ApiVersion,
   Acc) ->
-  case partitions(NumberOfPartitions, PartitionRemainder, []) of
+  case partitions(NumberOfPartitions, PartitionRemainder, ApiVersion, []) of
     {ok, Partitions, Remainder} ->
-      topics(N - 1, Remainder, [#{name => TopicName,
-                                  partitions => Partitions}|Acc]);
+      topics(N - 1, Remainder, ApiVersion, [#{name => TopicName,
+                                              partitions => Partitions}|Acc]);
     Error ->
       Error
   end;
-topics(_, _, _) ->
+topics(_N, _Remainder, _ApiVersion, _Result) ->
   {error, incomplete_data}.
 
-partitions(0, Remainder, Acc) ->
+partitions(0, Remainder, _ApiVersion, Acc) ->
   {ok, Acc, Remainder};
 partitions(
   N,
@@ -363,13 +438,104 @@ partitions(
     MessageSetSize:32/signed,
     MessageSet:MessageSetSize/binary,
     Remainder/binary>>,
+  ApiVersion,
+  Acc) when ApiVersion == ?V0;
+            ApiVersion == ?V1;
+            ApiVersion == ?V2;
+            ApiVersion == ?V3 ->
+  partitions(
+    N - 1,
+    Remainder,
+    ApiVersion,
+    [#{partition => Partition,
+       error_code => kafe_error:code(ErrorCode),
+       high_watermark_offset => HighwaterMarkOffset,
+       messages => message(MessageSet)} | Acc]);
+partitions(
+  N,
+  <<Partition:32/signed,
+    ErrorCode:16/signed,
+    HighwaterMarkOffset:64/signed,
+    LastStableOffset:64/signed,
+    AbortedTransactionsSize:32/signed,
+    Remainder0/binary>>,
+
+  ApiVersion,
+  Acc) when ApiVersion == ?V4 ->
+  case aborted_transactions(AbortedTransactionsSize, Remainder0, []) of
+    {ok, AbortedTransactions,
+     <<
+       MessageSetSize:32/signed,
+       MessageSet:MessageSetSize/binary,
+       Remainder1/binary
+     >>} ->
+      partitions(
+        N - 1,
+        Remainder1,
+        ApiVersion,
+        [#{partition => Partition,
+           error_code => kafe_error:code(ErrorCode),
+           high_watermark_offset => HighwaterMarkOffset,
+           last_stable_offset => LastStableOffset,
+           aborted_transactions => AbortedTransactions,
+           messages => message(MessageSet)} | Acc]);
+    Error ->
+      Error
+  end;
+partitions(
+  N,
+  <<Partition:32/signed,
+    ErrorCode:16/signed,
+    HighwaterMarkOffset:64/signed,
+    LastStableOffset:64/signed,
+    LogStartOffset:64/signed,
+    AbortedTransactionsSize:32/signed,
+    Remainder0/binary>>,
+
+  ApiVersion,
+  Acc) when ApiVersion == ?V5;
+            ApiVersion == ?V6;
+            ApiVersion == ?V7 ->
+  case aborted_transactions(AbortedTransactionsSize, Remainder0, []) of
+    {ok, AbortedTransactions,
+     <<
+       MessageSetSize:32/signed,
+       MessageSet:MessageSetSize/binary,
+       Remainder1/binary
+     >>} ->
+      partitions(
+        N - 1,
+        Remainder1,
+        ApiVersion,
+        [#{partition => Partition,
+           error_code => kafe_error:code(ErrorCode),
+           high_watermark_offset => HighwaterMarkOffset,
+           last_stable_offset => LastStableOffset,
+           log_start_offset => LogStartOffset,
+           aborted_transactions => AbortedTransactions,
+           messages => message(MessageSet)} | Acc]);
+    Error ->
+      Error
+  end;
+partitions(_N, _Remainder, _ApiVersion, _Result) ->
+  {error, incomplete_data}.
+
+aborted_transactions(0, Remainder, Acc) ->
+  {ok, lists:reverse(Acc), Remainder};
+aborted_transactions(
+  N,
+  <<
+    ProducerID:64/signed,
+    FirstOffset:64/signed,
+    Remainder/binary
+  >>,
   Acc) ->
-  partitions(N - 1, Remainder,
-             [#{partition => Partition,
-                error_code => kafe_error:code(ErrorCode),
-                high_watermark_offset => HighwaterMarkOffset,
-                messages => message(MessageSet)} | Acc]);
-partitions(_, _, _) ->
+  aborted_transactions(
+    N-1,
+    Remainder,
+    [#{producer_id => ProducerID,
+       first_offset => FirstOffset}|Acc]);
+aborted_transactions(_N, _Remainder, _Acc) ->
   {error, incomplete_data}.
 
 message(Data) ->

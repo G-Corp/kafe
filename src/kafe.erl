@@ -116,13 +116,18 @@
 -type produce_options() :: #{timeout => integer(),
                              required_acks => integer(),
                              partition => integer(),
-                             key_to_partition => fun((binary(), term()) -> integer())}.
+                             key_to_partition => fun((binary(), term()) -> integer()),
+                             transactional_id => binary()}.
 -type fetch_options() :: #{partition => integer(),
                            offset => integer(),
                            response_max_bytes => integer(),
                            max_bytes => integer(),
                            min_bytes => integer(),
                            max_wait_time => integer(),
+                           isolation_level => integer(),
+                           session_id => integer(),
+                           epoch => integer(),
+                           forgetten_topics => [{binary(), [integer()]}],
                            retrieve => first | all}.
 -type message_set() :: #{name => binary(),
                          partitions => [#{partition => integer(),
@@ -476,6 +481,13 @@ fetch(Topics, Options) when is_map(Options), (is_binary(Topics) orelse is_list(T
 % 1).</li>
 % <li><tt>max_wait_time :: integer()</tt> : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
 % at the time the request is issued (default : 100).</li>
+% <li><tt>isolation_level :: integer()</tt> : This setting controls the visibility of transactional records. Using READ_UNCOMMITTED (isolation_level = 0) makes all records
+% visible. With READ_COMMITTED (isolation_level = 1), non-transactional and COMMITTED transactional records are visible. To be more concrete, READ_COMMITTED returns all data
+% from offsets smaller than the current LSO (last stable offset), and enables the inclusion of the list of aborted transactions in the result, which allows consumers to
+% discard ABORTED transactional records (default: 1).</li>
+% <li><tt>session_id :: integer()</tt>i : The fetch session ID (default: 0).</li>.
+% <li><tt>epoch :: integer()</tt> : The fetch epoch (default: -1).</li>.
+% <li><tt>forgetten_topics :: [{binary(), [integer()]}]</tt> : Topics to remove from the fetch session (default: []).</li>.
 % </ul>
 %
 % ReplicatID must <b>always</b> be -1.
@@ -496,6 +508,7 @@ fetch(Topics, Options) when is_map(Options), (is_binary(Topics) orelse is_list(T
 % @end
 -spec fetch(integer(),
             binary()
+            | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer(), LogStartOffset :: integer(), MaxBytes :: integer()}]}]
             | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer(), MaxBytes :: integer()}]}]
             | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer()}]}]
             | [{Topic :: binary(), [Partition :: integer()]}]
