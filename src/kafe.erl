@@ -25,6 +25,7 @@
          offset/0,
          offset/1,
          offset/2,
+         offset/3,
          produce/1,
          produce/2,
          produce/3,
@@ -113,6 +114,7 @@
                                                  | #{error_code => error_code(),
                                                      id => integer(),
                                                      offsets => [integer()]}]}.
+-type offset_options() :: #{isolation_level => integer()}.
 -type produce_options() :: #{timeout => integer(),
                              required_acks => integer(),
                              partition => integer(),
@@ -340,8 +342,20 @@ offset() ->
 offset(Topics) when is_list(Topics) ->
   offset(-1, Topics).
 
+% @equiv offset(ReplicatID, Topics, #{})
+offset(ReplicatID, Topics) when is_integer(ReplicatID), is_list(Topics) ->
+  offset(ReplicatID, Topics, #{}).
+
 % @doc
 % Get offet for the given topics and replicat
+%
+% Options:
+% <ul>
+% <li><tt>isolation_level :: integer()</tt> : This setting controls the visibility of transactional records. Using READ_UNCOMMITTED (isolation_level = 0) makes all records
+% visible. With READ_COMMITTED (isolation_level = 1), non-transactional and COMMITTED transactional records are visible. To be more concrete, READ_COMMITTED returns all data
+% from offsets smaller than the current LSO (last stable offset), and enables the inclusion of the list of aborted transactions in the result, which allows consumers to
+% discard ABORTED transactional records (default: 1).</li>
+% </ul>
 %
 % Example:
 % <pre>
@@ -351,9 +365,12 @@ offset(Topics) when is_list(Topics) ->
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetRequest">Kafka protocol documentation</a>.
 % @end
--spec offset(integer(), topics()) -> {ok, [topic_partition_info()]} | {error, term()}.
-offset(ReplicatID, Topics) when is_integer(ReplicatID), is_list(Topics) ->
-  kafe_protocol_offset:run(ReplicatID, Topics).
+-spec offset(integer(), topics(), offset_options()) ->
+  {ok, [topic_partition_info()]}
+  | {ok, #{throttle_time => integer(), topics => topic_partition_info()}}
+  | {error, term()}.
+offset(ReplicatID, Topics, Options) when is_integer(ReplicatID), is_list(Topics), is_map(Options) ->
+  kafe_protocol_offset:run(ReplicatID, Topics, Options).
 
 % @equiv produce(Messages, #{})
 produce(Messages) ->

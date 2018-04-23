@@ -90,7 +90,7 @@ error_code() = no_error | unknown | offset_out_of_range | invalid_message | unkn
 
 
 <pre><code>
-fetch_options() = #{partition =&gt; integer(), offset =&gt; integer(), response_max_bytes =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), retrieve =&gt; first | all}
+fetch_options() = #{partition =&gt; integer(), offset =&gt; integer(), response_max_bytes =&gt; integer(), max_bytes =&gt; integer(), min_bytes =&gt; integer(), max_wait_time =&gt; integer(), isolation_level =&gt; integer(), session_id =&gt; integer(), epoch =&gt; integer(), forgetten_topics =&gt; [{binary(), [integer()]}], retrieve =&gt; first | all}
 </code></pre>
 
 
@@ -286,6 +286,16 @@ offset_fetch_set() = #{name =&gt; binary(), partitions_offset =&gt; [#{partition
 
 
 
+### <a name="type-offset_options">offset_options()</a> ###
+
+
+<pre><code>
+offset_options() = #{isolation_level =&gt; integer()}
+</code></pre>
+
+
+
+
 ### <a name="type-partition">partition()</a> ###
 
 
@@ -320,7 +330,7 @@ processing() = before_processing | after_processing
 
 
 <pre><code>
-produce_options() = #{timeout =&gt; integer(), required_acks =&gt; integer(), partition =&gt; integer(), key_to_partition =&gt; fun((binary(), term()) -&gt; integer())}
+produce_options() = #{timeout =&gt; integer(), required_acks =&gt; integer(), partition =&gt; integer(), key_to_partition =&gt; fun((binary(), term()) -&gt; integer()), transactional_id =&gt; binary()}
 </code></pre>
 
 
@@ -413,7 +423,7 @@ Join Group.</td></tr><tr><td valign="top"><a href="#leave_group-2">leave_group/2
 To explicitly leave a group, the client can send a leave group request.</td></tr><tr><td valign="top"><a href="#list_groups-0">list_groups/0</a></td><td>
 Find groups managed by all brokers.</td></tr><tr><td valign="top"><a href="#list_groups-1">list_groups/1</a></td><td> 
 Find groups managed by a broker.</td></tr><tr><td valign="top"><a href="#metadata-0">metadata/0</a></td><td>Equivalent to <a href="#metadata-1"><tt>metadata([])</tt></a>.</td></tr><tr><td valign="top"><a href="#metadata-1">metadata/1</a></td><td> 
-Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#offset-0">offset/0</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-1">offset/1</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, Topics)</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td> 
+Return metadata for the given topics.</td></tr><tr><td valign="top"><a href="#offset-0">offset/0</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, [])</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-1">offset/1</a></td><td>Equivalent to <a href="#offset-2"><tt>offset(-1, Topics)</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-2">offset/2</a></td><td>Equivalent to <a href="#offset-3"><tt>offset(ReplicatID, Topics, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#offset-3">offset/3</a></td><td> 
 Get offet for the given topics and replicat.</td></tr><tr><td valign="top"><a href="#offset_commit-2">offset_commit/2</a></td><td> 
 Offset commit v0.</td></tr><tr><td valign="top"><a href="#offset_commit-4">offset_commit/4</a></td><td> 
 Offset commit v1.</td></tr><tr><td valign="top"><a href="#offset_commit-5">offset_commit/5</a></td><td> 
@@ -537,7 +547,7 @@ Equivalent to [`fetch(ReplicatID, TopicName, #{})`](#fetch-3).
 ### fetch/3 ###
 
 <pre><code>
-fetch(ReplicatID::integer(), TopicName::binary() | [{Topic::binary(), [{Partition::integer(), Offset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer()}]}] | [{Topic::binary(), [Partition::integer()]}] | [{Topic::binary(), Partition::integer()}] | [Topic::binary()], Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {ok, #{topics =&gt; [<a href="#type-message_set">message_set()</a>], throttle_time =&gt; integer()}} | {error, term()}
+fetch(ReplicatID::integer(), TopicName::binary() | [{Topic::binary(), [{Partition::integer(), Offset::integer(), LogStartOffset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer()}]}] | [{Topic::binary(), [Partition::integer()]}] | [{Topic::binary(), Partition::integer()}] | [Topic::binary()], Options::<a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {ok, #{topics =&gt; [<a href="#type-message_set">message_set()</a>], throttle_time =&gt; integer()}} | {error, term()}
 </code></pre>
 <br />
 
@@ -567,6 +577,17 @@ MaxWaitTime to 100 ms and setting MinBytes to 64k would allow the server to wait
 * `max_wait_time :: integer()` : The max wait time is the maximum amount of time in milliseconds to block waiting if insufficient data is available
 at the time the request is issued (default : 100).
 
+* `isolation_level :: integer()` : This setting controls the visibility of transactional records. Using READ_UNCOMMITTED (isolation_level = 0) makes all records
+visible. With READ_COMMITTED (isolation_level = 1), non-transactional and COMMITTED transactional records are visible. To be more concrete, READ_COMMITTED returns all data
+from offsets smaller than the current LSO (last stable offset), and enables the inclusion of the list of aborted transactions in the result, which allows consumers to
+discard ABORTED transactional records (default: 1).
+
+* `session_id :: integer()`i : The fetch session ID (default: 0).
+.
+* `epoch :: integer()` : The fetch epoch (default: -1).
+.
+* `forgetten_topics :: [{binary(), [integer()]}]` : Topics to remove from the fetch session (default: []).
+.
 
 ReplicatID must __always__ be -1.
 
@@ -750,13 +771,29 @@ Equivalent to [`offset(-1, Topics)`](#offset-2).
 
 ### offset/2 ###
 
+`offset(ReplicatID, Topics) -> any()`
+
+Equivalent to [`offset(ReplicatID, Topics, #{})`](#offset-3).
+
+<a name="offset-3"></a>
+
+### offset/3 ###
+
 <pre><code>
-offset(ReplicatID::integer(), Topics::<a href="#type-topics">topics()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {error, term()}
+offset(ReplicatID::integer(), Topics::<a href="#type-topics">topics()</a>, Options::<a href="#type-offset_options">offset_options()</a>) -&gt; {ok, [<a href="#type-topic_partition_info">topic_partition_info()</a>]} | {ok, #{throttle_time =&gt; integer(), topics =&gt; <a href="#type-topic_partition_info">topic_partition_info()</a>}} | {error, term()}
 </code></pre>
 <br />
 
 
 Get offet for the given topics and replicat
+
+Options:
+
+* `isolation_level :: integer()` : This setting controls the visibility of transactional records. Using READ_UNCOMMITTED (isolation_level = 0) makes all records
+visible. With READ_COMMITTED (isolation_level = 1), non-transactional and COMMITTED transactional records are visible. To be more concrete, READ_COMMITTED returns all data
+from offsets smaller than the current LSO (last stable offset), and enables the inclusion of the list of aborted transactions in the result, which allows consumers to
+discard ABORTED transactional records (default: 1).
+
 
 Example:
 
@@ -894,6 +931,8 @@ socket timeout. (default: 5000)
 If it is 1, the server will wait the data is written to the local log before sending a response. If it is -1 the server will block until the message is committed
 by all in sync replicas before sending a response. For any number > 1 the server will block waiting for this number of acknowledgements to occur (but the server
 will never wait for more acknowledgements than there are in-sync replicas). (default: -1)
+
+* `transactional_id :: binary()` : The transactional id, if the producer is transactional.
 
 * `partition :: integer()` : The partition that data is being published to.
 _This option exist for compatibility but it will be removed in the next major release._

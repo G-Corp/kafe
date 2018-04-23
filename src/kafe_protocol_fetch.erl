@@ -3,7 +3,7 @@
 -compile([{parse_transform, lager_transform}]).
 
 -include("../include/kafe.hrl").
--define(MAX_VERSION, 3).
+-define(MAX_VERSION, 7).
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -endif.

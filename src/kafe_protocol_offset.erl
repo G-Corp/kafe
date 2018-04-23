@@ -2,22 +2,22 @@
 -module(kafe_protocol_offset).
 
 -include("../include/kafe.hrl").
--define(MAX_VERSION, 1).
+-define(MAX_VERSION, 2).
 
 -export([
-         run/2,
-         request/3,
+         run/3,
+         request/4,
          response/2
         ]).
 
-run(ReplicaID, []) ->
+run(ReplicaID, [], Options) ->
   case maps:keys(kafe:topics()) of
     Topics when is_list(Topics), length(Topics) > 0 ->
-      run(ReplicaID, maps:keys(kafe:topics()));
+      run(ReplicaID, maps:keys(kafe:topics()), Options);
     _ ->
       {error, cant_retrieve_topics}
   end;
-run(ReplicaID, Topics) ->
+run(ReplicaID, Topics, Options) ->
   case lists:flatten(
          maps:fold(
            fun
@@ -27,7 +27,7 @@ run(ReplicaID, Topics) ->
                case kafe_protocol:run(
                       ?OFFSET_REQUEST,
                       ?MAX_VERSION,
-                      {fun ?MODULE:request/3, [ReplicaID, TopicsForBroker]},
+                      {fun ?MODULE:request/4, [ReplicaID, TopicsForBroker, Options]},
                       fun ?MODULE:response/2,
                       #{broker => BrokerID}) of
                  {ok, Result} ->
@@ -71,9 +71,28 @@ run(ReplicaID, Topics) ->
 %     partitions => partition timestamp
 %       partition => INT32
 %       timestamp => INT64
-request(ReplicaId, Topics, #{api_version := ApiVersion} = State) ->
+%
+% ListOffsets Request (Version: 2) => replica_id isolation_level [topics]
+%   replica_id => INT32
+%   isolation_level => INT8
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition timestamp
+%       partition => INT32
+%       timestamp => INT64
+request(ReplicaId, Topics, _Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V0;
+                                                                                ApiVersion == ?V1 ->
   kafe_protocol:request(
     <<ReplicaId:32/signed, (topics(Topics, ApiVersion))/binary>>,
+    State);
+request(ReplicaId, Topics, Options, #{api_version := ApiVersion} = State) when ApiVersion == ?V2 ->
+  IsolationLevel = maps:get(isolation_level, Options, ?DEFAULT_OFFSET_ISOLATION_LEVEL),
+  kafe_protocol:request(
+    <<
+      ReplicaId:32/signed,
+      IsolationLevel:8/signed,
+      (topics(Topics, ApiVersion))/binary
+    >>,
     State).
 
 % Offsets Response (Version: 0) => [responses]
@@ -91,8 +110,22 @@ request(ReplicaId, Topics, #{api_version := ApiVersion} = State) ->
 %       error_code => INT16
 %       timestamp => INT64
 %       offset => INT64
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, #{api_version := ApiVersion}) ->
-  {ok, response(NumberOfTopics, Remainder, ApiVersion)}.
+%
+% ListOffsets Response (Version: 2) => throttle_time_ms [responses]
+%   throttle_time_ms => INT32
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code timestamp offset
+%       partition => INT32
+%       error_code => INT16
+%       timestamp => INT64
+%       offset => INT64
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, #{api_version := ApiVersion}) when ApiVersion == ?V0;
+                                                                                            ApiVersion == ?V1 ->
+  {ok, response(NumberOfTopics, Remainder, ApiVersion)};
+response(<<ThrottleTime:32/signed, NumberOfTopics:32/signed, Remainder/binary>>, #{api_version := ApiVersion}) when ApiVersion == ?V2 ->
+  {ok, #{throttle_time => ThrottleTime,
+         topics => response(NumberOfTopics, Remainder, ApiVersion)}}.
 
 response(0, <<>>, _ApiVersion) ->
   [];
@@ -160,7 +193,8 @@ topics([{TopicName, Partitions} | T], Acc, ApiVersion) when ApiVersion == ?V0 ->
                end || P <- Partitions]))/binary
          >>,
          ApiVersion);
-topics([{TopicName, Partitions} | T], Acc, ApiVersion) when ApiVersion == ?V1 ->
+topics([{TopicName, Partitions} | T], Acc, ApiVersion) when ApiVersion == ?V1;
+                                                            ApiVersion == ?V2 ->
   topics(T,
          <<
            Acc/binary,
@@ -178,7 +212,8 @@ topics([{TopicName, Partitions} | T], Acc, ApiVersion) when ApiVersion == ?V1 ->
          >>,
          ApiVersion);
 topics([TopicName | T], Acc, ApiVersion) when ApiVersion == ?V0;
-                                              ApiVersion == ?V1 ->
+                                              ApiVersion == ?V1;
+                                              ApiVersion == ?V2 ->
   topics([{TopicName, kafe:partitions(TopicName)} | T],
          Acc,
          ApiVersion).
@@ -212,7 +247,8 @@ partitions(
     Remainder/binary
   >>,
   Acc,
-  ApiVersion) when ApiVersion == ?V1 ->
+  ApiVersion) when ApiVersion == ?V1;
+                   ApiVersion == ?V2 ->
   partitions(N - 1,
              Remainder,
              [#{id => Partition,
@@ -220,4 +256,3 @@ partitions(
                 timestamp => Timestamp,
                 offset => Offset} | Acc],
              ApiVersion).
-

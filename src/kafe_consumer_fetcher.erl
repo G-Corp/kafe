@@ -337,6 +337,11 @@ get_partition_offset(Topic, Partition, Time) ->
                              id := Partition,
                              offset := Offset}]}]} when is_integer(Offset) ->
       {ok, Offset};
+    {ok, #{topics := [#{name := Topic,
+                        partitions := [#{error_code := none,
+                                         id := Partition,
+                                         offset := Offset}]}]}} when is_integer(Offset) ->
+      {ok, Offset};
     _ ->
       error
   end.
@@ -678,4 +683,3 @@ commit_test() ->
 
   meck:unload(kafe_consumer).
 -endif.
-

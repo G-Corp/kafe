@@ -2,7 +2,7 @@
 -module(kafe_protocol_produce).
 
 -include("../include/kafe.hrl").
--define(MAX_VERSION, 2).
+-define(MAX_VERSION, 5).
 
 -export([
          run/2,

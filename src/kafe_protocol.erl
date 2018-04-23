@@ -178,4 +178,3 @@ response(<<CorrelationId:32/signed, Remainder/bytes>>, #{requests := Requests} =
     error ->
       {error, request_not_found} %;
   end.
-
