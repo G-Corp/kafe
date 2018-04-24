@@ -813,7 +813,7 @@ For more informations, see the
 ### offset_commit/5 ###
 
 <pre><code>
-offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationID::integer(), ConsumerID::binary(), RetentionTime::integer(), Topics::<a href="#type-offset_commit_topics">offset_commit_topics()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>]} | {error, term()}
+offset_commit(ConsumerGroup::binary(), ConsumerGroupGenerationID::integer(), ConsumerID::binary(), RetentionTime::integer(), Topics::<a href="#type-offset_commit_topics">offset_commit_topics()</a>) -&gt; {ok, [<a href="#type-offset_commit_set">offset_commit_set()</a>] | #{throttle_time =&gt; integer(), topics =&gt; [<a href="#type-offset_commit_set">offset_commit_set()</a>]}} | {error, term()}
 </code></pre>
 <br />
 

@@ -723,7 +723,11 @@ offset_commit(ConsumerGroup, ConsumerGroupGenerationID, ConsumerID, Topics) ->
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetCommitRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_commit(binary(), integer(), binary(), integer(), offset_commit_topics()) -> {ok, [offset_commit_set()]} | {error, term()}.
+-spec offset_commit(binary(), integer(), binary(), integer(), offset_commit_topics()) ->
+  {ok,
+   [offset_commit_set()]
+   | #{throttle_time => integer(), topics => [offset_commit_set()]}}
+  | {error, term()}.
 offset_commit(ConsumerGroup, ConsumerGroupGenerationID, ConsumerID, RetentionTime, Topics) ->
   kafe_protocol_consumer_offset_commit:run_v2(ConsumerGroup,
                                               ConsumerGroupGenerationID,

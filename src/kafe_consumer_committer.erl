@@ -72,6 +72,14 @@ handle_call({offset, Offset}, _From, #state{group_id = GroupID,
                 partitions := [#{error_code := Error,
                                  partition := Partition}]}]} ->
           lager:error("Commit offset ~p for topic ~s, partition ~p error: ~s", [CommitOffset, Topic, Partition, kafe_error:message(Error)]);
+        {ok, #{topics := [#{name := Topic,
+                            partitions := [#{error_code := none,
+                                             partition := Partition}]}]}} ->
+          lager:debug("Committed offset ~p for topic ~s, partition ~p", [CommitOffset, Topic, Partition]);
+        {ok, #{topics := [#{name := Topic,
+                            partitions := [#{error_code := Error,
+                                             partition := Partition}]}]}} ->
+          lager:error("Commit offset ~p for topic ~s, partition ~p error: ~s", [CommitOffset, Topic, Partition, kafe_error:message(Error)]);
         Error ->
           lager:error("Commit offset ~p for topic ~s, partition ~p error: ~p", [CommitOffset, Topic, Partition, Error])
       end;
@@ -133,6 +141,19 @@ handle_info(commit, #state{last_offset = LastOffset, commits = Commits, group_id
         {ok, [#{name := Topic,
                 partitions := [#{error_code := Error,
                                  partition := Partition}]}]} ->
+          lager:error("Commit offset ~p for topic ~s, partition ~p error: ~s", [CommitOffset, Topic, Partition, kafe_error:message(Error)]),
+          {noreply, start_commit_timer(State)};
+        {ok, #{topic := [#{name := Topic,
+                           partitions := [#{error_code := none,
+                                            partition := Partition}]}]}} ->
+          lager:debug("Committed offset ~p for topic ~s, partition ~p", [CommitOffset, Topic, Partition]),
+          kafe_metrics:consumer_partition_pending_commits(GroupID, Topic, Partition, length(RemainingCommits)),
+          {noreply, start_commit_timer(State#state{last_offset = CommitOffset,
+                                                   commits = RemainingCommits,
+                                                   attempt = Attempt0})};
+        {ok, #{topic := [#{name := Topic,
+                           partitions := [#{error_code := Error,
+                                            partition := Partition}]}]}} ->
           lager:error("Commit offset ~p for topic ~s, partition ~p error: ~s", [CommitOffset, Topic, Partition, kafe_error:message(Error)]),
           {noreply, start_commit_timer(State)};
         Error ->
@@ -478,4 +499,3 @@ lcs_test() ->
   ?assertMatch([3, 2, 1], lcs(0, [1, 2, 3, 6, 7, 8], ?DEFAULT_CONSUMER_COMMIT_ATTEMPTS)),
   ?assertMatch([2, 1, 0], lcs(0, [0, 1, 2, 4, 5], 0)).
 -endif.
-

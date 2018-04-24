@@ -5,7 +5,7 @@
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
--define(MAX_VERSION, 2).
+-define(MAX_VERSION, 3).
 
 -export([
          run_v0/2,
@@ -41,8 +41,7 @@ run_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topi
     ?MAX_VERSION,
     {fun ?MODULE:request_v2/6, [ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics]},
     fun ?MODULE:response/2,
-    #{api_version => 2,
-      broker => {coordinator, ConsumerGroup}}).
+    #{broker => {coordinator, ConsumerGroup}}).
 
 % OffsetCommit Request (Version: 0) => group_id [topics]
 %   group_id => STRING
@@ -92,7 +91,20 @@ request_v1(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, Topics, #{api_v
 %       partition => INT32
 %       offset => INT64
 %       metadata => NULLABLE_STRING
-request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics, #{api_version := ApiVersion} = State) ->
+%
+% OffsetCommit Request (Version: 3) => group_id generation_id member_id retention_time [topics]
+%   group_id => STRING
+%   generation_id => INT32
+%   member_id => STRING
+%   retention_time => INT64
+%   topics => topic [partitions]
+%     topic => STRING
+%     partitions => partition offset metadata
+%       partition => INT32
+%       offset => INT64
+%       metadata => NULLABLE_STRING
+request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, Topics, #{api_version := ApiVersion} = State) when ApiVersion == ?V2;
+                                                                                                                                   ApiVersion == ?V3 ->
   kafe_protocol:request(
     <<
       (kafe_protocol:encode_string(ConsumerGroup))/binary,
@@ -123,8 +135,21 @@ request_v2(ConsumerGroup, ConsumerGroupGenerationId, ConsumerId, RetentionTime, 
 %     partition_responses => partition error_code
 %       partition => INT32
 %       error_code => INT16
-response(<<NumberOfTopics:32/signed, Remainder/binary>>, _State) ->
-  {ok, response2(NumberOfTopics, Remainder)}.
+%
+% OffsetCommit Response (Version: 3) => throttle_time_ms [responses]
+%   throttle_time_ms => INT32
+%   responses => topic [partition_responses]
+%     topic => STRING
+%     partition_responses => partition error_code
+%       partition => INT32
+%       error_code => INT16
+response(<<NumberOfTopics:32/signed, Remainder/binary>>, #{api_version := ApiVersion}) when ApiVersion == ?V0;
+                                                                                            ApiVersion == ?V1;
+                                                                                            ApiVersion == ?V2 ->
+  {ok, response2(NumberOfTopics, Remainder)};
+response(<<ThrottleTimeMs:32/signed, NumberOfTopics:32/signed, Remainder/binary>>, #{api_version := ApiVersion}) when ApiVersion == ?V3 ->
+  {ok, #{throttle_time => ThrottleTimeMs,
+         topics => response2(NumberOfTopics, Remainder)}}.
 
 % Private
 
@@ -135,7 +160,8 @@ topics([], _, Acc) ->
   kafe_protocol:encode_array(lists:reverse(Acc));
 
 topics([{TopicName, Partitions}|Rest], ApiVersion, Acc) when ApiVersion == ?V0;
-                                                             ApiVersion == ?V2 ->
+                                                             ApiVersion == ?V2;
+                                                             ApiVersion == ?V3 ->
   topics(Rest,
          ApiVersion,
          [<<
@@ -164,7 +190,8 @@ topics([{TopicName, Partitions}|Rest], ApiVersion, Acc) when ApiVersion == ?V1 -
           >> | Acc]).
 
 check_partition({Partition, Offset}, ApiVersion) when (ApiVersion == ?V0 orelse
-                                                       ApiVersion == ?V2),
+                                                       ApiVersion == ?V2 orelse
+                                                       ApiVersion == ?V3),
                                                       is_integer(Partition),
                                                       is_integer(Offset) ->
   {Partition, Offset, undefined};
@@ -304,4 +331,3 @@ kafe_protocol_consumer_offset_commit_test_() ->
     end
    ]}.
 -endif.
-
