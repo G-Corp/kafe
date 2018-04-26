@@ -30,7 +30,9 @@ run(ReplicaID, Topics, Options) ->
                       {fun ?MODULE:request/4, [ReplicaID, TopicsForBroker, Options]},
                       fun ?MODULE:response/2,
                       #{broker => BrokerID}) of
-                 {ok, Result} ->
+                 {ok, #{topics := Result}} ->
+                   [Result|Acc];
+                 {ok, Result} when is_list(Result) ->
                    [Result|Acc];
                  _ ->
                    Acc
