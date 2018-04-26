@@ -311,18 +311,27 @@ get_start_offset(GroupID, Topic, Partition, FromBeginning) ->
             partitions_offset := [#{error_code := none,
                                     offset := Offset,
                                     partition := Partition}]}]} ->
-      case (Offset < 0) of
-        true ->
-          Time = case FromBeginning of
-                   true -> -2;
-                   false -> -1
-                 end,
-          get_partition_offset(Topic, Partition, Time);
-        false ->
-          {ok, Offset}
-      end;
+      start_offset(Offset, FromBeginning, Topic, Partition);
+    {ok, #{topics := [#{name := Topic,
+                        partitions_offset := [#{error_code := none,
+                                                offset := Offset,
+                                                partition := Partition}]}],
+           error_code := none}} ->
+      start_offset(Offset, FromBeginning, Topic, Partition);
     _ ->
       error
+  end.
+
+start_offset(Offset, FromBeginning, Topic, Partition) ->
+  case (Offset < 0) of
+    true ->
+      Time = case FromBeginning of
+               true -> -2;
+               false -> -1
+             end,
+      get_partition_offset(Topic, Partition, Time);
+    false ->
+      {ok, Offset}
   end.
 
 get_partition_offset(Topic, Partition, Time) ->

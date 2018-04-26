@@ -746,7 +746,12 @@ offset_fetch(ConsumerGroup) ->
 % For more informations, see the
 % <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-OffsetFetchRequest">Kafka protocol documentation</a>.
 % @end
--spec offset_fetch(binary(), offset_fetch_options()) -> {ok, [offset_fetch_set()]} | {error, term()}.
+-spec offset_fetch(binary(), offset_fetch_options()) ->
+  {ok,
+   [offset_fetch_set()]
+   | #{topics => [offset_fetch_set()], error_code => error_code()}
+   | #{topics => [offset_fetch_set()], error_code => error_code(), throttle_time => integer()}}
+  | {error, term()}.
 offset_fetch(ConsumerGroup, Options) when is_binary(ConsumerGroup), is_list(Options) ->
   kafe_protocol_consumer_offset_fetch:run(ConsumerGroup, Options);
 offset_fetch(ConsumerGroup, Options) when is_list(Options) ->

@@ -839,7 +839,7 @@ Equivalent to [`offset_fetch(ConsumerGroup, [])`](#offset_fetch-2).
 ### offset_fetch/2 ###
 
 <pre><code>
-offset_fetch(ConsumerGroup::binary(), Options::<a href="#type-offset_fetch_options">offset_fetch_options()</a>) -&gt; {ok, [<a href="#type-offset_fetch_set">offset_fetch_set()</a>]} | {error, term()}
+offset_fetch(ConsumerGroup::binary(), Options::<a href="#type-offset_fetch_options">offset_fetch_options()</a>) -&gt; {ok, [<a href="#type-offset_fetch_set">offset_fetch_set()</a>] | #{topics =&gt; [<a href="#type-offset_fetch_set">offset_fetch_set()</a>], error_code =&gt; <a href="#type-error_code">error_code()</a>} | #{topics =&gt; [<a href="#type-offset_fetch_set">offset_fetch_set()</a>], error_code =&gt; <a href="#type-error_code">error_code()</a>, throttle_time =&gt; integer()}} | {error, term()}
 </code></pre>
 <br />
 
