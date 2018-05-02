@@ -4,13 +4,16 @@
 -include("../include/kafe.hrl").
 -define(MAX_VERSION, 5).
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
 -export([
          run/2,
          request/3,
          response/2
         ]).
 
-% [{broker_id, [{topic, [{partition, [message]}]}]}]
 run(Messages, Options) ->
   case dispatch(Messages,
            maps:get(key_to_partition, Options, fun kafe:default_key_to_partition/2),
@@ -402,8 +405,12 @@ dispatch([{Value, Partition}|Rest], Topic, KeyToPartition, Result) when is_binar
 dispatch([Value|Rest], Topic, KeyToPartition, Result) when is_binary(Value) ->
   dispatch([{<<>>, Value, kafe_rr:next(Topic)}|Rest], Topic, KeyToPartition, Result).
 
+consolidate([]) ->
+  {error, internal_error};
 consolidate([{ok, Base}|Rest]) ->
-  consolidate(Rest, Base).
+  consolidate(Rest, Base);
+consolidate([{error, _}|Rest]) ->
+  consolidate(Rest).
 
 consolidate([], Acc) ->
   {ok, Acc};
@@ -411,6 +418,10 @@ consolidate([{ok, #{topics := Topics}}|Rest], #{topics := AccTopics} = Acc) ->
   consolidate(
     Rest,
     Acc#{topics => consolidate_topics(Topics, AccTopics)});
+consolidate([{ok, Topics}|Rest], AccTopics) ->
+  consolidate(
+    Rest,
+    consolidate_topics(Topics, AccTopics));
 consolidate([{error, _} = Error|_], _) ->
   Error.
 
@@ -429,3 +440,295 @@ add_partition([#{name := Topic, partitions := CurrentPartitions}|Rest], Topic, P
   add_partition(Rest, Topic, [], [#{name => Topic, partitions => CurrentPartitions ++ Partitions}|Acc]);
 add_partition([Current|Rest], Topic, Partitions, Acc) ->
   add_partition(Rest, Topic, Partitions, [Current|Acc]).
+
+-ifdef(TEST).
+consolidate_test_() ->
+  {foreach,
+    fun()->
+        ok
+    end,
+    fun(_)->
+        ok
+    end,
+    [
+     {"consolidate V0 without error",
+      ?_test(begin
+               ?assertEqual(
+                  {
+                   ok,
+                   [#{
+                     name => <<"topic0">>,
+                     partitions => [#{
+                       partition => 0,
+                       error_code => none,
+                       offset => 1000
+                      }]}]
+                  },
+                  consolidate(
+                    [
+                     {
+                      ok,
+                      [#{
+                        name => <<"topic0">>,
+                        partitions => [#{
+                          partition => 0,
+                          error_code => none,
+                          offset => 1000
+                         }]}]
+                     }
+                    ]
+                   )
+                 ),
+               ?assertEqual(
+                  {
+                   ok,
+                   [#{
+                     name => <<"topic0">>,
+                     partitions => [#{
+                       partition => 0,
+                       error_code => none,
+                       offset => 1000
+                      }, #{
+                       partition => 1,
+                       error_code => none,
+                       offset => 1001}]
+                    }, #{
+                     name => <<"topic1">>,
+                     partitions => [#{
+                       partition => 0,
+                       error_code => none,
+                       offset => 2000
+                      }]}]
+                  },
+                  consolidate(
+                    [
+                     {
+                      ok,
+                      [#{
+                        name => <<"topic0">>,
+                        partitions => [#{
+                          partition => 0,
+                          error_code => none,
+                          offset => 1000
+                         }]}]
+                     },
+                     {
+                      ok,
+                      [#{
+                        name => <<"topic1">>,
+                        partitions => [#{
+                          partition => 0,
+                          error_code => none,
+                          offset => 2000
+                         }]}]
+                     },
+                     {
+                      ok,
+                      [#{
+                        name => <<"topic0">>,
+                        partitions => [#{
+                          partition => 1,
+                          error_code => none,
+                          offset => 1001
+                         }]}]
+                     }
+                    ]
+                   )
+                 )
+             end)
+     },
+     {"consolidate V1 without error",
+      ?_test(begin
+               ?assertEqual(
+                  {
+                   ok,
+                   #{topics => [#{
+                       name => <<"topic0">>,
+                       partitions => [#{
+                         partition => 0,
+                         error_code => none,
+                         offset => 1000
+                        }]}],
+                     throttle_time => 1234}
+                  },
+                  consolidate(
+                    [
+                     {
+                      ok,
+                      #{topics => [#{
+                          name => <<"topic0">>,
+                          partitions => [#{
+                            partition => 0,
+                            error_code => none,
+                            offset => 1000
+                           }]}],
+                        throttle_time => 1234}
+                     }
+                    ]
+                   )
+                 ),
+               ?assertEqual(
+                  {
+                   ok,
+                   #{topics => [#{
+                       name => <<"topic0">>,
+                       partitions => [#{
+                         partition => 0,
+                         error_code => none,
+                         offset => 1000
+                        }, #{
+                         partition => 1,
+                         error_code => none,
+                         offset => 1001}]
+                      }, #{
+                       name => <<"topic1">>,
+                       partitions => [#{
+                         partition => 0,
+                         error_code => none,
+                         offset => 2000
+                        }]}],
+                     throttle_time => 1234}
+                  },
+                  consolidate(
+                    [
+                     {
+                      ok,
+                      #{topics => [#{
+                          name => <<"topic0">>,
+                          partitions => [#{
+                            partition => 0,
+                            error_code => none,
+                            offset => 1000
+                           }]}],
+                        throttle_time => 1234}
+                     },
+                     {
+                      ok,
+                      #{topics => [#{
+                          name => <<"topic1">>,
+                          partitions => [#{
+                            partition => 0,
+                            error_code => none,
+                            offset => 2000
+                           }]}],
+                        throttle_time => 1234}
+                     },
+                     {
+                      ok,
+                      #{topics => [#{
+                          name => <<"topic0">>,
+                          partitions => [#{
+                            partition => 1,
+                            error_code => none,
+                            offset => 1001
+                           }]}],
+                        throttle_time => 1234}
+                     }
+                    ]
+                   )
+                 )
+             end)
+     },
+     {"consolidate V2,V3 or V4 without error",
+      ?_test(begin
+               ?assertEqual(
+                  {
+                   ok,
+                   #{topics => [#{
+                       name => <<"topic0">>,
+                       partitions => [#{
+                         partition => 0,
+                         error_code => none,
+                         offset => 1000,
+                         timestamp => 1234567890
+                        }]}],
+                     throttle_time => 1234}
+                  },
+                  consolidate(
+                    [
+                     {
+                      ok,
+                      #{topics => [#{
+                          name => <<"topic0">>,
+                          partitions => [#{
+                            partition => 0,
+                            error_code => none,
+                            offset => 1000,
+                            timestamp => 1234567890
+                           }]}],
+                        throttle_time => 1234}
+                     }
+                    ]
+                   )
+                 ),
+               ?assertEqual(
+                  {
+                   ok,
+                   #{topics => [#{
+                       name => <<"topic0">>,
+                       partitions => [#{
+                         partition => 0,
+                         error_code => none,
+                         offset => 1000,
+                         timestamp => 1234567890
+                        }, #{
+                         partition => 1,
+                         error_code => none,
+                         offset => 1001,
+                         timestamp => 1234567891}]
+                      }, #{
+                       name => <<"topic1">>,
+                       partitions => [#{
+                         partition => 0,
+                         error_code => none,
+                         offset => 2000,
+                         timestamp => 1234567892
+                        }]}],
+                     throttle_time => 1234}
+                  },
+                  consolidate(
+                    [
+                     {
+                      ok,
+                      #{topics => [#{
+                          name => <<"topic0">>,
+                          partitions => [#{
+                            partition => 0,
+                            error_code => none,
+                            offset => 1000,
+                            timestamp => 1234567890
+                           }]}],
+                        throttle_time => 1234}
+                     },
+                     {
+                      ok,
+                      #{topics => [#{
+                          name => <<"topic1">>,
+                          partitions => [#{
+                            partition => 0,
+                            error_code => none,
+                            offset => 2000,
+                            timestamp => 1234567892
+                           }]}],
+                        throttle_time => 1234}
+                     },
+                     {
+                      ok,
+                      #{topics => [#{
+                          name => <<"topic0">>,
+                          partitions => [#{
+                            partition => 1,
+                            error_code => none,
+                            offset => 1001,
+                            timestamp => 1234567891
+                           }]}],
+                        throttle_time => 1234}
+                     }
+                    ]
+                   )
+                 )
+             end)
+     }
+    ]
+  }.
+-endif.

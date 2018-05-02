@@ -17,6 +17,7 @@ run(ReplicaID, [], Options) ->
     _ ->
       {error, cant_retrieve_topics}
   end;
+%% TODO refactor and test !!!
 run(ReplicaID, Topics, Options) ->
   case lists:flatten(
          maps:fold(
