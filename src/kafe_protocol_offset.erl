@@ -17,46 +17,62 @@ run(ReplicaID, [], Options) ->
     _ ->
       {error, cant_retrieve_topics}
   end;
-%% TODO refactor and test !!!
 run(ReplicaID, Topics, Options) ->
-  case lists:flatten(
-         maps:fold(
-           fun
-             (undefined, _, Acc) ->
+  case maps:fold(
+         fun
+           (undefined, _, Acc) ->
                Acc;
-             (BrokerID, TopicsForBroker, Acc) ->
-               case kafe_protocol:run(
-                      ?OFFSET_REQUEST,
-                      ?MAX_VERSION,
-                      {fun ?MODULE:request/4, [ReplicaID, TopicsForBroker, Options]},
-                      fun ?MODULE:response/2,
-                      #{broker => BrokerID}) of
-                 {ok, #{topics := Result}} ->
-                   [Result|Acc];
-                 {ok, Result} when is_list(Result) ->
-                   [Result|Acc];
-                 _ ->
-                   Acc
-               end
-           end, [], dispatch(Topics))) of
+           (BrokerID, TopicsForBroker, Acc) ->
+             case kafe_protocol:run(
+                    ?OFFSET_REQUEST,
+                    ?MAX_VERSION,
+                    {fun ?MODULE:request/4, [ReplicaID, TopicsForBroker, Options]},
+                    fun ?MODULE:response/2,
+                    #{broker => BrokerID}) of
+               {ok, #{throttle_time := ThrottleTime, topics := Result}} ->
+                 case Acc of
+                   #{throttle_time := ThrottleTimeAcc, topics := ResultsAcc} ->
+                     #{throttle_time => max(ThrottleTimeAcc, ThrottleTime),
+                       topics => lists:flatten([Result|ResultsAcc])};
+                   ResultsAcc ->
+                     #{throttle_time => ThrottleTime,
+                       topics => lists:flatten([Result|ResultsAcc])}
+                 end;
+               {ok, Result} when is_list(Result) ->
+                 case Acc of
+                   #{throttle_time := ThrottleTimeAcc, topics := ResultsAcc} ->
+                     #{throttle_time => ThrottleTimeAcc,
+                       topics => lists:flatten([Result|ResultsAcc])};
+                   ResultsAcc ->
+                     lists:flatten([Result|ResultsAcc])
+                 end;
+               _ ->
+                 Acc
+             end
+         end, [], dispatch(Topics)) of
     [] ->
       {error, no_broker_found};
-    OffsetsData ->
-      {ok, maps:fold(
-             fun(K, V, Acc) ->
-                 [#{name => K, partitions => V}|Acc]
-             end,
-             [],
-             lists:foldl(
-               fun(#{name := Name, partitions := Partitions}, Acc) ->
-                   case maps:get(Name, Acc, undefined) of
-                     undefined ->
-                       maps:put(Name, Partitions, Acc);
-                     Data ->
-                       maps:put(Name, Data ++ Partitions, Acc)
-                   end
-               end, #{}, OffsetsData))}
+    OffsetsData when is_list(OffsetsData)->
+      {ok, gather(OffsetsData)};
+    #{topics := OffsetsData} = R ->
+      R#{topics => gather(OffsetsData)}
   end.
+
+gather(OffsetsData) ->
+  maps:fold(
+    fun(K, V, Acc) ->
+        [#{name => K, partitions => V}|Acc]
+    end,
+    [],
+    lists:foldl(
+      fun(#{name := Name, partitions := Partitions}, Acc) ->
+          case maps:get(Name, Acc, undefined) of
+            undefined ->
+              maps:put(Name, Partitions, Acc);
+            Data ->
+              maps:put(Name, Data ++ Partitions, Acc)
+          end
+      end, #{}, OffsetsData)).
 
 % Offsets Request (Version: 0) => replica_id [topics]
 %   replica_id => INT32

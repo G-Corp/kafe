@@ -17,9 +17,14 @@ check-etchosts:
 	  127.0.0.1 kafka1 kafka2 kafka3\n\
 	'
 
+# KAFKA_VERSION=3.3.0-1
+# ZK_VERSION=3.3.0-1
+KAFKA_VERSION=4.1.0-1
+ZK_VERSION=4.1.0-1
+
 define one_kafka
   kafka$(1):
-    image: confluentinc/cp-kafka:3.3.0-1
+    image: confluentinc/cp-kafka:$(KAFKA_VERSION)
     depends_on:
       - zookeeper
     environment:
@@ -40,7 +45,7 @@ version: "2"
 
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:3.3.0-1
+    image: confluentinc/cp-zookeeper:$(ZK_VERSION)
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
 
