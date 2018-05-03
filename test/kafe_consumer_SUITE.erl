@@ -66,8 +66,9 @@ t_consumer(_Config) ->
                        member_metadata := <<>>}],
          protocol := <<>>,
          protocol_type := <<"consumer">>,
-         state := <<"AwaitingSync">>}]} =
+         state := State}]} =
     kafe:describe_group(<<"kafe_test_consumer_group">>),
+  ?assert(lists:member(State, [<<"AwaitingSync">>, <<"CompletingRebalance">>])),
 
   {ok, GroupsByBroker} = kafe:list_groups(),
 
@@ -118,13 +119,9 @@ heartbeat(N, GenerationId, MemberId, ClientHost) ->
   heartbeat(N - 1, GenerationId, MemberId, ClientHost).
 
 check_partition_assignment(PartitionAssignment) ->
-  Sorted = lists:sort(fun
-                        (#{topic := TopicA}, #{topic := TopicB}) -> TopicA =< TopicB
-                      end, PartitionAssignment),
-
-  ?assertMatch([#{partitions := [0], topic := <<"testone">>},
-                #{partitions := [2, 1, 0], topic := <<"testthree">>},
-                #{partitions := [1, 0], topic := <<"testtwo">>}], Sorted).
+  [?assert(lists:member(S, PartitionAssignment)) || S <- [#{partitions => [0], topic => <<"testone">>},
+                                                          #{partitions => [1, 0], topic => <<"testtwo">>},
+                                                          #{partitions => [2, 1, 0], topic => <<"testthree">>}]].
 
 t_coordinator_going_down(_Config) ->
   % get a coordinator for a new group

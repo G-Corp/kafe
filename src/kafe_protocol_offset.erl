@@ -55,7 +55,7 @@ run(ReplicaID, Topics, Options) ->
     OffsetsData when is_list(OffsetsData)->
       {ok, gather(OffsetsData)};
     #{topics := OffsetsData} = R ->
-      R#{topics => gather(OffsetsData)}
+      {ok, R#{topics => gather(OffsetsData)}}
   end.
 
 gather(OffsetsData) ->

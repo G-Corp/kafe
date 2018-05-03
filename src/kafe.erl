@@ -239,21 +239,25 @@ partitions(Topic) ->
 max_offset(TopicName) ->
   case offset([TopicName]) of
     {ok, [#{partitions := Partitions}]} ->
-      lists:foldl(fun
-                    (#{id := P, offsets := [O|_]}, {_, Offset} = Acc) ->
-                      if
-                        O > Offset -> {P, O};
-                        true -> Acc
-                      end;
-                    (#{id := P, offset := O}, {_, Offset} = Acc) ->
-                      if
-                        O > Offset -> {P, O};
-                        true -> Acc
-                      end
-                  end, {?DEFAULT_OFFSET_PARTITION, 0}, Partitions);
+      get_max_offset(Partitions);
+    {ok, #{topics := [#{partitions := Partitions}]}} ->
+      get_max_offset(Partitions);
     {ok, _} ->
       {?DEFAULT_OFFSET_PARTITION, 0}
   end.
+get_max_offset(Partitions) ->
+  lists:foldl(fun
+                (#{id := P, offsets := [O|_]}, {_, Offset} = Acc) ->
+                  if
+                    O > Offset -> {P, O};
+                    true -> Acc
+                  end;
+                (#{id := P, offset := O}, {_, Offset} = Acc) ->
+                  if
+                    O > Offset -> {P, O};
+                    true -> Acc
+                  end
+              end, {?DEFAULT_OFFSET_PARTITION, 0}, Partitions).
 
 % @hidden
 max_offset(TopicName, Partition) ->
@@ -261,6 +265,11 @@ max_offset(TopicName, Partition) ->
     {ok,
      [#{partitions := [#{id := Partition,
                          offsets := [Offset|_]}]}]
+    } ->
+      {Partition, Offset};
+    {ok,
+     #{topics := [#{partitions := [#{id := Partition,
+                                     offset := Offset}]}]}
     } ->
       {Partition, Offset};
     {ok, _} ->
@@ -271,15 +280,25 @@ max_offset(TopicName, Partition) ->
 partition_for_offset(TopicName, Offset) ->
   case offset([TopicName]) of
     {ok, [#{partitions := Partitions}]} ->
-      lists:foldl(fun(#{id := P, offsets := [O|_]}, {_, Offset1} = Acc) ->
-                      if
-                        O >= Offset1 -> {P, Offset1};
-                        true -> Acc
-                      end
-                  end, {0, Offset}, Partitions);
+      get_partition_for_offset(Offset, Partitions);
+    {ok, #{topics := [#{partitions := Partitions}]}} ->
+      get_partition_for_offset(Offset, Partitions);
     {ok, _} ->
       {?DEFAULT_OFFSET_PARTITION, Offset}
   end.
+get_partition_for_offset(Offset, Partitions) ->
+  lists:foldl(fun
+                (#{id := P, offsets := [O|_]}, {_, Offset1} = Acc) ->
+                  if
+                    O >= Offset1 -> {P, Offset1};
+                    true -> Acc
+                  end;
+                (#{id := P, offsets := O}, {_, Offset1} = Acc) ->
+                  if
+                    O >= Offset1 -> {P, Offset1};
+                    true -> Acc
+                  end
+              end, {0, Offset}, Partitions).
 
 % @hidden
 update_brokers() ->
@@ -764,11 +783,21 @@ offset_fetch(ConsumerGroup, Options) when is_list(Options) ->
 offsets(TopicName, ConsumerGroup, Nth) when is_binary(TopicName) ->
   offsets({TopicName, partitions(TopicName)}, ConsumerGroup, Nth);
 offsets({TopicName, PartitionsList}, ConsumerGroup, Nth) ->
-  case offset([TopicName]) of
+  case do_keep_topics_only(offset([TopicName])) of
     {ok, [#{name := TopicName, partitions := Partitions}]} ->
       {Offsets, PartitionsID} = lists:foldl(fun
                                               (#{id := PartitionID,
                                                  offsets := [Offset|_],
+                                                 error_code := none},
+                                               {AccOffs, AccParts} = Acc) ->
+                                                case lists:member(PartitionID, PartitionsList) of
+                                                  true ->
+                                                    {[{PartitionID, Offset - 1}|AccOffs], [PartitionID|AccParts]};
+                                                  false ->
+                                                    Acc
+                                                end;
+                                              (#{id := PartitionID,
+                                                 offset := Offset,
                                                  error_code := none},
                                                {AccOffs, AccParts} = Acc) ->
                                                 case lists:member(PartitionID, PartitionsList) of
@@ -817,6 +846,9 @@ offsets({TopicName, PartitionsList}, ConsumerGroup, Nth) ->
       lager:error("Can't retrieve offsets for topic ~s", [TopicName]),
       error
   end.
+
+do_keep_topics_only({ok, #{topics := Topics}}) -> {ok, Topics};
+do_keep_topics_only(Other) -> Other.
 
 % @doc
 % Return the list of all unread offsets for a given topic and consumer group
