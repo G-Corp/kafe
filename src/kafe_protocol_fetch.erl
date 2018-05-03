@@ -255,6 +255,11 @@ partitions([{Partition, Offset, MaxBytes}|Rest], ApiVersion, Acc) when ApiVersio
                                   0:64/signed,
                                   MaxBytes:32/signed
                                 >>|Acc]);
+partitions([{Partition, Offset, _LogStartOffset, MaxBytes}|Rest], ApiVersion, Acc) when ApiVersion == ?V1;
+                                                                                        ApiVersion == ?V2;
+                                                                                        ApiVersion == ?V3;
+                                                                                        ApiVersion == ?V4 ->
+  partitions([{Partition, Offset, MaxBytes}|Rest], ApiVersion, Acc);
 partitions([{Partition, Offset, LogStartOffset, MaxBytes}|Rest], ApiVersion, Acc) when ApiVersion == ?V5;
                                                                                        ApiVersion == ?V6;
                                                                                        ApiVersion == ?V7 ->
@@ -394,11 +399,25 @@ response(<<ThrottleTime:32/signed,
                                             ApiVersion == ?V3;
                                             ApiVersion == ?V4;
                                             ApiVersion == ?V5;
-                                            ApiVersion == ?V6;
-                                            ApiVersion == ?V7 ->
+                                            ApiVersion == ?V6 ->
   case topics(NumberOfTopics, Remainder, ApiVersion, []) of
     {ok, Response} ->
       {ok, #{topics => Response,
+             throttle_time => ThrottleTime}};
+    Error ->
+      Error
+  end;
+response(<<ThrottleTime:32/signed,
+           ErrorCode:16/signed,
+           SessionID:32/signed,
+           NumberOfTopics:32/signed,
+           Remainder/binary>>,
+         #{api_version := ApiVersion}) when ApiVersion == ?V7 ->
+  case topics(NumberOfTopics, Remainder, ApiVersion, []) of
+    {ok, Response} ->
+      {ok, #{topics => Response,
+             error_code => kafe_error:code(ErrorCode),
+             session_id => SessionID,
              throttle_time => ThrottleTime}};
     Error ->
       Error
@@ -619,10 +638,22 @@ dispatch([Topic|Rest], Options, Result) when is_binary(Topic) ->
 
 dispatch(_, [], _, Result) ->
   Result;
-dispatch(Topic, [{Partition, _, _} = P|Rest], Options, Result) ->
-  case kafe_brokers:broker_id_by_topic_and_partition(Topic, Partition) of
+dispatch(Topic, [{Partition, Offset}|Rest], Options, Result) ->
+  MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
+  dispatch(Topic, [{Partition, Offset, MaxBytes}|Rest], Options, Result);
+dispatch(Topic, [Partition|Rest], Options, Result) when is_integer(Partition) ->
+  {Partition, Offset} = case maps:get(offset, Options, undefined) of
+                          undefined ->
+                            kafe:max_offset(Topic, Partition);
+                          Offset1 ->
+                            {Partition, Offset1}
+                        end,
+  MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
+  dispatch(Topic, [{Partition, Offset, MaxBytes}|Rest], Options, Result);
+dispatch(Topic, [Partition|Rest], Options, Result) when is_tuple(Partition) ->
+  case kafe_brokers:broker_id_by_topic_and_partition(Topic, element(1, Partition)) of
     undefined ->
-      {error, {leader_not_available, {Topic, Partition}}};
+      {error, {leader_not_available, {Topic, element(1, Partition)}}};
     BrokerID ->
       TopicsForBroker = buclists:keyfind(BrokerID, 1, Result, []),
       PartitionsForTopic = buclists:keyfind(Topic, 1, TopicsForBroker, []),
@@ -639,20 +670,8 @@ dispatch(Topic, [{Partition, _, _} = P|Rest], Options, Result) ->
              Topic,
              1,
              TopicsForBroker,
-             {Topic, [P|PartitionsForTopic]})}))
-  end;
-dispatch(Topic, [{Partition, Offset}|Rest], Options, Result) ->
-  MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
-  dispatch(Topic, [{Partition, Offset, MaxBytes}|Rest], Options, Result);
-dispatch(Topic, [Partition|Rest], Options, Result) when is_integer(Partition) ->
-  {Partition, Offset} = case maps:get(offset, Options, undefined) of
-                          undefined ->
-                            kafe:max_offset(Topic, Partition);
-                          Offset1 ->
-                            {Partition, Offset1}
-                        end,
-  MaxBytes = maps:get(max_bytes, Options, ?DEFAULT_FETCH_MAX_BYTES),
-  dispatch(Topic, [{Partition, Offset, MaxBytes}|Rest], Options, Result).
+             {Topic, [Partition|PartitionsForTopic]})}))
+  end.
 
 response_max_bytes(List) ->
   response_max_bytes(List, 0).
@@ -660,7 +679,7 @@ response_max_bytes(List) ->
 response_max_bytes([], Acc) ->
   Acc;
 response_max_bytes([{_, Partitions}|Rest], Acc) ->
-  response_max_bytes(Rest, Acc + lists:sum([erlang:element(3, P) || P <- Partitions])).
+  response_max_bytes(Rest, Acc + lists:sum([erlang:element(size(P), P) || P <- Partitions])).
 
 -ifdef(TEST).
 kafe_protocol_fetch_test_() ->

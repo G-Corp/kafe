@@ -477,6 +477,7 @@ default_key_to_partition(Topic, Key) ->
 
 % @equiv fetch(-1, Topics, #{})
 -spec fetch(binary()
+            | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer(), LogStartOffset :: integer(), MaxBytes :: integer()}]}]
             | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer(), MaxBytes :: integer()}]}]
             | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer()}]}]
             | [{Topic :: binary(), [Partition :: integer()]}]
@@ -488,12 +489,14 @@ fetch(Topics) when is_binary(Topics) orelse is_list(Topics) ->
 % @equiv fetch(ReplicatID, TopicName, #{})
 -spec fetch(integer()
             | binary()
+            | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer(), LogStartOffset :: integer(), MaxBytes :: integer()}]}]
             | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer(), MaxBytes :: integer()}]}]
             | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer()}]}]
             | [{Topic :: binary(), [Partition :: integer()]}]
             | [{Topic :: binary(), Partition :: integer()}]
             | [Topic :: binary()],
             binary()
+            | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer(), LogStartOffset :: integer(), MaxBytes :: integer()}]}]
             | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer(), MaxBytes :: integer()}]}]
             | [{Topic :: binary(), [{Partition :: integer(), Offset :: integer()}]}]
             | [{Topic :: binary(), [Partition :: integer()]}]
@@ -543,7 +546,7 @@ fetch(Topics, Options) when is_map(Options), (is_binary(Topics) orelse is_list(T
 % <pre>
 % Response0 = kafe:fetch(&lt;&lt;"topic"&gt;&gt;).
 % Response1 = kafe:fetch(&lt;&lt;"topic"&gt;&gt;, #{offset =&gt; 2, partition =&gt; 3}).
-% Response2 = fetch(-1, [{Topic, [{Partition, Offset, MaxBytes, Options).
+% Response2 = fetch(-1, [{Topic, [{Partition, Offset, MaxBytes}]}], Options).
 % Response3 = fetch(-1, [{Topic, [{Partition, Offset}]}], Options).
 % Response4 = fetch(-1, [{Topic, [Partition]}], Options).
 % Response5 = fetch(-1, [{Topic, Partition}], Options).

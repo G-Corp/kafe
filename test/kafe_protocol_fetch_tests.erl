@@ -32,7 +32,7 @@ t_request() ->
                         , 1:32                            % partition count
                           , 0:32                            % partition index
                           , 1:64                            % fetch offset
-                          , (?DEFAULT_FETCH_MAX_BYTES):32     % max bytes
+                          , (?DEFAULT_FETCH_MAX_BYTES):32   % max bytes
                  >>,
        state => #{api_key => ?FETCH_REQUEST,
                   api_version => 0,
@@ -59,7 +59,7 @@ t_request() ->
                         , 1:32                            % partition count
                           , 0:32                            % partition index
                           , 1:64                            % fetch offset
-                          , (?DEFAULT_FETCH_MAX_BYTES):32     % max bytes
+                          , (?DEFAULT_FETCH_MAX_BYTES):32   % max bytes
                  >>,
        state => #{api_key => ?FETCH_REQUEST,
                   api_version => 1,
@@ -86,7 +86,7 @@ t_request() ->
                         , 1:32                            % partition count
                           , 0:32                            % partition index
                           , 1:64                            % fetch offset
-                          , (?DEFAULT_FETCH_MAX_BYTES):32     % max bytes
+                          , (?DEFAULT_FETCH_MAX_BYTES):32   % max bytes
                  >>,
        state => #{api_key => ?FETCH_REQUEST,
                   api_version => 2,
@@ -114,7 +114,7 @@ t_request() ->
                         , 1:32                            % partition count
                           , 0:32                            % partition index
                           , 1:64                            % fetch offset
-                          , (?DEFAULT_FETCH_MAX_BYTES):32     % max bytes
+                          , (?DEFAULT_FETCH_MAX_BYTES):32   % max bytes
                  >>,
        state => #{api_key => ?FETCH_REQUEST,
                   api_version => 3,
@@ -125,6 +125,161 @@ t_request() ->
                                  #{},
                                  #{api_key => ?FETCH_REQUEST,
                                    api_version => 3,
+                                   correlation_id => 0,
+                                   client_id => <<"test">>})),
+
+  ?assertEqual(
+     #{packet => << ?FETCH_REQUEST:16                  % API key
+                    , 4:16                             % API version
+                    , 0:32                             % correlation ID
+                    , 4:16, "test"                     % client ID
+                      , -1:32                            % replica ID
+                      , ?DEFAULT_FETCH_MAX_WAIT_TIME:32  % max wait time
+                      , ?DEFAULT_FETCH_MIN_BYTES:32      % min bytes
+                      , (?DEFAULT_FETCH_MAX_BYTES):32    % max bytes
+                      , ?DEFAULT_FETCH_ISOLATION_LEVEL:8 % isolation level
+                      , 1:32                             % topic count
+                        , 5:16, "topic"                    % topic name
+                        , 1:32                             % partition count
+                          , 0:32                             % partition index
+                          , 1:64                             % fetch offset
+                          , (?DEFAULT_FETCH_MAX_BYTES):32    % max bytes
+                 >>,
+       state => #{api_key => ?FETCH_REQUEST,
+                  api_version => 4,
+                  client_id => <<"test">>,
+                  correlation_id => 1}},
+     kafe_protocol_fetch:request(-1,
+                                 [{<<"topic">>, [{0, 1, ?DEFAULT_FETCH_MAX_BYTES}]}],
+                                 #{},
+                                 #{api_key => ?FETCH_REQUEST,
+                                   api_version => 4,
+                                   correlation_id => 0,
+                                   client_id => <<"test">>})),
+
+  ?assertEqual(
+     #{packet => << ?FETCH_REQUEST:16                  % API key
+                    , 5:16                             % API version
+                    , 0:32                             % correlation ID
+                    , 4:16, "test"                     % client ID
+                      , -1:32                            % replica ID
+                      , ?DEFAULT_FETCH_MAX_WAIT_TIME:32  % max wait time
+                      , ?DEFAULT_FETCH_MIN_BYTES:32      % min bytes
+                      , (?DEFAULT_FETCH_MAX_BYTES):32    % max bytes
+                      , ?DEFAULT_FETCH_ISOLATION_LEVEL:8 % isolation level
+                      , 1:32                             % topic count
+                        , 5:16, "topic"                    % topic name
+                        , 1:32                             % partition count
+                          , 0:32                             % partition index
+                          , 1:64                             % fetch offset
+                          , 0:64                             % log start offset
+                          , (?DEFAULT_FETCH_MAX_BYTES):32    % max bytes
+                 >>,
+       state => #{api_key => ?FETCH_REQUEST,
+                  api_version => 5,
+                  client_id => <<"test">>,
+                  correlation_id => 1}},
+     kafe_protocol_fetch:request(-1,
+                                 [{<<"topic">>, [{0, 1, ?DEFAULT_FETCH_MAX_BYTES}]}],
+                                 #{},
+                                 #{api_key => ?FETCH_REQUEST,
+                                   api_version => 5,
+                                   correlation_id => 0,
+                                   client_id => <<"test">>})),
+
+  ?assertEqual(
+     #{packet => << ?FETCH_REQUEST:16                  % API key
+                    , 6:16                             % API version
+                    , 0:32                             % correlation ID
+                    , 4:16, "test"                     % client ID
+                      , -1:32                            % replica ID
+                      , ?DEFAULT_FETCH_MAX_WAIT_TIME:32  % max wait time
+                      , ?DEFAULT_FETCH_MIN_BYTES:32      % min bytes
+                      , (?DEFAULT_FETCH_MAX_BYTES):32    % max bytes
+                      , ?DEFAULT_FETCH_ISOLATION_LEVEL:8 % isolation level
+                      , 1:32                             % topic count
+                        , 5:16, "topic"                    % topic name
+                        , 1:32                             % partition count
+                          , 0:32                             % partition index
+                          , 1:64                             % fetch offset
+                          , 0:64                             % log start offset
+                          , (?DEFAULT_FETCH_MAX_BYTES):32    % max bytes
+                 >>,
+       state => #{api_key => ?FETCH_REQUEST,
+                  api_version => 6,
+                  client_id => <<"test">>,
+                  correlation_id => 1}},
+     kafe_protocol_fetch:request(-1,
+                                 [{<<"topic">>, [{0, 1, ?DEFAULT_FETCH_MAX_BYTES}]}],
+                                 #{},
+                                 #{api_key => ?FETCH_REQUEST,
+                                   api_version => 6,
+                                   correlation_id => 0,
+                                   client_id => <<"test">>})),
+
+  ?assertEqual(
+     #{packet => << ?FETCH_REQUEST:16                  % API key
+                    , 7:16                             % API version
+                    , 0:32                             % correlation ID
+                    , 4:16, "test"                     % client ID
+                      , -1:32                            % replica ID
+                      , ?DEFAULT_FETCH_MAX_WAIT_TIME:32  % max wait time
+                      , ?DEFAULT_FETCH_MIN_BYTES:32      % min bytes
+                      , (?DEFAULT_FETCH_MAX_BYTES):32    % max bytes
+                      , ?DEFAULT_FETCH_ISOLATION_LEVEL:8 % isolation level
+                      , ?DEFAULT_FETCH_SESSION_ID:32     % session ID
+                      , ?DEFAULT_FETCH_EPOCH:32          % epoch
+                      , 1:32                             % topic count
+                        , 5:16, "topic"                    % topic name
+                        , 1:32                             % partition count
+                          , 0:32                             % partition index
+                          , 1:64                             % fetch offset
+                          , 0:64                             % log start offset
+                          , (?DEFAULT_FETCH_MAX_BYTES):32    % max bytes
+                      , 0:32                             % forgotten topics count
+                 >>,
+       state => #{api_key => ?FETCH_REQUEST,
+                  api_version => 7,
+                  client_id => <<"test">>,
+                  correlation_id => 1}},
+     kafe_protocol_fetch:request(-1,
+                                 [{<<"topic">>, [{0, 1, ?DEFAULT_FETCH_MAX_BYTES}]}],
+                                 #{},
+                                 #{api_key => ?FETCH_REQUEST,
+                                   api_version => 7,
+                                   correlation_id => 0,
+                                   client_id => <<"test">>})),
+
+  ?assertEqual(
+     #{packet => << ?FETCH_REQUEST:16                  % API key
+                    , 7:16                             % API version
+                    , 0:32                             % correlation ID
+                    , 4:16, "test"                     % client ID
+                      , -1:32                            % replica ID
+                      , ?DEFAULT_FETCH_MAX_WAIT_TIME:32  % max wait time
+                      , ?DEFAULT_FETCH_MIN_BYTES:32      % min bytes
+                      , 123456:32                        % max bytes
+                      , ?DEFAULT_FETCH_ISOLATION_LEVEL:8 % isolation level
+                      , ?DEFAULT_FETCH_SESSION_ID:32     % session ID
+                      , ?DEFAULT_FETCH_EPOCH:32          % epoch
+                      , 1:32                             % topic count
+                        , 5:16, "topic"                    % topic name
+                        , 1:32                             % partition count
+                          , 0:32                             % partition index
+                          , 1:64                             % fetch offset
+                          , 10:64                            % log start offset
+                          , 123456:32                        % max bytes
+                      , 0:32                             % forgotten topics count
+                 >>,
+       state => #{api_key => ?FETCH_REQUEST,
+                  api_version => 7,
+                  client_id => <<"test">>,
+                  correlation_id => 1}},
+     kafe_protocol_fetch:request(-1,
+                                 [{<<"topic">>, [{0, 1, 10, 123456}]}],
+                                 #{},
+                                 #{api_key => ?FETCH_REQUEST,
+                                   api_version => 7,
                                    correlation_id => 0,
                                    client_id => <<"test">>})).
 
@@ -571,6 +726,8 @@ t_response() ->
 
   ?assertEqual(
      {ok, #{throttle_time => 0,
+            error_code => none,
+            session_id => 0,
             topics => [#{name => <<"topic">>,
                         partitions => [#{error_code => none,
                                          high_watermark_offset => 5,
@@ -618,6 +775,8 @@ t_response() ->
                                          partition => 0}]}]}},
      kafe_protocol_fetch:response(
        <<0:32                       % throttle time ms
+         , 0:16                     % error code
+         , 0:32                     % session ID
          , 1:32                     % topic count
            , 5:16, "topic"          % topic name
            , 1:32                   % partition count

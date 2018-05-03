@@ -514,7 +514,7 @@ For more informations, see the
 ### fetch/1 ###
 
 <pre><code>
-fetch(Topics::binary() | [{Topic::binary(), [{Partition::integer(), Offset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer()}]}] | [{Topic::binary(), [Partition::integer()]}] | [{Topic::binary(), Partition::integer()}] | [Topic::binary()]) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {ok, #{topics =&gt; [<a href="#type-message_set">message_set()</a>], throttle_time =&gt; integer()}} | {error, term()}
+fetch(Topics::binary() | [{Topic::binary(), [{Partition::integer(), Offset::integer(), LogStartOffset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer()}]}] | [{Topic::binary(), [Partition::integer()]}] | [{Topic::binary(), Partition::integer()}] | [Topic::binary()]) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {ok, #{topics =&gt; [<a href="#type-message_set">message_set()</a>], throttle_time =&gt; integer()}} | {error, term()}
 </code></pre>
 <br />
 
@@ -525,7 +525,7 @@ Equivalent to [`fetch(-1, Topics, #{})`](#fetch-3).
 ### fetch/2 ###
 
 <pre><code>
-fetch(ReplicatID::integer() | binary() | [{Topic::binary(), [{Partition::integer(), Offset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer()}]}] | [{Topic::binary(), [Partition::integer()]}] | [{Topic::binary(), Partition::integer()}] | [Topic::binary()], Topics::binary() | [{Topic::binary(), [{Partition::integer(), Offset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer()}]}] | [{Topic::binary(), [Partition::integer()]}] | [{Topic::binary(), Partition::integer()}] | [Topic::binary()] | <a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {ok, #{topics =&gt; [<a href="#type-message_set">message_set()</a>], throttle_time =&gt; integer()}} | {error, term()}
+fetch(ReplicatID::integer() | binary() | [{Topic::binary(), [{Partition::integer(), Offset::integer(), LogStartOffset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer()}]}] | [{Topic::binary(), [Partition::integer()]}] | [{Topic::binary(), Partition::integer()}] | [Topic::binary()], Topics::binary() | [{Topic::binary(), [{Partition::integer(), Offset::integer(), LogStartOffset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer(), MaxBytes::integer()}]}] | [{Topic::binary(), [{Partition::integer(), Offset::integer()}]}] | [{Topic::binary(), [Partition::integer()]}] | [{Topic::binary(), Partition::integer()}] | [Topic::binary()] | <a href="#type-fetch_options">fetch_options()</a>) -&gt; {ok, [<a href="#type-message_set">message_set()</a>]} | {ok, #{topics =&gt; [<a href="#type-message_set">message_set()</a>], throttle_time =&gt; integer()}} | {error, term()}
 </code></pre>
 <br />
 
@@ -586,7 +586,7 @@ Examples:
 
  Response0 = kafe:fetch(<<"topic">>).
  Response1 = kafe:fetch(<<"topic">>, #{offset => 2, partition => 3}).
- Response2 = fetch(-1, [{Topic, [{Partition, Offset, MaxBytes, Options).
+ Response2 = fetch(-1, [{Topic, [{Partition, Offset, MaxBytes}]}], Options).
  Response3 = fetch(-1, [{Topic, [{Partition, Offset}]}], Options).
  Response4 = fetch(-1, [{Topic, [Partition]}], Options).
  Response5 = fetch(-1, [{Topic, Partition}], Options).
