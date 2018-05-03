@@ -229,6 +229,7 @@ group_state(#state{group_id = GroupID} = State, stable) ->
   {stable, ?STABLE_TIMEOUT(State)}.
 
 state_by_name(<<"PreparingRebalance">>) -> preparing_rebalance;
+state_by_name(<<"CompletingRebalance">>) -> awaiting_sync;
 state_by_name(<<"Dead">>) -> dead;
 state_by_name(<<"AwaitingSync">>) -> awaiting_sync;
 state_by_name(<<"CompletingRebalance">>) -> awaiting_sync;
