@@ -401,7 +401,8 @@ value() = binary()
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#api_versions-0">api_versions/0</a></td><td>
 Return the list of API versions for each api key.</td></tr><tr><td valign="top"><a href="#brokers-0">brokers/0</a></td><td>
 Return the list of availables brokers.</td></tr><tr><td valign="top"><a href="#consumer_groups-0">consumer_groups/0</a></td><td>
-Return the list of availables consumers.</td></tr><tr><td valign="top"><a href="#default_key_to_partition-2">default_key_to_partition/2</a></td><td>
+Return the list of availables consumers.</td></tr><tr><td valign="top"><a href="#consumer_infos-1">consumer_infos/1</a></td><td>
+Return informations about a consumer.</td></tr><tr><td valign="top"><a href="#default_key_to_partition-2">default_key_to_partition/2</a></td><td>
 Default fonction used to do partition assignment from the message key.</td></tr><tr><td valign="top"><a href="#default_protocol-4">default_protocol/4</a></td><td>
 Create a default protocol as defined in the <a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol#AGuideToTheKafkaProtocol-JoinGroupRequest">Kafka Protocol Guide</a>.</td></tr><tr><td valign="top"><a href="#describe_group-1">describe_group/1</a></td><td> 
 Return the description of the given consumer group.</td></tr><tr><td valign="top"><a href="#fetch-1">fetch/1</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(-1, Topics, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-2">fetch/2</a></td><td>Equivalent to <a href="#fetch-3"><tt>fetch(ReplicatID, TopicName, #{})</tt></a>.</td></tr><tr><td valign="top"><a href="#fetch-3">fetch/3</a></td><td> 
@@ -460,6 +461,17 @@ consumer_groups() -&gt; [binary()]
 <br />
 
 Return the list of availables consumers
+
+<a name="consumer_infos-1"></a>
+
+### consumer_infos/1 ###
+
+<pre><code>
+consumer_infos(GroupID::binary()) -&gt; {ok, list()} | {error, term()}
+</code></pre>
+<br />
+
+Return informations about a consumer
 
 <a name="default_key_to_partition-2"></a>
 

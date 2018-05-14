@@ -52,6 +52,7 @@
 -export([
          start_consumer/3,
          stop_consumer/1,
+         consumer_infos/1,
          consumer_groups/0,
          offsets/2,
          offsets/3
@@ -847,9 +848,20 @@ stop_consumer(GroupID) ->
   kafe_consumer_sup:stop_child(GroupID).
 
 % @doc
+% Return informations about a consumer
+% @end
+-spec consumer_infos(GroupID :: binary()) -> {ok, list()} | {error, term()}.
+consumer_infos(GroupID) ->
+  case lists:member(GroupID, [bucs:to_binary(G) || G <- consumer_groups()]) of
+    true ->
+      {ok, [{Name, kafe_consumer_store:value(GroupID, Name)} || Name <- [generation_id, member_id, topics]]};
+    false ->
+      {error, group_does_not_exist}
+  end.
+
+% @doc
 % Return the list of availables consumers
 % @end
 -spec consumer_groups() -> [binary()].
 consumer_groups() ->
   kafe_consumer_sup:consumer_groups().
-
