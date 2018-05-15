@@ -232,7 +232,6 @@ state_by_name(<<"PreparingRebalance">>) -> preparing_rebalance;
 state_by_name(<<"CompletingRebalance">>) -> awaiting_sync;
 state_by_name(<<"Dead">>) -> dead;
 state_by_name(<<"AwaitingSync">>) -> awaiting_sync;
-state_by_name(<<"CompletingRebalance">>) -> awaiting_sync;
 state_by_name(<<"Stable">>) -> stable.
 
 group_assignment(MemberID, MemberID, Topics, Members) ->
