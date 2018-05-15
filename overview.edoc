@@ -1,7 +1,7 @@
 @author Gregoire Lejeune <gregoire.lejeune@finexkap.com>
 @author Gregoire Lejeune <greg@g-corp.io>
 @author Gregoire Lejeune <gregoire.lejeune@botsunit.com>
-@copyright 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016, 2017 BotsUnit
+@copyright 2014, 2015 Finexkap, 2015, 2016, 2017, 2018 G-Corp, 2015, 2016, 2017 BotsUnit
 @version 2.2.0
 @title A Kafka client for Erlang and Elixir
 @doc
@@ -18,7 +18,7 @@
 <li>{@link kafe:fetch/3}</li>
 </ul>
 
-<b>Kafe</b> has been tested with Kafka 0.9 and 0.10
+<b>Kafe</b> has been tested with Kafka 0.9 and above
 
 You can also use it with Kafka 0.8 but {@link kafe_consumer} is not compatible with this version.
 
@@ -328,8 +328,8 @@ kafe is available for use under the following license, commonly known as the 3-c
 
 <p>
 Copyright (c) 2014, 2015 Finexkap<br />
-Copyright (c) 2015, G-Corp<br />
-Copyright (c) 2015, 2016 BotsUnit<br />
+Copyright (c) 2015, 2016, 2017 BotsUnit<br />
+Copyright (c) 2015, 2016, 2017, 2018 G-Corp<br />
 </p>
 
 <p>

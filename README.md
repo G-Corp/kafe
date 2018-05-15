@@ -2,7 +2,7 @@
 
 # A Kafka client for Erlang and Elixir #
 
-Copyright (c) 2014, 2015 Finexkap, 2015 G-Corp, 2015, 2016, 2017 BotsUnit
+Copyright (c) 2014, 2015 Finexkap, 2015, 2016, 2017, 2018 G-Corp, 2015, 2016, 2017 BotsUnit
 
 __Version:__ 2.2.0
 
@@ -20,7 +20,7 @@ __Version 2.0.0 cause changes in the following APIs :__
 * [`kafe:fetch/3`](https://github.com/G-Corp/kafe/blob/master/doc/kafe.md#fetch-3)
 
 
-__Kafe__ has been tested with Kafka 0.9 and 0.10
+__Kafe__ has been tested with Kafka 0.9 and above
 
 You can also use it with Kafka 0.8 but [`kafe_consumer`](https://github.com/G-Corp/kafe/blob/master/doc/kafe_consumer.md) is not compatible with this version.
 
@@ -387,8 +387,8 @@ See [documentation](https://github.com/G-Corp/kafe/blob/master/doc/.)
 kafe is available for use under the following license, commonly known as the 3-clause (or "modified") BSD license:
 
 Copyright (c) 2014, 2015 Finexkap<br />
-Copyright (c) 2015, G-Corp<br />
-Copyright (c) 2015, 2016 BotsUnit<br />
+Copyright (c) 2015, 2016, 2017 BotsUnit<br />
+Copyright (c) 2015, 2016, 2017, 2018 G-Corp<br />
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
