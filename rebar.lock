@@ -1,16 +1,24 @@
 {"1.1.0",
-[{<<"bristow">>,{pkg,<<"bristow">>,<<"0.2.2">>},0},
- {<<"bucs">>,{pkg,<<"bucs">>,<<"1.0.15">>},0},
- {<<"doteki">>,{pkg,<<"doteki">>,<<"1.0.6">>},0},
+[{<<"bristow">>,
+  {git,"git://github.com/G-Corp/bristow.git",
+       {ref,"529d9892008d06133cb03f3837d225f4065163c0"}},
+  0},
+ {<<"bucs">>,
+  {git,"git://github.com/G-Corp/bucs.git",
+       {ref,"042a7144b6729579c2d1a85eba475cbd70719484"}},
+  0},
+ {<<"doteki">>,
+  {git,"git://github.com/G-Corp/doteki.git",
+       {ref,"645337f8e037b88c6a4a71adc75a34a462bcb638"}},
+  0},
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.9">>},1},
  {<<"lager">>,{pkg,<<"lager">>,<<"3.6.2">>},0},
- {<<"poolgirl">>,{pkg,<<"poolgirl">>,<<"1.2.0">>},0}]}.
+ {<<"poolgirl">>,
+  {git,"git://github.com/G-Corp/poolgirl.git",
+       {ref,"41624a3210624674af4bd277c94bc85c936d452e"}},
+  0}]}.
 [
 {pkg_hash,[
- {<<"bristow">>, <<"034423223B1B27EC5E39928A04476F7AEAAE9EDF9E3448C572049DB8FC595C8A">>},
- {<<"bucs">>, <<"44FC10DC863184FB99B1B7D25AF5B1FA06355D0003800629668FBC37F3F9B6BD">>},
- {<<"doteki">>, <<"A953213C8C34E5AF8DE22CB48779BB6390F0D352D43ECE3B75223BD941EC543B">>},
  {<<"goldrush">>, <<"F06E5D5F1277DA5C413E84D5A2924174182FB108DABB39D5EC548B27424CD106">>},
- {<<"lager">>, <<"2C72950A0E75FFD927DD35BC85EA30E7680A264C4BBD08B328250871AC456CC2">>},
- {<<"poolgirl">>, <<"F7EB4B6A6263284DF7035DDC1A35CC3B77C97CEE915CA71A56203CE9557E3E06">>}]}
+ {<<"lager">>, <<"2C72950A0E75FFD927DD35BC85EA30E7680A264C4BBD08B328250871AC456CC2">>}]}
 ].

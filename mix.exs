@@ -8,7 +8,7 @@ defmodule Kafe.Mixfile do
   def project do
     [
       app: :kafe,
-      version: "2.2.3",
+      version: "2.3.0",
       elixir: "~> 1.2",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
@@ -28,10 +28,10 @@ defmodule Kafe.Mixfile do
   defp deps do
     [
       {:lager, "~> 3.6.2"},
-      {:bucs, "~> 1.0.15"},
-      {:doteki, "~> 1.0.6"},
-      {:poolgirl, "~> 1.2.0"},
-      {:bristow, "~> 0.2.2"}
+      {:bucs, git: "git://github.com/G-Corp/bucs.git", branch: "master"},
+      {:doteki, git: "git://github.com/G-Corp/doteki.git", branch: "master"},
+      {:poolgirl, git: "git://github.com/G-Corp/poolgirl.git", branch: "master"},
+      {:bristow, git: "git://github.com/G-Corp/bristow.git", branch: "master"}
     ]
   end
 
