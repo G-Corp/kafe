@@ -405,6 +405,7 @@ update_state_with_metadata(PoolSize, ChunkPoolSize) ->
   case kafe:metadata() of
     {ok, #{brokers := Brokers,
            topics := Topics}} ->
+      lager:info("[update_state_with_metadata] Brokers ~p", [Brokers]),
       BrokersByID = maps:from_list(
                    [ begin
                        get_connections([{bucs:to_string(Host), Port}], PoolSize, ChunkPoolSize),
@@ -424,6 +425,7 @@ remove_unlisted_brokers(NewBrokersList) ->
   lager:debug("Brokers = ~p", [Brokers]),
   lager:debug("NewBrokersList = ~p", [NewBrokersList]),
   NewBrokers = lists:foldr(fun(BrokerName, Acc) ->
+                              lager:debug("Getting broker by name ~p", [BrokerName]),
                                case maps:get(BrokerName, Brokers, undefined) of
                                  undefined -> Acc;
                                  Broker -> maps:put(BrokerName, Broker, Acc)
