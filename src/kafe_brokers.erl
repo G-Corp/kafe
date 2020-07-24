@@ -294,7 +294,7 @@ get_connections([{Host, Port}|Rest], PoolSize, ChunkPoolSize) ->
                     h_addrtype = AddrType,
                     h_addr_list = AddrsList}} ->
         lager:debug("Got resolved ~p to ~p", [Host, Hostname]),
-        case get_host(AddrsList, Hostname, AddrType) of
+        case get_host(AddrsList, Host, AddrType) of
           undefined ->
             lager:warning("Can't retrieve host for ~s:~p", [Host, Port]),
             get_connections(Rest, PoolSize, ChunkPoolSize);
