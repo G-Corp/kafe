@@ -357,12 +357,14 @@ get_host([], _, _) -> undefined;
 get_host([Addr|Rest], Hostname, AddrType) ->
   case inet:getaddr(Hostname, AddrType) of
     {ok, Addr} ->
-      case inet:gethostbyaddr(Addr) of
-        {ok, #hostent{h_name = Hostname1, h_aliases = HostAlias}} ->
-          {Addr, lists:usort([Hostname|[Hostname1|HostAlias]])};
-        _ ->
-          {Addr, [Hostname]}
-      end;
+     % case inet:gethostbyaddr(Addr) of
+     %   {ok, #hostent{h_name = _Hostname1, h_aliases = _HostAlias}} ->
+     %     %{Addr, lists:usort([Hostname|[Hostname1|HostAlias]])};
+     %     {Addr, [Hostname]};
+     %   _ ->
+     %     {Addr, [Hostname]}
+     % end;
+      {Addr, [Hostname]};
     _ -> get_host(Rest, Hostname, AddrType)
   end.
 
