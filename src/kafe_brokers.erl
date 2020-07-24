@@ -408,9 +408,9 @@ update_state_with_metadata(PoolSize, ChunkPoolSize) ->
       BrokersByID = maps:from_list(
                    [ begin
                        get_connections([{bucs:to_string(Host), Port}], PoolSize, ChunkPoolSize),
-                       {ID, kafe_utils:broker_name(Host, Port)}
+                       {Host, kafe_utils:broker_name(Host, Port)}
                      end ||
-                     #{id := ID, host := Host, port := Port} <- Brokers ]),
+                     #{id := _ID, host := Host, port := Port} <- Brokers ]),
       remove_unlisted_brokers(maps:values(BrokersByID)),
       TopicsWithLeaders = leaders_for_topics(Topics, BrokersByID),
       ets:insert(?ETS_TABLE, [{topics, TopicsWithLeaders}]);
