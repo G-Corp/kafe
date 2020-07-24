@@ -408,9 +408,10 @@ update_state_with_metadata(PoolSize, ChunkPoolSize) ->
       BrokersByID = maps:from_list(
                    [ begin
                        get_connections([{bucs:to_string(Host), Port}], PoolSize, ChunkPoolSize),
-                       {Host, kafe_utils:broker_name(Host, Port)}
+                       {ID, kafe_utils:broker_name(Host, Port)}
                      end ||
-                     #{id := _ID, host := Host, port := Port} <- Brokers ]),
+                     #{id := ID, host := Host, port := Port} <- Brokers ]),
+      lager:info("BrokersByID ~p", [BrokersByID]),
       remove_unlisted_brokers(maps:values(BrokersByID)),
       TopicsWithLeaders = leaders_for_topics(Topics, BrokersByID),
       ets:insert(?ETS_TABLE, [{topics, TopicsWithLeaders}]);
@@ -420,6 +421,8 @@ update_state_with_metadata(PoolSize, ChunkPoolSize) ->
 
 remove_unlisted_brokers(NewBrokersList) ->
   Brokers = ets_get(?ETS_TABLE, brokers, #{}),
+  lager:debug("Brokers = ~p", [Brokers]),
+  lager:debug("NewBrokersList = ~p", [NewBrokersList]),
   NewBrokers = lists:foldr(fun(BrokerName, Acc) ->
                                case maps:get(BrokerName, Brokers, undefined) of
                                  undefined -> Acc;
