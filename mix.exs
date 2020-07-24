@@ -1,10 +1,14 @@
+# File: mix.exs
+# This file was generated from rebar.config
+# Using rebar3_elixir (https://github.com/G-Corp/rebar3_elixir)
+# MODIFY IT AT YOUR OWN RISK AND ONLY IF YOU KNOW WHAT YOU ARE DOING!
 defmodule Kafe.Mixfile do
   use Mix.Project
 
   def project do
     [
       app: :kafe,
-      version: "3.0.0",
+      version: "2.2.3",
       elixir: "~> 1.2",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
@@ -23,10 +27,10 @@ defmodule Kafe.Mixfile do
 
   defp deps do
     [
-      {:lager, "~> 3.4"},
-      {:bucs, "~> 1.0.12"},
+      {:lager, "~> 3.6.2"},
+      {:bucs, "~> 1.0.15"},
       {:doteki, "~> 1.0.6"},
-      {:poolgirl, "~> 1.1.3"},
+      {:poolgirl, "~> 1.2.0"},
       {:bristow, "~> 0.2.2"}
     ]
   end
@@ -66,9 +70,9 @@ defmodule Kafe.Mixfile do
 
   defp trim(x) do
     if Version.compare(System.version, "1.5.0") == :lt do
-      String.strip(x)
+      Kernel.apply(String, :strip, [x])
     else
-      String.trim(x)
+      Kernel.apply(String, :trim, [x])
     end
   end
 end

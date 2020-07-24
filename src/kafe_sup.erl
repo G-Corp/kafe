@@ -16,6 +16,18 @@ init([]) ->
        intensity => 1,
        period => 5},
      [
+      #{id => kafe_brokers,
+        start => {kafe_brokers, start_link, []},
+        restart => permanent,
+        type => worker,
+        shutdown => 5000,
+        modules => [kafe_brokers]},
+      #{id => kafe_rr,
+        start => {kafe_rr, start_link, []},
+        restart => permanent,
+        type => worker,
+        shutdown => 5000,
+        modules => [kafe_rr]},
       #{id => kafe_consumer_sup,
         start => {kafe_consumer_sup, start_link, []},
         restart => permanent,
@@ -27,18 +39,5 @@ init([]) ->
         restart => permanent,
         type => supervisor,
         shutdown => infinity,
-        modules => [kafe_consumer_group_sup]},
-      #{id => kafe_rr,
-        start => {kafe_rr, start_link, []},
-        restart => permanent,
-        type => worker,
-        shutdown => 5000,
-        modules => [kafe_rr]},
-      #{id => kafe_brokers,
-        start => {kafe_brokers, start_link, []},
-        restart => permanent,
-        type => worker,
-        shutdown => 5000,
-        modules => [kafe_brokers]}
+        modules => [kafe_consumer_group_sup]}
      ]}}.
-

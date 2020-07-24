@@ -234,7 +234,8 @@ init(_) ->
                                  [kafe, chunk_pool_size],
                                  ?DEFAULT_CHUNK_POOL_SIZE)
             },
-  {ok, retrieve, State, 0}.
+  retrieve_brokers(State),
+  {ok, retrieve, State, Timeout}.
 
 % @hidden
 callback_mode() ->
@@ -246,12 +247,12 @@ retrieve(timeout, _, #state{brokers_update_frequency = Timeout} = State) ->
   retrieve_brokers(State),
   {next_state, retrieve, State, Timeout};
 retrieve({call, From}, retrieve, #state{brokers_update_frequency = Timeout} = State) ->
-  lager:debug("~p ask to retrieve brokers after timeout", [From]),
+  lager:debug("~p ask to retrieve brokers...", [From]),
   retrieve_brokers(State),
-  {reply, ok, retrieve, State, Timeout};
+  {next_state, retrieve, State, [{reply, From, ok}, Timeout]};
 retrieve({call, From}, Event, #state{brokers_update_frequency = Timeout} = State) ->
-  lager:debug("~p ask for ~p after timeout: invalid event", [From, Event]),
-  {reply, {error, invalid_demand}, retrieve, State, Timeout}.
+  lager:debug("~p ask for ~p: invalid event", [From, Event]),
+  {next_state, retrieve, State, [{reply, From, {error, invalid_event}}, Timeout]}.
 
 % @hidden
 terminate(_Reason, _StateName, _State) ->
@@ -270,6 +271,7 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 retrieve_brokers(#state{default_brokers = Brokers,
                         pool_size = PoolSize,
                         chunk_pool_size = ChunkPoolSize}) ->
+  lager:debug("Start retrieve brokers..."),
   remove_dead_brokers(),
   case ets_get(?ETS_TABLE, brokers_list, []) of
     [] ->
@@ -507,4 +509,3 @@ ets_get(Table, Key, Default) ->
     _ ->
       Default
   end.
-
