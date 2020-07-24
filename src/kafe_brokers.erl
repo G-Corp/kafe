@@ -300,7 +300,8 @@ get_connections([{Host, Port}|Rest], PoolSize, ChunkPoolSize) ->
             lager:warning("Can't retrieve host for ~s:~p", [Host, Port]),
             get_connections(Rest, PoolSize, ChunkPoolSize);
           {BrokerAddr, BrokerHostList} ->
-            lager:debug("[get_connections] will now connect to ~p for Hostname: ~p", [BrokerAddr, Hostname]),
+            lager:debug("[get_connections] will now connect to ~p for Hostname: ~p", [BrokerAddr, Host]),
+            lager:debug("[get_connections] after get_host BrokerHostList is ~p",  [BrokerHostList]),
             case lists:foldl(fun(E, Acc) ->
                                  BrokerFullName = kafe_utils:broker_name(E, Port),
                                  case lists:member(BrokerFullName, BrokersList) of
