@@ -27,10 +27,10 @@ defmodule Kafe.Mixfile do
 
   defp deps do
     [
-      {:lager, "~> 3.6.2"},
-      {:bucs, git: "git://github.com/G-Corp/bucs.git", branch: "master"},
-      {:doteki, git: "git://github.com/G-Corp/doteki.git", branch: "master"},
-      {:poolgirl, git: "git://github.com/G-Corp/poolgirl.git", branch: "master"},
+      {:lager, "~> 3.9"},
+      {:bucs, "~> 1.1.0"},
+      {:doteki, git: "git://github.com/G-Corp/doteki.git", tag: "1.1.0"},
+      {:poolgirl, git: "git://github.com/qbisserie/poolgirl.git", branch: "master"},
       {:bristow, git: "git://github.com/G-Corp/bristow.git", branch: "master"}
     ]
   end
