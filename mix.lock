@@ -1,8 +1,8 @@
 %{
   "bristow": {:git, "git://github.com/G-Corp/bristow.git", "529d9892008d06133cb03f3837d225f4065163c0", [branch: "master"]},
-  "bucs": {:git, "git://github.com/G-Corp/bucs.git", "042a7144b6729579c2d1a85eba475cbd70719484", [branch: "master"]},
-  "doteki": {:git, "git://github.com/G-Corp/doteki.git", "645337f8e037b88c6a4a71adc75a34a462bcb638", [branch: "master"]},
-  "goldrush": {:hex, :goldrush, "0.1.9", "f06e5d5f1277da5c413e84d5a2924174182fb108dabb39d5ec548b27424cd106", [:rebar3], [], "hexpm"},
-  "lager": {:hex, :lager, "3.6.2", "2c72950a0e75ffd927dd35bc85ea30e7680a264c4bbd08b328250871ac456cc2", [:rebar3], [{:goldrush, "0.1.9", [hex: :goldrush, repo: "hexpm", optional: false]}], "hexpm"},
-  "poolgirl": {:git, "git://github.com/G-Corp/poolgirl.git", "41624a3210624674af4bd277c94bc85c936d452e", [branch: "master"]},
+  "bucs": {:hex, :bucs, "1.1.0", "de79a0d781a7c5f616ab0cf3c61bf67576382daffcd2e01a9504fa0342f80a21", [:make, :mix, :rebar3], [], "hexpm", "200b8d07b72a1c8099f9ca77edab16353b63e5b7b806534be159106b4b030503"},
+  "doteki": {:git, "git://github.com/G-Corp/doteki.git", "3a0675b14fc663ca59a256aa78ba80c624f344a1", [tag: "1.1.0"]},
+  "goldrush": {:hex, :goldrush, "0.1.9", "f06e5d5f1277da5c413e84d5a2924174182fb108dabb39d5ec548b27424cd106", [:rebar3], [], "hexpm", "99cb4128cffcb3227581e5d4d803d5413fa643f4eb96523f77d9e6937d994ceb"},
+  "lager": {:hex, :lager, "3.9.2", "4cab289120eb24964e3886bd22323cb5fefe4510c076992a23ad18cf85413d8c", [:rebar3], [{:goldrush, "0.1.9", [hex: :goldrush, repo: "hexpm", optional: false]}], "hexpm", "7f904d9e87a8cb7e66156ed31768d1c8e26eba1d54f4bc85b1aa4ac1f6340c28"},
+  "poolgirl": {:git, "git://github.com/qbisserie/poolgirl.git", "eb283b02dabbfd19f536eeae7f356b49f77bf8b0", [branch: "master"]},
 }
